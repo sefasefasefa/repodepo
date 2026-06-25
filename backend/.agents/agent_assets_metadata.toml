@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "8uzBBlw_QlEEZ3-XJ8IDM"
+uri = "file://artifacts/soci-django.zip"
+type = "unspecified"
+title = "Soci → Django (PythonAnywhere) — Final Build"
