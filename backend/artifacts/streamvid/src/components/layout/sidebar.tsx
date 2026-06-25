@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { useSidebar } from "@/lib/sidebar-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { useSiteConfig } from "@/lib/use-site-config";
-import { useFeatureState } from "@/lib/feature-flags";
+import { useFeatureFlags, useFeatureState } from "@/lib/feature-flags";
 import { X, PlayCircle, FastForward, ThumbsUp, Flame, Star, ChevronDown, ChevronUp, ListVideo, Image, Users, Shield, History, Bookmark, Bell, PlusCircle, LayoutDashboard, ShieldAlert, LogIn, BarChart3, Smartphone, TrendingUp, Heart, UserCheck, Tv, ShoppingBag, BookOpen, Radio, Download, Trophy, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
