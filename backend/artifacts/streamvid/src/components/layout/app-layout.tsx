@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Navbar } from "./navbar";
 import { Sidebar } from "./sidebar";
 import { useLocation } from "wouter";
+import { MiningConsent } from "@/components/mining-consent";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <main className={!isShortsPage ? "pt-14" : ""}>
         {children}
       </main>
+      <MiningConsent />
     </div>
   );
 }
