@@ -19,10 +19,6 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Django Backend"
-
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -35,22 +31,10 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
-[[workflows.workflow]]
-name = "Django Backend"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd backend && python manage.py runserver localhost:8000"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 8000
-externalPort = 8000
-exposeLocalhost = true
+localPort = 22983
+externalPort = 3001
