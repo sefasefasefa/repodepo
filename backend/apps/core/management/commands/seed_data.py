@@ -323,21 +323,21 @@ class Command(BaseCommand):
     def _create_watermark_settings(self):
         from apps.videos.models import WatermarkSettings
         WatermarkSettings.objects.get_or_create(id=1, defaults={
-            'is_enabled': False, 'text': 'Prnhbbbb',
+            'is_enabled': False, 'text': 'Hotpulse',
             'position': 'bottom-right', 'size': 'medium', 'opacity': 0.4
         })
 
     def _create_site_settings(self):
         from apps.admin_panel.models import SiteSettings
         SiteSettings.objects.get_or_create(id=1, defaults={
-            'site_name': 'Prnhbbbb', 'site_description': '18+ Video streaming ve sosyal platform',
+            'site_name': 'Hotpulse', 'site_description': '18+ Video streaming ve sosyal platform',
             'primary_color': '#7c3aed'
         })
 
     def _create_seo_settings(self):
         from apps.admin_panel.models import SeoSettings
         SeoSettings.objects.get_or_create(id=1, defaults={
-            'site_title': 'Prnhbbbb — 18+ Video Platform',
+            'site_title': 'Hotpulse — 18+ Video Platform',
             'site_description': 'Türkiye\'nin lider yetişkin video streaming platformu. Creator içerikleri, canlı yayınlar ve daha fazlası.',
             'keywords': 'video, streaming, 18+, adult, creator, yetişkin, platform',
             'robots': 'index,follow',
