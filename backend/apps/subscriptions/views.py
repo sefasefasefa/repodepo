@@ -23,6 +23,68 @@ def list_plans(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def admin_list_plans(request):
+    if request.user.role != 'admin':
+        return Response({'error': 'Yetkisiz'}, status=403)
+    plans = SubscriptionPlan.objects.all().order_by('id')
+    return Response({'plans': list(map(_fmt_plan, plans))})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_create_plan(request):
+    if request.user.role != 'admin':
+        return Response({'error': 'Yetkisiz'}, status=403)
+    d = request.data
+    if not d.get('name') or d.get('price') is None:
+        return Response({'error': 'name ve price zorunlu'}, status=400)
+    plan = SubscriptionPlan.objects.create(
+        name=d['name'],
+        description=d.get('description', ''),
+        price=float(d['price']),
+        billing_cycle=d.get('billingCycle', 'monthly'),
+        features=d.get('features', []),
+        is_popular=bool(d.get('isPopular', False)),
+        is_active=bool(d.get('isActive', True)),
+    )
+    return Response({'plan': _fmt_plan(plan)}, status=201)
+
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_plan_detail(request, plan_id):
+    if request.user.role != 'admin':
+        return Response({'error': 'Yetkisiz'}, status=403)
+    try:
+        plan = SubscriptionPlan.objects.get(id=plan_id)
+    except SubscriptionPlan.DoesNotExist:
+        return Response({'error': 'Plan bulunamadı'}, status=404)
+
+    if request.method == 'DELETE':
+        plan.delete()
+        return Response({'message': 'silindi'})
+
+    d = request.data
+    if 'name' in d:
+        plan.name = d['name']
+    if 'description' in d:
+        plan.description = d['description']
+    if 'price' in d:
+        plan.price = float(d['price'])
+    if 'billingCycle' in d:
+        plan.billing_cycle = d['billingCycle']
+    if 'features' in d:
+        plan.features = d['features']
+    if 'isPopular' in d:
+        plan.is_popular = bool(d['isPopular'])
+    if 'isActive' in d:
+        plan.is_active = bool(d['isActive'])
+    plan.save()
+    return Response({'plan': _fmt_plan(plan)})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def current_subscription(request):
     sub = UserSubscription.objects.filter(user=request.user).order_by('-created_at').first()
     if not sub:
