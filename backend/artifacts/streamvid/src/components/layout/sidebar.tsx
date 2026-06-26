@@ -9,7 +9,7 @@ import {
   History, Bookmark, Bell, PlusCircle, LayoutDashboard,
   ShieldAlert, LogIn, BarChart3, Smartphone, TrendingUp,
   Heart, UserCheck, Tv, ShoppingBag, BookOpen, Settings2, Radio, Download,
-  Trophy, MessageSquare, Crown,
+  Trophy, MessageSquare, Crown, Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -262,6 +262,7 @@ export function Sidebar() {
               <SectionDivider label={sec("section-creator").label} />
               {nav("upload").enabled && <Row icon={PlusCircle} label={nav("upload").label} href="/upload" onClick={onClose} />}
               {nav("creator-dash").enabled && <Row icon={LayoutDashboard} label={nav("creator-dash").label} href="/creator/dashboard" onClick={onClose} />}
+              <Row icon={Share2} label="Crosspost Görevleri" href="/crosspost-jobs" onClick={onClose} />
             </>
           )}
 

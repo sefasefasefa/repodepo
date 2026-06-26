@@ -157,5 +157,49 @@ def dispatch(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def jobs_list(request):
-    qs = CrossPostJob.objects.filter(user=request.user).select_related('site')[:200]
-    return Response({'jobs': [j.to_dict() for j in qs]})
+    qs = (CrossPostJob.objects
+          .filter(user=request.user)
+          .select_related('site', 'video')
+          .order_by('-created_at')[:500])
+
+    def _job_dict(j):
+        d = j.to_dict()
+        # Video bilgisi
+        if j.video_id:
+            d['videoTitle'] = j.video.title if j.video else ''
+            d['videoThumb'] = j.video.thumbnail_url if j.video else ''
+            d['videoUrl'] = f'/videos/{j.video_id}'
+        else:
+            d['videoTitle'] = ''
+            d['videoThumb'] = ''
+            d['videoUrl'] = ''
+        # Sağlayıcı renk/harf bilgisi
+        if j.site_id and j.site:
+            d['providerColor'] = j.site.provider_color or '#555'
+            d['providerLetter'] = j.site.provider_letter or j.site.name[:2].upper()
+        else:
+            d['providerColor'] = '#555'
+            d['providerLetter'] = '?'
+        return d
+
+    return Response({'jobs': [_job_dict(j) for j in qs]})
+
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def job_retry(request, job_id):
+    """Başarısız bir job'u yeniden dene."""
+    try:
+        job = CrossPostJob.objects.select_related('site', 'video').get(
+            id=job_id, user=request.user)
+    except CrossPostJob.DoesNotExist:
+        return Response({'error': 'Bulunamadı'}, status=404)
+    if job.status not in ('failed', 'skipped'):
+        return Response({'error': 'Yalnızca başarısız/atlanan işler yeniden denenir'}, status=400)
+
+    from .dispatcher import _run_job
+    job.status = 'pending'
+    job.save(update_fields=['status'])
+    _run_job(job)
+    return Response({'job': job.to_dict()})
