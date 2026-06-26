@@ -241,7 +241,7 @@ export default function VideoWatch() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: video, isLoading } = useGetVideo(videoId, { query: { enabled: !!videoId, queryKey: getGetVideoQueryKey(videoId) } });
+  const { data: video, isLoading, error: videoError } = useGetVideo(videoId, { query: { enabled: !!videoId, queryKey: getGetVideoQueryKey(videoId), retry: 2 } });
   const { data: relatedVideos } = useGetRelatedVideos(videoId, { queryKey: ["relatedVideos", videoId] as any, enabled: !!videoId } as any);
   const { data: comments } = useListComments(videoId, { queryKey: getListCommentsQueryKey(videoId) as any, enabled: !!videoId } as any);
 
@@ -358,7 +358,44 @@ export default function VideoWatch() {
     );
   }
 
-  if (!video) return <AppLayout><div className="p-8 text-[#888]">Video bulunamadı</div></AppLayout>;
+  if (videoError || !video) {
+    const is404 = (videoError as any)?.status === 404;
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 p-8 text-center">
+          <div className="p-5 rounded-2xl bg-[#1a1a1a] border border-[#2a2a2a]">
+            <svg className="h-12 w-12 text-[#444] mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-white">
+              {is404 ? "Video bulunamadı" : "Video yüklenemedi"}
+            </p>
+            <p className="text-sm text-[#666] mt-1 max-w-sm">
+              {is404
+                ? "Bu video silinmiş veya hiç yüklenmemiş olabilir."
+                : "Sunucuya bağlanırken hata oluştu. İnternet bağlantını kontrol et."}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-5 py-2 rounded-xl bg-[#7c3aed] text-white text-sm font-medium hover:bg-[#6d28d9] transition-colors"
+            >
+              Tekrar Dene
+            </button>
+            <button
+              onClick={() => history.back()}
+              className="px-5 py-2 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-[#aaa] text-sm font-medium hover:text-white transition-colors"
+            >
+              Geri Dön
+            </button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const isLocked = (video.isPremium || video.isPPV) && hasAccess === false;
   const accessLoading = (video.isPremium || video.isPPV) && hasAccess === null;

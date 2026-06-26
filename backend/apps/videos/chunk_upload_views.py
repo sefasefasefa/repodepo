@@ -13,6 +13,11 @@ from rest_framework.response import Response
 CHUNK_UPLOAD_DIR = os.path.join(settings.MEDIA_ROOT, '_chunks')
 CHUNK_SIZE = 5 * 1024 * 1024  # 5 MB
 
+# Dizinleri garantiye al
+os.makedirs(CHUNK_UPLOAD_DIR, exist_ok=True)
+os.makedirs(os.path.join(settings.MEDIA_ROOT, 'uploads'), exist_ok=True)
+os.makedirs(os.path.join(settings.MEDIA_ROOT, 'thumbnails'), exist_ok=True)
+
 
 def _session_dir(upload_id: str) -> str:
     return os.path.join(CHUNK_UPLOAD_DIR, upload_id)
