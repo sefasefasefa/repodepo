@@ -44,7 +44,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && python manage.py migrate --run-syncdb && python manage.py runserver 0.0.0.0:8000"
+args = "cd backend && python manage.py migrate --run-syncdb && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"
 waitForPort = 8000
 
 [[ports]]
@@ -54,7 +54,3 @@ externalPort = 80
 [[ports]]
 localPort = 8000
 externalPort = 8000
-
-[[ports]]
-localPort = 22983
-externalPort = 3001
