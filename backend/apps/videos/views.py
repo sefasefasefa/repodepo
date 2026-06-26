@@ -239,8 +239,8 @@ def create_video(request):
         watermark_enabled=data.get('watermarkEnabled', data.get('watermark_enabled', False)),
     )
     from django.db.models import F
-    user.video_count = F('video_count') + 1
-    user.save(update_fields=['video_count'])
+    from django.contrib.auth import get_user_model as _get_user_model
+    _get_user_model().objects.filter(id=user.id).update(video_count=F('video_count') + 1)
 
     # Optional cross-posting
     try:
