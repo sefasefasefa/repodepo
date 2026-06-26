@@ -53,6 +53,7 @@ import CrosspostJobs from "@/pages/crosspost-jobs";
 import NotFound from "@/pages/not-found";
 import { usePageTracking } from "@/hooks/use-page-tracking";
 import { ThemeProvider } from "@/lib/use-theme";
+import { gated } from "@/components/layout/feature-gate";
 import { ThemePicker } from "@/components/theme-picker";
 
 const queryClient = new QueryClient();
@@ -62,40 +63,40 @@ function RouterInner() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/videos" component={Videos} />
-      <Route path="/shorts" component={Shorts} />
-      <Route path="/search" component={Search} />
-      <Route path="/categories" component={Categories} />
-      <Route path="/categories/:id" component={CategoryDetail} />
-      <Route path="/creators" component={Creators} />
-      <Route path="/creators/:id" component={CreatorProfile} />
-      <Route path="/videos/:id" component={VideoWatch} />
+      <Route path="/videos" component={gated("videos", Videos)} />
+      <Route path="/shorts" component={gated("shorts", Shorts)} />
+      <Route path="/search" component={gated("search", Search)} />
+      <Route path="/categories" component={gated("categories", Categories)} />
+      <Route path="/categories/:id" component={gated("categories", CategoryDetail)} />
+      <Route path="/creators" component={gated("creators", Creators)} />
+      <Route path="/creators/:id" component={gated("creators", CreatorProfile)} />
+      <Route path="/videos/:id" component={gated("videos", VideoWatch)} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/profile" component={Profile} />
-      <Route path="/notifications" component={Notifications} />
-      <Route path="/playlists" component={Playlists} />
-      <Route path="/playlists/:id" component={PlaylistDetail} />
-      <Route path="/history" component={History} />
-      <Route path="/bookmarks" component={Bookmarks} />
-      <Route path="/subscriptions" component={Subscriptions} />
-      <Route path="/pricing" component={Pricing} />
-      <Route path="/payment" component={Payment} />
-      <Route path="/creator/dashboard" component={CreatorDashboard} />
+      <Route path="/notifications" component={gated("notifications", Notifications)} />
+      <Route path="/playlists" component={gated("playlists", Playlists)} />
+      <Route path="/playlists/:id" component={gated("playlists", PlaylistDetail)} />
+      <Route path="/history" component={gated("history", History)} />
+      <Route path="/bookmarks" component={gated("bookmarks", Bookmarks)} />
+      <Route path="/subscriptions" component={gated("subscriptions", Subscriptions)} />
+      <Route path="/pricing" component={gated("pricing", Pricing)} />
+      <Route path="/payment" component={gated("payment", Payment)} />
+      <Route path="/creator/dashboard" component={gated("creator_dashboard", CreatorDashboard)} />
       <Route path="/admin" component={Admin} />
       <Route path="/developer" component={DeveloperPage} />
-      <Route path="/upload" component={Upload} />
-      <Route path="/stories" component={Stories} />
+      <Route path="/upload" component={gated("upload", Upload)} />
+      <Route path="/stories" component={gated("stories", Stories)} />
       <Route path="/my-requests" component={MyRequests} />
-      <Route path="/affiliate" component={AffiliatePage} />
-      <Route path="/messages" component={MessagesPage} />
-      <Route path="/messages/:convId" component={MessagesPage} />
-      <Route path="/live" component={LiveStreamsPage} />
-      <Route path="/live/:id" component={LiveWatchPage} />
+      <Route path="/affiliate" component={gated("affiliate", AffiliatePage)} />
+      <Route path="/messages" component={gated("dm_messages", MessagesPage)} />
+      <Route path="/messages/:convId" component={gated("dm_messages", MessagesPage)} />
+      <Route path="/live" component={gated("live_streams", LiveStreamsPage)} />
+      <Route path="/live/:id" component={gated("live_streams", LiveWatchPage)} />
       <Route path="/page/:slug" component={CustomPageView} />
-      <Route path="/downloads" component={DownloadsPage} />
-      <Route path="/match" component={MatchRoomsPage} />
-      <Route path="/leaderboard" component={LeaderboardPage} />
+      <Route path="/downloads" component={gated("downloads", DownloadsPage)} />
+      <Route path="/match" component={gated("match", MatchRoomsPage)} />
+      <Route path="/leaderboard" component={gated("leaderboard", LeaderboardPage)} />
       <Route path="/become-creator" component={BecomeCreator} />
       <Route path="/crosspost-jobs" component={CrosspostJobs} />
       <Route component={NotFound} />

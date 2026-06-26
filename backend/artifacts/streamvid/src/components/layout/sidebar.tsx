@@ -10,33 +10,44 @@ import {
   History, Bookmark, Bell, PlusCircle, LayoutDashboard,
   ShieldAlert, LogIn, BarChart3, Smartphone, TrendingUp,
   Heart, UserCheck, Tv, ShoppingBag, BookOpen, Settings2, Radio, Download,
-  Trophy, MessageSquare, Crown, Share2,
+  Trophy, MessageSquare, Crown, Share2, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useListCategories } from "@workspace/api-client-react";
 import { Switch } from "@/components/ui/switch";
 import { useCrosspostBadge } from "@/hooks/use-crosspost-badge";
+import { useFeatureState } from "@/lib/feature-flags";
+import { toast } from "sonner";
 
 function Row({
   icon: Icon, label, href, onClick, active, flag, badge,
-  expandable, expanded, onToggle, sub = false,
+  expandable, expanded, onToggle, sub = false, featureKey,
 }: {
   icon?: React.ComponentType<{ className?: string }>;
   label: string; href?: string; onClick?: () => void;
   active?: boolean; flag?: string; badge?: number; expandable?: boolean;
-  expanded?: boolean; onToggle?: () => void; sub?: boolean;
+  expanded?: boolean; onToggle?: () => void; sub?: boolean; featureKey?: string;
 }) {
+  const ffState = featureKey ? useFeatureState(featureKey) : "enabled";
+  if (ffState === "disabled") return null;
+  const isMaint = ffState === "maintenance";
+
+  const handleClick = isMaint
+    ? (e: React.MouseEvent) => { e.preventDefault(); toast("Bu bölüm şu anda bakımda 🔧"); }
+    : onToggle;
+
   const inner = (
     <div className={cn(
       "flex items-center gap-3.5 px-4 py-3 text-[15px] cursor-pointer transition-colors border-b border-[#2c2c2c] select-none",
       sub ? "pl-9 text-[14px]" : "",
-      active ? "bg-[#303030] text-white font-medium" : "text-[#d0d0d0] hover:bg-[#252525] hover:text-white",
+      isMaint ? "opacity-50" : active ? "bg-[#303030] text-white font-medium" : "text-[#d0d0d0] hover:bg-[#252525] hover:text-white",
       expandable && "pr-4"
-    )} onClick={onToggle}>
+    )} onClick={handleClick}>
       {Icon && <Icon className={cn("shrink-0", sub ? "h-4 w-4 text-[#666]" : "h-[18px] w-[18px] text-[#bbb]")} />}
       <span className="flex-1 leading-tight">{label}</span>
-      {badge != null && badge > 0 && (
+      {isMaint && <Wrench className="h-3.5 w-3.5 text-yellow-500/60 shrink-0" />}
+      {!isMaint && badge != null && badge > 0 && (
         <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center leading-none shrink-0 animate-pulse">
           {badge > 99 ? "99+" : badge}
         </span>
@@ -47,6 +58,7 @@ function Row({
         : <ChevronDown className="h-4 w-4 text-[#888] shrink-0" />)}
     </div>
   );
+  if (isMaint) return inner;
   if (href && !onToggle) return <Link href={href} onClick={onClick}>{inner}</Link>;
   return inner;
 }
@@ -78,6 +90,25 @@ export function Sidebar() {
   const { config } = useSiteConfig();
   const { settings: siteSettings } = usePublicSiteSettings();
   const siteName = siteSettings.siteName || "Prnhbbbb";
+
+  const ffVideos = useFeatureState("videos");
+  const ffShorts = useFeatureState("shorts");
+  const ffCreators = useFeatureState("creators");
+  const ffCategories = useFeatureState("categories");
+  const ffPlaylists = useFeatureState("playlists");
+  const ffStories = useFeatureState("stories");
+  const ffLive = useFeatureState("live_streams");
+  const ffLeaderboard = useFeatureState("leaderboard");
+  const ffMatch = useFeatureState("match");
+  const ffHistory = useFeatureState("history");
+  const ffBookmarks = useFeatureState("bookmarks");
+  const ffNotifications = useFeatureState("notifications");
+  const ffDownloads = useFeatureState("downloads");
+  const ffUpload = useFeatureState("upload");
+  const ffCreatorDash = useFeatureState("creator_dashboard");
+  const ffDm = useFeatureState("dm_messages");
+  const ffSearch = useFeatureState("search");
+
   const [modelsExpanded, setModelsExpanded] = useState(false);
   const [topCatsExpanded, setTopCatsExpanded] = useState(false);
   const [communityExpanded, setCommunityExpanded] = useState(false);
@@ -170,54 +201,50 @@ export function Sidebar() {
         <div className="flex-1 overflow-y-auto overscroll-contain">
 
           {nav("videos").enabled && (
-            <Row icon={PlayCircle} label={nav("videos").label} href="/videos?sort=trending" onClick={onClose} active={location === "/videos"} />
+            <Row icon={PlayCircle} label={nav("videos").label} href="/videos?sort=trending" onClick={onClose} active={location === "/videos"} featureKey="videos" />
           )}
           {nav("shorts").enabled && (
-            <Row icon={FastForward} label={nav("shorts").label} href="/shorts" onClick={onClose} active={location === "/shorts"} />
+            <Row icon={FastForward} label={nav("shorts").label} href="/shorts" onClick={onClose} active={location === "/shorts"} featureKey="shorts" />
           )}
           {nav("recommended").enabled && (
-            <Row icon={ThumbsUp} label={nav("recommended").label} href="/videos?sort=most_liked" onClick={onClose} />
+            <Row icon={ThumbsUp} label={nav("recommended").label} href="/videos?sort=most_liked" onClick={onClose} featureKey="videos" />
           )}
           {nav("trending").enabled && (
-            <Row icon={Flame} label={nav("trending").label} href="/videos?sort=trending" onClick={onClose} flag="🇹🇷" />
+            <Row icon={Flame} label={nav("trending").label} href="/videos?sort=trending" onClick={onClose} flag="🇹🇷" featureKey="videos" />
           )}
 
           {nav("models").enabled && (
-            <>
-              <Row icon={Star} label={nav("models").label} expandable expanded={modelsExpanded} onToggle={() => setModelsExpanded(p => !p)} />
-              {modelsExpanded && (
-                <div className="bg-[#161616]">
-                  {modelTypes.map(m => (
-                    <Row key={m.label} icon={PlayCircle} label={m.label} href={m.href} onClick={onClose} sub active={location === m.href} />
-                  ))}
-                </div>
-              )}
-            </>
+            <Row icon={Star} label={nav("models").label} expandable expanded={modelsExpanded} onToggle={() => setModelsExpanded(p => !p)} featureKey="creators" />
+          )}
+          {nav("models").enabled && modelsExpanded && ffCreators !== "disabled" && (
+            <div className="bg-[#161616]">
+              {modelTypes.map(m => (
+                <Row key={m.label} icon={PlayCircle} label={m.label} href={m.href} onClick={onClose} sub active={location === m.href} featureKey="creators" />
+              ))}
+            </div>
           )}
 
           {nav("channels").enabled && (
-            <Row icon={Tv} label={nav("channels").label} href="/creators" onClick={onClose} />
+            <Row icon={Tv} label={nav("channels").label} href="/creators" onClick={onClose} featureKey="creators" />
           )}
 
           {nav("top-cats").enabled && (
-            <>
-              <Row icon={TrendingUp} label={nav("top-cats").label} expandable expanded={topCatsExpanded} onToggle={() => setTopCatsExpanded(p => !p)} />
-              {topCatsExpanded && (
-                <div className="bg-[#161616]">
-                  {topCategories.map(cat => (
-                    <Row key={cat} icon={PlayCircle} label={cat} href={`/search?q=${encodeURIComponent(cat)}`} onClick={onClose} sub />
-                  ))}
-                  <Link href="/categories" onClick={onClose}>
-                    <div className="flex items-center justify-center py-3 border-b border-[#2c2c2c]">
-                      <ChevronDown className="h-5 w-5 text-[#888]" />
-                    </div>
-                  </Link>
+            <Row icon={TrendingUp} label={nav("top-cats").label} expandable expanded={topCatsExpanded} onToggle={() => setTopCatsExpanded(p => !p)} featureKey="categories" />
+          )}
+          {nav("top-cats").enabled && topCatsExpanded && ffCategories !== "disabled" && (
+            <div className="bg-[#161616]">
+              {topCategories.map(cat => (
+                <Row key={cat} icon={PlayCircle} label={cat} href={`/search?q=${encodeURIComponent(cat)}`} onClick={onClose} sub featureKey="categories" />
+              ))}
+              <Link href="/categories" onClick={onClose}>
+                <div className="flex items-center justify-center py-3 border-b border-[#2c2c2c]">
+                  <ChevronDown className="h-5 w-5 text-[#888]" />
                 </div>
-              )}
-            </>
+              </Link>
+            </div>
           )}
 
-          {nav("all-categories").enabled && (
+          {nav("all-categories").enabled && ffCategories !== "disabled" && (
             <Link href="/categories" onClick={onClose}>
               <div className="mx-4 my-3 py-2.5 bg-[#2a2a2a] hover:bg-[#333] transition-colors rounded text-center text-sm text-[#ccc] font-medium border border-[#383838] cursor-pointer">
                 {nav("all-categories").label}
@@ -226,16 +253,16 @@ export function Sidebar() {
           )}
 
           {nav("playlists").enabled && (
-            <Row icon={ListVideo} label={nav("playlists").label} href="/playlists" onClick={onClose} active={location === "/playlists"} />
+            <Row icon={ListVideo} label={nav("playlists").label} href="/playlists" onClick={onClose} active={location === "/playlists"} featureKey="playlists" />
           )}
           {nav("stories").enabled && (
-            <Row icon={Image} label={nav("stories").label} href="/stories" onClick={onClose} active={location === "/stories"} />
+            <Row icon={Image} label={nav("stories").label} href="/stories" onClick={onClose} active={location === "/stories"} featureKey="stories" />
           )}
-          <Row icon={Radio} label="Canlı Yayınlar" href="/live" onClick={onClose} active={location === "/live"} flag="🔴" />
-          <Row icon={Trophy} label="Sadakat Sıralaması" href="/leaderboard" onClick={onClose} active={location === "/leaderboard"} />
-          <Row icon={MessageSquare} label="Rastgele Eşleşme" href="/match" onClick={onClose} active={location === "/match"} />
+          <Row icon={Radio} label="Canlı Yayınlar" href="/live" onClick={onClose} active={location === "/live"} flag="🔴" featureKey="live_streams" />
+          <Row icon={Trophy} label="Sadakat Sıralaması" href="/leaderboard" onClick={onClose} active={location === "/leaderboard"} featureKey="leaderboard" />
+          <Row icon={MessageSquare} label="Rastgele Eşleşme" href="/match" onClick={onClose} active={location === "/match"} featureKey="match" />
           {nav("photos").enabled && (
-            <Row icon={Image} label={nav("photos").label} href="/videos" onClick={onClose} />
+            <Row icon={Image} label={nav("photos").label} href="/videos" onClick={onClose} featureKey="videos" />
           )}
 
           {nav("community").enabled && (
@@ -249,10 +276,11 @@ export function Sidebar() {
           {user && sec("section-account").enabled && (
             <>
               <SectionDivider label={sec("section-account").label} />
-              {nav("history").enabled && <Row icon={History} label={nav("history").label} href="/history" onClick={onClose} active={location === "/history"} />}
-              {nav("bookmarks").enabled && <Row icon={Bookmark} label={nav("bookmarks").label} href="/bookmarks" onClick={onClose} active={location === "/bookmarks"} />}
-              {nav("notifications").enabled && <Row icon={Bell} label={nav("notifications").label} href="/notifications" onClick={onClose} active={location === "/notifications"} />}
-              <Row icon={Download} label="İndirilenler" href="/downloads" onClick={onClose} active={location === "/downloads"} />
+              {nav("history").enabled && <Row icon={History} label={nav("history").label} href="/history" onClick={onClose} active={location === "/history"} featureKey="history" />}
+              {nav("bookmarks").enabled && <Row icon={Bookmark} label={nav("bookmarks").label} href="/bookmarks" onClick={onClose} active={location === "/bookmarks"} featureKey="bookmarks" />}
+              {nav("notifications").enabled && <Row icon={Bell} label={nav("notifications").label} href="/notifications" onClick={onClose} active={location === "/notifications"} featureKey="notifications" />}
+              <Row icon={Download} label="İndirilenler" href="/downloads" onClick={onClose} active={location === "/downloads"} featureKey="downloads" />
+              {ffDm !== "disabled" && <Row icon={MessageSquare} label="Mesajlar" href="/messages" onClick={onClose} active={location.startsWith("/messages")} featureKey="dm_messages" />}
             </>
           )}
 
@@ -276,8 +304,8 @@ export function Sidebar() {
           {isCreator && sec("section-creator").enabled && (
             <>
               <SectionDivider label={sec("section-creator").label} />
-              {nav("upload").enabled && <Row icon={PlusCircle} label={nav("upload").label} href="/upload" onClick={onClose} />}
-              {nav("creator-dash").enabled && <Row icon={LayoutDashboard} label={nav("creator-dash").label} href="/creator/dashboard" onClick={onClose} />}
+              {nav("upload").enabled && <Row icon={PlusCircle} label={nav("upload").label} href="/upload" onClick={onClose} featureKey="upload" />}
+              {nav("creator-dash").enabled && <Row icon={LayoutDashboard} label={nav("creator-dash").label} href="/creator/dashboard" onClick={onClose} featureKey="creator_dashboard" />}
               <Row icon={Share2} label="Crosspost Görevleri" href="/crosspost-jobs" onClick={onClose} badge={crosspostBadge} />
             </>
           )}
