@@ -5,11 +5,11 @@ import { useNotifications } from "@/lib/use-notifications";
 import { useSiteConfig } from "@/lib/use-site-config";
 import {
   X, PlayCircle, FastForward, ThumbsUp, Flame, Star,
-  ChevronDown, ChevronUp, ListVideo, Image, Users, Shield,
+  ChevronDown, ChevronUp, ChevronRight, ListVideo, Image, Users, Shield,
   History, Bookmark, Bell, PlusCircle, LayoutDashboard,
   ShieldAlert, LogIn, BarChart3, Smartphone, TrendingUp,
   Heart, UserCheck, Tv, ShoppingBag, BookOpen, Settings2, Radio, Download,
-  Trophy, MessageSquare,
+  Trophy, MessageSquare, Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -238,6 +238,22 @@ export function Sidebar() {
               {nav("notifications").enabled && <Row icon={Bell} label={nav("notifications").label} href="/notifications" onClick={onClose} active={location === "/notifications"} />}
               <Row icon={Download} label="İndirilenler" href="/downloads" onClick={onClose} active={location === "/downloads"} />
             </>
+          )}
+
+          {/* Creator Ol CTA — sadece normal kullanıcılara */}
+          {user && !isCreator && (
+            <div className="px-3 pt-1 pb-2">
+              <Link href="/become-creator" onClick={onClose}>
+                <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/15 transition-colors cursor-pointer group">
+                  <Crown className="h-4 w-4 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-primary leading-tight">Creator Ol</p>
+                    <p className="text-[10px] text-primary/60 mt-0.5">İçerik üret, gelir kazan</p>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 text-primary/50 group-hover:text-primary transition-colors" />
+                </div>
+              </Link>
+            </div>
           )}
 
           {/* Creator */}

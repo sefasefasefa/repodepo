@@ -47,6 +47,7 @@ import CustomPageView from "@/pages/custom-page";
 import DownloadsPage from "@/pages/downloads";
 import MatchRoomsPage from "@/pages/match-rooms";
 import LeaderboardPage from "@/pages/leaderboard";
+import BecomeCreator from "@/pages/become-creator";
 import NotFound from "@/pages/not-found";
 import { usePageTracking } from "@/hooks/use-page-tracking";
 import { ThemeProvider } from "@/lib/use-theme";
@@ -93,6 +94,7 @@ function RouterInner() {
       <Route path="/downloads" component={DownloadsPage} />
       <Route path="/match" component={MatchRoomsPage} />
       <Route path="/leaderboard" component={LeaderboardPage} />
+      <Route path="/become-creator" component={BecomeCreator} />
       <Route component={NotFound} />
     </Switch>
   );

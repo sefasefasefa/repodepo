@@ -14,6 +14,7 @@ import { AdminSecurity } from "@/components/admin/admin-security";
 import AdminMining from "@/components/admin/admin-mining";
 import AdminSiteSettings from "@/components/admin/admin-site-settings";
 import { AdminCreators } from "@/components/admin/admin-creators";
+import { AdminCreatorApplications } from "@/components/admin/admin-creator-applications";
 import { AdminApiEndpoints } from "@/components/admin/admin-api-endpoints";
 import { AdminAffiliate } from "@/components/admin/admin-affiliate";
 import { AdminBadges } from "@/components/admin/admin-badges";
@@ -34,6 +35,7 @@ const TABS = [
   { id: "videos",       label: "Videolar",        icon: Video },
   { id: "users",        label: "Kullanıcılar",    icon: Users },
   { id: "creators",     label: "Yükleyiciler",    icon: Crown },
+  { id: "applications", label: "Creator Başvuruları", icon: Crown },
   { id: "ads",          label: "Reklamlar",       icon: Megaphone },
   { id: "reports",      label: "Raporlar",        icon: AlertTriangle },
   { id: "subscriptions",label: "Üyelikler",       icon: CreditCard },
@@ -163,6 +165,7 @@ export default function Admin() {
             {tab === "videos" && <AdminVideos />}
             {tab === "users" && <AdminUsers />}
             {tab === "creators" && <AdminCreators />}
+            {tab === "applications" && <AdminCreatorApplications />}
             {tab === "ads" && <AdminAds />}
             {tab === "reports" && <AdminReports />}
             {tab === "subscriptions" && <AdminSubscriptions />}
