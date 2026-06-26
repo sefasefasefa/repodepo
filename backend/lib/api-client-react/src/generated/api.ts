@@ -1907,7 +1907,7 @@ export const useUpdateVideo = <
  * @summary Delete video
  */
 export const getDeleteVideoUrl = (id: number) => {
-  return `/api/videos/${id}`;
+  return `/api/videos/${id}/delete`;
 };
 
 export const deleteVideo = async (

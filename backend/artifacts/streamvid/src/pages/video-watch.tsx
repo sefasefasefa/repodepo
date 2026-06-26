@@ -161,47 +161,60 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
             <video ref={videoRef} key={activeSource.directUrl} src={activeSource.directUrl} className="w-full h-full object-contain" controls autoPlay={false} poster={video.thumbnailUrl || undefined} {...videoProps} />
           ) : null}
           {isDirectVideo && (
-            <div ref={overlayControlsRef} className="absolute top-3 right-3 z-20 flex items-start gap-2">
+            <div ref={overlayControlsRef} className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-start gap-1 sm:gap-2">
+              {/* CC */}
               <div className="relative">
-                <button type="button" onClick={() => { setSubtitleOpen(v => !v); setQualityOpen(false); setSpeedOpen(false); }} className={cn("flex items-center gap-1.5 rounded-full backdrop-blur px-3 py-1.5 text-xs font-semibold border", subtitleOpen ? "bg-primary/20 text-primary border-primary/30" : "bg-black/70 text-white border-white/10 hover:bg-black/80")}>
-                  <Languages className="h-3.5 w-3.5" />
-                  CC
+                <button
+                  type="button"
+                  onClick={() => { setSubtitleOpen(v => !v); setQualityOpen(false); setSpeedOpen(false); }}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold border touch-manipulation",
+                    subtitleOpen ? "bg-primary/20 text-primary border-primary/30" : "bg-black/70 text-white border-white/10 hover:bg-black/80"
+                  )}
+                >
+                  <Languages className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="hidden sm:inline">CC</span>
                 </button>
                 {subtitleOpen && hasSubtitles && (
-                  <div className="absolute right-0 mt-2 w-44 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
-                    <button type="button" onClick={() => { setSubtitleOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5", "text-white")}>Kapalı</button>
-                    <button type="button" onClick={() => { setSubtitleOpen(false); }} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-primary">Türkçe</button>
-                    <button type="button" onClick={() => { setSubtitleOpen(false); }} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-white">English</button>
+                  <div className="absolute right-0 mt-1.5 w-36 sm:w-44 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
+                    <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-white touch-manipulation">Kapalı</button>
+                    <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-primary touch-manipulation">Türkçe</button>
+                    <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-white touch-manipulation">English</button>
                   </div>
                 )}
               </div>
+              {/* Quality */}
               <div className="relative">
-                <button type="button" onClick={() => { setQualityOpen(v => !v); setSubtitleOpen(false); setSpeedOpen(false); }} className="flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur px-3 py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80">
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {activeQuality === "auto" ? "Otomatik" : activeQuality}
+                <button
+                  type="button"
+                  onClick={() => { setQualityOpen(v => !v); setSubtitleOpen(false); setSpeedOpen(false); }}
+                  className="flex items-center gap-1 rounded-full bg-black/70 backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80 touch-manipulation"
+                >
+                  <SlidersHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="hidden sm:inline">{activeQuality === "auto" ? "Otomatik" : activeQuality}</span>
                 </button>
                 {qualityOpen && (
-                  <div className="absolute right-0 mt-2 w-40 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
-                    <button type="button" onClick={() => { setActiveQuality("auto"); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5", activeQuality === "auto" ? "text-primary" : "text-white")}>Otomatik</button>
+                  <div className="absolute right-0 mt-1.5 w-36 sm:w-40 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
+                    <button type="button" onClick={() => { setActiveQuality("auto"); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", activeQuality === "auto" ? "text-primary" : "text-white")}>Otomatik</button>
                     {qualities.map(q => (
-                      <button key={q} type="button" onClick={() => { setActiveQuality(q); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5", activeQuality === q ? "text-primary" : "text-white")}>{q}</button>
+                      <button key={q} type="button" onClick={() => { setActiveQuality(q); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", activeQuality === q ? "text-primary" : "text-white")}>{q}</button>
                     ))}
                   </div>
                 )}
               </div>
+              {/* Speed */}
               <div className="relative">
-                <button type="button" onClick={() => { setSpeedOpen(v => !v); setSubtitleOpen(false); setQualityOpen(false); }} className="flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur px-3 py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80">
-                  <span>{playbackSpeed}x</span>
+                <button
+                  type="button"
+                  onClick={() => { setSpeedOpen(v => !v); setSubtitleOpen(false); setQualityOpen(false); }}
+                  className="flex items-center rounded-full bg-black/70 backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80 touch-manipulation min-w-[28px] justify-center"
+                >
+                  {playbackSpeed}x
                 </button>
                 {speedOpen && (
-                  <div className="absolute right-0 mt-2 w-32 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
+                  <div className="absolute right-0 mt-1.5 w-28 sm:w-32 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
                     {speeds.map(speed => (
-                      <button
-                        key={speed}
-                        type="button"
-                        onClick={() => { setPlaybackSpeed(speed); setSpeedOpen(false); }}
-                        className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5", playbackSpeed === speed ? "text-primary" : "text-white")}
-                      >
+                      <button key={speed} type="button" onClick={() => { setPlaybackSpeed(speed); setSpeedOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", playbackSpeed === speed ? "text-primary" : "text-white")}>
                         {speed}x
                       </button>
                     ))}
@@ -554,7 +567,80 @@ export default function VideoWatch() {
           </div>
           {showTranscript && user && <SubtitleManager videoId={videoId} token={token} />}
           {isCreatorOrAdmin && showSubManager && <SubtitleManager videoId={videoId} token={token} />}
-          <div className="pt-2"><h3 className="text-base font-bold mb-4">{video.commentCount ?? 0} Yorum</h3>{user ? (<form onSubmit={handleComment} className="flex gap-3 mb-6"><Avatar className="h-8 w-8 shrink-0"><AvatarFallback>{(user as any).username?.substring(0,2).toUpperCase()}</AvatarFallback></Avatar><div className="flex-1 flex gap-2"><Input value={commentText} onChange={e => setCommentText(e.target.value)} placeholder="Yorum yaz..." className="bg-[#1e1e1e] border-[#2a2a2a] rounded-lg focus-visible:ring-primary" /><Button type="submit" size="sm" disabled={!commentText.trim() || commentMutation.isPending} className="shrink-0">Gönder</Button></div></form>) : (<p className="text-sm text-[#666] mb-4">Yorum yapmak için <a href="/login" className="text-primary hover:underline">giriş yap</a></p>)}<div className="space-y-5">{comments?.comments?.map(comment => (<div key={comment.id} className="flex gap-3"><Avatar className="h-8 w-8 shrink-0"><AvatarImage src={comment.author?.avatarUrl || ""} /><AvatarFallback>{comment.author?.username?.substring(0,2).toUpperCase()}</AvatarFallback></Avatar><div className="flex-1"><p className="text-xs font-bold mb-1">@{comment.author?.username}<span className="text-muted-foreground font-normal ml-2">{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</span></p><p className="text-sm text-[#ccc]">{comment.content}</p><div className="flex items-center gap-3 mt-1.5"><button className="text-xs text-[#666] hover:text-red-400 flex items-center gap-1 transition-colors"><Heart className="h-3 w-3" />{comment.likeCount}</button><button className="text-xs text-[#666] hover:text-white transition-colors">Yanıtla</button>{user && (user as any).id !== comment.author?.id && (<button onClick={() => { setReportTarget({ type: "comment", commentId: comment.id }); setShowReport(true); }} className="text-xs text-[#444] hover:text-red-400 flex items-center gap-1 transition-colors" title="Yorumu şikayet et"><Flag className="h-2.5 w-2.5" /> Şikayet</button>)}</div></div></div>))}</div></div>
+          <div className="pt-2">
+            <h3 className="text-base font-bold mb-4">{video.commentCount ?? 0} Yorum</h3>
+
+            {user ? (
+              <form onSubmit={handleComment} className="flex gap-2 sm:gap-3 mb-6">
+                <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 mt-0.5">
+                  <AvatarFallback className="text-[10px]">
+                    {(user as any).username?.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 flex gap-2">
+                  <Input
+                    value={commentText}
+                    onChange={e => setCommentText(e.target.value)}
+                    placeholder="Yorum yaz..."
+                    className="bg-[#1e1e1e] border-[#2a2a2a] rounded-lg focus-visible:ring-primary text-sm"
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!commentText.trim() || commentMutation.isPending}
+                    className="shrink-0 touch-manipulation"
+                  >
+                    Gönder
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <p className="text-sm text-[#666] mb-4">
+                Yorum yapmak için{" "}
+                <a href="/login" className="text-primary hover:underline">giriş yap</a>
+              </p>
+            )}
+
+            <div className="space-y-4">
+              {comments?.comments?.map(comment => (
+                <div key={comment.id} className="flex gap-2 sm:gap-3">
+                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 mt-0.5">
+                    <AvatarImage src={comment.author?.avatarUrl || ""} />
+                    <AvatarFallback className="text-[10px]">
+                      {comment.author?.username?.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span>@{comment.author?.username}</span>
+                      <span className="text-muted-foreground font-normal text-[10px]">
+                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                      </span>
+                    </p>
+                    <p className="text-sm text-[#ccc] break-words">{comment.content}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <button className="text-xs text-[#666] hover:text-red-400 flex items-center gap-1 transition-colors touch-manipulation">
+                        <Heart className="h-3 w-3" />
+                        {comment.likeCount}
+                      </button>
+                      <button className="text-xs text-[#666] hover:text-white transition-colors touch-manipulation">
+                        Yanıtla
+                      </button>
+                      {user && (user as any).id !== comment.author?.id && (
+                        <button
+                          onClick={() => { setReportTarget({ type: "comment", commentId: comment.id }); setShowReport(true); }}
+                          className="text-xs text-[#444] hover:text-red-400 flex items-center gap-1 transition-colors touch-manipulation"
+                          title="Yorumu şikayet et"
+                        >
+                          <Flag className="h-2.5 w-2.5" /> Şikayet
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="lg:w-[360px] shrink-0">
           <h3 className="font-bold text-base mb-3">İlgili Videolar</h3>
