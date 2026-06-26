@@ -43,8 +43,10 @@ urlpatterns = [
     path('admin/badges/award/<int:user_id>', views.award_badge),
     # SEO / Webhook / Watermark admin settings (FE-expected paths)
     path('seo/admin/settings', sw.seo_settings),
+    path('seo/public/settings', sw.public_seo_settings),
     path('webhooks/admin/settings', sw.webhook_settings),
     path('watermark/admin/settings', sw.watermark_admin_settings),
+    path('watermark/admin/upload', sw.watermark_upload),
     path('admin/pages', views.list_custom_pages),
     path('admin/pages/create', views.create_custom_page),
     # Public pages + admin CRUD (Express /api/pages parity)

@@ -6,10 +6,14 @@ import { useAuth } from "@/lib/auth";
 import {
   Settings2, Eye, EyeOff, Edit2, Check, X, RotateCcw,
   AlertTriangle, Wrench, ChevronRight, Tag, LayoutList, Stamp, Sparkles, Plus, Trash2, Search,
-  Globe, Link2, ShieldAlert, Webhook, Palette,
+  Globe, Link2, ShieldAlert, Webhook, Palette, Upload, ExternalLink, BarChart2,
+  Twitter, Code2, Map, Zap, RefreshCw, Copy, CheckCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const API_BASE = "/api";
+
+// ── GeneralTab ──────────────────────────────────────────────────────────────
 function GeneralTab() {
   const { reload } = usePublicSiteSettings();
   const { token } = useAuth() as any;
@@ -62,141 +66,79 @@ function GeneralTab() {
 
   return (
     <div className="space-y-4">
-      {/* Site adı & açıklama */}
       <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
         <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Site Kimliği</p>
         <div>
           <label className="text-xs text-[#666] block mb-1.5">Site Adı</label>
-          <input
-            value={form.siteName}
-            onChange={e => setForm((f: any) => ({ ...f, siteName: e.target.value }))}
-            placeholder="Prnhbbbb"
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
-          />
-          <p className="text-[10px] text-[#444] mt-1">Yaş doğrulama ekranı, tarayıcı sekmesi ve sidebar'da görünür</p>
+          <input value={form.siteName} onChange={e => setForm((f: any) => ({ ...f, siteName: e.target.value }))}
+            placeholder="Prnhbbbb" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
         </div>
         <div>
           <label className="text-xs text-[#666] block mb-1.5">Site Açıklaması</label>
-          <input
-            value={form.siteDescription}
-            onChange={e => setForm((f: any) => ({ ...f, siteDescription: e.target.value }))}
-            placeholder="Video streaming ve sosyal platform"
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
-          />
+          <input value={form.siteDescription} onChange={e => setForm((f: any) => ({ ...f, siteDescription: e.target.value }))}
+            placeholder="Video streaming ve sosyal platform" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
         </div>
       </div>
-
-      {/* Logo & Favicon */}
       <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
         <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Logo & Favicon</p>
         <div>
           <label className="text-xs text-[#666] block mb-1.5">Logo URL</label>
-          <input
-            value={form.logoUrl}
-            onChange={e => setForm((f: any) => ({ ...f, logoUrl: e.target.value }))}
-            placeholder="https://example.com/logo.png"
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
-          />
-          {form.logoUrl && (
-            <div className="mt-2 flex items-center gap-2">
-              <img src={form.logoUrl} alt="logo" className="h-8 object-contain bg-[#1a1a1a] rounded p-1 border border-[#2a2a2a]" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              <span className="text-xs text-[#555]">Önizleme</span>
-            </div>
-          )}
-          <p className="text-[10px] text-[#444] mt-1">Boş bırakılırsa site adının ilk harfi kullanılır</p>
+          <input value={form.logoUrl} onChange={e => setForm((f: any) => ({ ...f, logoUrl: e.target.value }))}
+            placeholder="https://example.com/logo.png" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
+          {form.logoUrl && <img src={form.logoUrl} alt="logo" className="h-8 mt-2 object-contain bg-[#1a1a1a] rounded p-1 border border-[#2a2a2a]" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />}
         </div>
         <div>
           <label className="text-xs text-[#666] block mb-1.5">Favicon URL</label>
-          <input
-            value={form.faviconUrl}
-            onChange={e => setForm((f: any) => ({ ...f, faviconUrl: e.target.value }))}
-            placeholder="https://example.com/favicon.ico"
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
-          />
+          <input value={form.faviconUrl} onChange={e => setForm((f: any) => ({ ...f, faviconUrl: e.target.value }))}
+            placeholder="https://example.com/favicon.ico" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
         </div>
       </div>
-
-      {/* Renk teması */}
       <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
-        <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2">
-          <Palette className="h-3.5 w-3.5" /> Ana Renk (Primary Color)
-        </p>
+        <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Palette className="h-3.5 w-3.5" /> Ana Renk</p>
         <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={form.primaryColor}
-            onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
-            className="w-12 h-10 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] cursor-pointer p-1"
-          />
-          <input
-            value={form.primaryColor}
-            onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
-            placeholder="#7c3aed"
-            className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40 font-mono"
-          />
+          <input type="color" value={form.primaryColor} onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
+            className="w-12 h-10 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] cursor-pointer p-1" />
+          <input value={form.primaryColor} onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
+            placeholder="#7c3aed" className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40 font-mono" />
           <div className="w-10 h-10 rounded-xl border border-[#2a2a2a] shrink-0" style={{ backgroundColor: form.primaryColor }} />
         </div>
         <div className="flex flex-wrap gap-2">
           {["#7c3aed","#e11d48","#2563eb","#059669","#d97706","#db2777","#0891b2","#dc2626"].map(c => (
             <button key={c} onClick={() => setForm((f: any) => ({ ...f, primaryColor: c }))}
               className={cn("w-7 h-7 rounded-lg border-2 transition-all", form.primaryColor === c ? "border-white scale-110" : "border-transparent")}
-              style={{ backgroundColor: c }} title={c} />
+              style={{ backgroundColor: c }} />
           ))}
         </div>
-        <p className="text-[10px] text-[#444]">Butonlar, rozetler ve vurgular bu rengi kullanır. Kaydetmeden önce canlı önizleme için renk seçicisini kullanın.</p>
       </div>
-
-      {/* Genel ayarlar */}
       <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
         <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Platform Ayarları</p>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-white">Kullanıcı Kaydı</p>
-            <p className="text-xs text-[#555]">Yeni kayıtlara izin ver</p>
+        {[
+          { key: "registrationEnabled", label: "Kullanıcı Kaydı", desc: "Yeni kayıtlara izin ver", color: "bg-primary" },
+          { key: "maintenanceMode", label: "Bakım Modu", desc: "Siteyi ziyaretçilere kapat", color: "bg-red-500" },
+        ].map(({ key, label, desc, color }) => (
+          <div key={key} className="flex items-center justify-between">
+            <div><p className="text-sm text-white">{label}</p><p className="text-xs text-[#555]">{desc}</p></div>
+            <button onClick={() => setForm((f: any) => ({ ...f, [key]: !f[key] }))}
+              className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", form[key] ? color : "bg-[#333]")}>
+              <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", form[key] ? "left-6" : "left-1")} />
+            </button>
           </div>
-          <button
-            onClick={() => setForm((f: any) => ({ ...f, registrationEnabled: !f.registrationEnabled }))}
-            className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", form.registrationEnabled ? "bg-primary" : "bg-[#333]")}
-          >
-            <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", form.registrationEnabled ? "left-6" : "left-1")} />
-          </button>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-white">Bakım Modu</p>
-            <p className="text-xs text-[#555]">Siteyi ziyaretçilere kapat</p>
-          </div>
-          <button
-            onClick={() => setForm((f: any) => ({ ...f, maintenanceMode: !f.maintenanceMode }))}
-            className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", form.maintenanceMode ? "bg-red-500" : "bg-[#333]")}
-          >
-            <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", form.maintenanceMode ? "left-6" : "left-1")} />
-          </button>
-        </div>
+        ))}
       </div>
-
-      <button
-        onClick={save}
-        disabled={saving}
-        className={cn(
-          "w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all",
-          saved ? "bg-green-600 text-white" : "bg-primary hover:bg-primary/90 text-white disabled:opacity-50"
-        )}
-      >
+      <button onClick={save} disabled={saving}
+        className={cn("w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all",
+          saved ? "bg-green-600 text-white" : "bg-primary hover:bg-primary/90 text-white disabled:opacity-50")}>
         {saving ? "Kaydediliyor..." : saved ? <><Check className="h-4 w-4" /> Kaydedildi!</> : <><Check className="h-4 w-4" /> Değişiklikleri Kaydet</>}
       </button>
     </div>
   );
 }
 
-const API_BASE = "/api";
-
-// ── Otomatik Kategorileme Sekmesi ──────────────────────────────────────────
+// ── AutoCategoryTab ─────────────────────────────────────────────────────────
 function AutoCategoryTab() {
   const { data: catData } = useListCategories();
   const { token } = useAuth() as any;
   const allCategories: any[] = (catData as any)?.categories ?? [];
-
   const [rules, setRules] = useState<Record<number, { keywords: string[]; isEnabled: boolean }>>({});
   const [draft, setDraft] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
@@ -205,23 +147,16 @@ function AutoCategoryTab() {
 
   useEffect(() => {
     if (!token) return;
-    fetch(`${API_BASE}/auto-category/rules`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch(`${API_BASE}/auto-category/rules`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => {
         if (!d.rules) return;
         const map: Record<number, { keywords: string[]; isEnabled: boolean }> = {};
-        for (const r of d.rules) {
-          map[r.categoryId] = { keywords: r.keywords ?? [], isEnabled: r.isEnabled ?? true };
-        }
+        for (const r of d.rules) map[r.categoryId] = { keywords: r.keywords ?? [], isEnabled: r.isEnabled ?? true };
         setRules(map);
         setLoaded(true);
       });
   }, [token]);
-
-  const setEnabled = (catId: number, v: boolean) =>
-    setRules(p => ({ ...p, [catId]: { ...(p[catId] ?? { keywords: [] }), isEnabled: v } }));
 
   const addKeyword = (catId: number) => {
     const kw = (draft[catId] ?? "").trim().toLowerCase();
@@ -234,30 +169,18 @@ function AutoCategoryTab() {
     setDraft(p => ({ ...p, [catId]: "" }));
   };
 
-  const removeKeyword = (catId: number, kw: string) =>
-    setRules(p => {
-      const existing = p[catId] ?? { keywords: [], isEnabled: true };
-      return { ...p, [catId]: { ...existing, keywords: existing.keywords.filter(k => k !== kw) } };
-    });
-
   const save = async () => {
     setSaving(true);
     try {
       const payload = allCategories.map(cat => ({
-        categoryId: cat.id,
-        keywords: rules[cat.id]?.keywords ?? [],
-        isEnabled: rules[cat.id]?.isEnabled ?? true,
+        categoryId: cat.id, keywords: rules[cat.id]?.keywords ?? [], isEnabled: rules[cat.id]?.isEnabled ?? true,
       }));
       await fetch(`${API_BASE}/auto-category/rules`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ rules: payload }),
       });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } finally {
-      setSaving(false);
-    }
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } finally { setSaving(false); }
   };
 
   if (!loaded) return <div className="py-10 text-center text-[#555] text-sm">Yükleniyor...</div>;
@@ -265,33 +188,20 @@ function AutoCategoryTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-[#555]">
-          Her kategori için anahtar kelimeler tanımlayın. Video başlığı/açıklaması eşleşince kategori otomatik önerilir.
-        </p>
-        <button
-          onClick={save}
-          disabled={saving}
-          className={cn(
-            "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all",
-            saved ? "bg-green-900/40 text-green-400" : "bg-primary/20 hover:bg-primary/30 text-primary"
-          )}
-        >
-          {saved ? <><Check className="h-3 w-3" /> Kaydedildi</> : saving ? "Kaydediliyor..." : <><Check className="h-3 w-3" /> Kaydet</>}
+        <p className="text-xs text-[#555]">Her kategori için anahtar kelimeler tanımlayın. Video başlığı/açıklaması eşleşince kategori otomatik önerilir.</p>
+        <button onClick={save} disabled={saving}
+          className={cn("flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all",
+            saved ? "bg-green-900/40 text-green-400" : "bg-primary/20 hover:bg-primary/30 text-primary")}>
+          {saved ? <><Check className="h-3 w-3" /> Kaydedildi</> : saving ? "..." : <><Check className="h-3 w-3" /> Kaydet</>}
         </button>
       </div>
-
       {allCategories.map(cat => {
         const rule = rules[cat.id] ?? { keywords: [], isEnabled: true };
         return (
-          <div key={cat.id} className={cn(
-            "bg-[#111] border rounded-xl overflow-hidden transition-all",
-            rule.isEnabled ? "border-[#222]" : "border-[#1a1a1a] opacity-60"
-          )}>
+          <div key={cat.id} className={cn("bg-[#111] border rounded-xl overflow-hidden", rule.isEnabled ? "border-[#222]" : "border-[#1a1a1a] opacity-60")}>
             <div className="flex items-center gap-3 px-4 py-3">
-              <button
-                onClick={() => setEnabled(cat.id, !rule.isEnabled)}
-                className={cn("w-9 h-5 rounded-full relative shrink-0 transition-all", rule.isEnabled ? "bg-primary" : "bg-[#333]")}
-              >
+              <button onClick={() => setRules(p => ({ ...p, [cat.id]: { ...(p[cat.id] ?? { keywords: [] }), isEnabled: !rule.isEnabled } }))}
+                className={cn("w-9 h-5 rounded-full relative shrink-0 transition-all", rule.isEnabled ? "bg-primary" : "bg-[#333]")}>
                 <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", rule.isEnabled ? "left-4" : "left-0.5")} />
               </button>
               <span className="text-sm font-medium text-white flex-1">{cat.name}</span>
@@ -304,25 +214,17 @@ function AutoCategoryTab() {
                     {rule.keywords.map(kw => (
                       <span key={kw} className="inline-flex items-center gap-1 bg-[#1e1e1e] border border-[#2a2a2a] rounded-full px-2.5 py-0.5 text-xs text-[#ccc]">
                         {kw}
-                        <button onClick={() => removeKeyword(cat.id, kw)} className="text-[#555] hover:text-red-400 transition-colors ml-0.5">
-                          <X className="h-2.5 w-2.5" />
-                        </button>
+                        <button onClick={() => setRules(p => ({ ...p, [cat.id]: { ...rule, keywords: rule.keywords.filter(k => k !== kw) } }))} className="text-[#555] hover:text-red-400 ml-0.5"><X className="h-2.5 w-2.5" /></button>
                       </span>
                     ))}
                   </div>
                 )}
                 <div className="flex gap-2">
-                  <input
-                    value={draft[cat.id] ?? ""}
-                    onChange={e => setDraft(p => ({ ...p, [cat.id]: e.target.value }))}
+                  <input value={draft[cat.id] ?? ""} onChange={e => setDraft(p => ({ ...p, [cat.id]: e.target.value }))}
                     onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addKeyword(cat.id))}
                     placeholder="Anahtar kelime ekle (Enter)..."
-                    className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#444] placeholder:text-[#444]"
-                  />
-                  <button
-                    onClick={() => addKeyword(cat.id)}
-                    className="flex items-center gap-1 bg-[#1a1a1a] hover:bg-[#222] border border-[#2a2a2a] rounded-lg px-2.5 py-1.5 text-xs text-[#aaa] transition-colors"
-                  >
+                    className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#444] placeholder:text-[#444]" />
+                  <button onClick={() => addKeyword(cat.id)} className="flex items-center gap-1 bg-[#1a1a1a] hover:bg-[#222] border border-[#2a2a2a] rounded-lg px-2.5 py-1.5 text-xs text-[#aaa]">
                     <Plus className="h-3 w-3" /> Ekle
                   </button>
                 </div>
@@ -335,12 +237,11 @@ function AutoCategoryTab() {
   );
 }
 
+// ── Toggle & InlineEdit helpers ─────────────────────────────────────────────
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", checked ? "bg-primary" : "bg-[#333]")}
-    >
+    <button onClick={() => onChange(!checked)}
+      className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", checked ? "bg-primary" : "bg-[#333]")}>
       <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", checked ? "left-6" : "left-1")} />
     </button>
   );
@@ -350,45 +251,41 @@ function InlineEdit({ value, onChange }: { value: string; onChange: (v: string) 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
-
   const start = () => { setDraft(value); setEditing(true); setTimeout(() => inputRef.current?.select(), 30); };
   const confirm = () => { if (draft.trim()) onChange(draft.trim()); setEditing(false); };
-  const cancel = () => setEditing(false);
-
   if (editing) {
     return (
       <div className="flex items-center gap-1.5 flex-1">
-        <input
-          ref={inputRef}
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") confirm(); if (e.key === "Escape") cancel(); }}
-          className="flex-1 bg-[#111] border border-primary rounded px-2 py-1 text-sm text-white focus:outline-none min-w-0"
-        />
-        <button onClick={confirm} className="text-green-400 hover:text-green-300"><Check className="h-4 w-4" /></button>
-        <button onClick={cancel} className="text-[#555] hover:text-white"><X className="h-4 w-4" /></button>
+        <input ref={inputRef} value={draft} onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") confirm(); if (e.key === "Escape") setEditing(false); }}
+          className="flex-1 bg-[#111] border border-primary rounded px-2 py-1 text-sm text-white focus:outline-none min-w-0" />
+        <button onClick={confirm} className="text-green-400"><Check className="h-4 w-4" /></button>
+        <button onClick={() => setEditing(false)} className="text-[#555]"><X className="h-4 w-4" /></button>
       </div>
     );
   }
-
   return (
     <div className="flex items-center gap-1.5 flex-1 min-w-0 group cursor-pointer" onClick={start}>
       <span className="text-sm text-white truncate flex-1">{value}</span>
-      <Edit2 className="h-3.5 w-3.5 text-[#444] group-hover:text-[#888] shrink-0 transition-colors" />
+      <Edit2 className="h-3.5 w-3.5 text-[#444] group-hover:text-[#888] shrink-0" />
     </div>
   );
 }
 
+// ── WatermarkTab ─────────────────────────────────────────────────────────────
 function WatermarkTab() {
+  const { token } = useAuth() as any;
   const [settings, setSettings] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     const r = await fetch("/api/watermark/admin/settings");
     const d = await r.json();
-    setSettings(d.settings);
-    setForm(d.settings || {});
+    setSettings(d.settings); setForm(d.settings || {});
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -396,40 +293,46 @@ function WatermarkTab() {
   const save = async () => {
     setSaving(true);
     const r = await fetch("/api/watermark/admin/settings", {
-      method: "PUT", headers: { "Content-Type": "application/json" },
+      method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(form),
     });
     const d = await r.json();
-    setSettings(d.settings);
-    setForm(d.settings);
+    setSettings(d.settings); setForm(d.settings);
     setSaving(false);
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setUploading(true); setUploadError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch("/api/watermark/admin/upload", {
+        method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
+      });
+      const d = await r.json();
+      if (!r.ok) { setUploadError(d.error || "Yükleme başarısız"); return; }
+      setForm((f: any) => ({ ...f, imageUrl: d.url, useImage: true }));
+    } catch { setUploadError("Yükleme sırasında hata oluştu"); }
+    finally { setUploading(false); }
   };
 
   if (!settings) return <div className="flex items-center justify-center h-32 text-[#555] text-sm">Yükleniyor...</div>;
 
   const positions = [
-    { value: "top-left",     label: "Sol Üst" },
-    { value: "top-right",    label: "Sağ Üst" },
-    { value: "bottom-left",  label: "Sol Alt" },
-    { value: "bottom-right", label: "Sağ Alt" },
-    { value: "center",       label: "Ortada" },
+    { value: "top-left", label: "Sol Üst" }, { value: "top-right", label: "Sağ Üst" },
+    { value: "bottom-left", label: "Sol Alt" }, { value: "bottom-right", label: "Sağ Alt" },
+    { value: "center", label: "Ortada" },
   ];
 
   return (
     <div className="space-y-5">
-      {/* Sistem toggle */}
       <div className="bg-[#111] border border-[#222] rounded-xl p-4 flex items-center justify-between">
         <div>
           <p className="font-medium text-sm">Filigran Sistemi</p>
-          <p className="text-xs text-[#555] mt-0.5">Etkinleştirildiğinde, watermarkEnabled olan videolarda filigran görünür</p>
+          <p className="text-xs text-[#555] mt-0.5">Etkinleştirildiğinde watermarkEnabled olan videolarda görünür</p>
         </div>
-        <button
-          onClick={() => setForm((f: any) => ({ ...f, isEnabled: !f.isEnabled }))}
-          className={cn(
-            "w-12 h-6 rounded-full transition-all relative shrink-0",
-            form.isEnabled ? "bg-blue-500" : "bg-[#333]"
-          )}
-        >
+        <button onClick={() => setForm((f: any) => ({ ...f, isEnabled: !f.isEnabled }))}
+          className={cn("w-12 h-6 rounded-full transition-all relative shrink-0", form.isEnabled ? "bg-blue-500" : "bg-[#333]")}>
           <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", form.isEnabled ? "left-7" : "left-1")} />
         </button>
       </div>
@@ -437,394 +340,777 @@ function WatermarkTab() {
       {!form.isEnabled && (
         <div className="flex items-center gap-2 bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-4 py-3">
           <Stamp className="h-4 w-4 text-yellow-500 shrink-0" />
-          <p className="text-xs text-yellow-500/80">Filigran sistemi pasif. Hiçbir videoda gösterilmez.</p>
+          <p className="text-xs text-yellow-500/80">Filigran sistemi pasif.</p>
         </div>
       )}
 
-      {/* İçerik türü */}
       <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
         <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Filigran İçeriği</p>
         <div className="flex gap-3">
-          <button
-            onClick={() => setForm((f: any) => ({ ...f, useImage: false }))}
-            className={cn("flex-1 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all",
-              !form.useImage ? "bg-blue-500/10 border-blue-500/30 text-blue-400" : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555] hover:text-[#aaa]"
-            )}
-          >
-            Metin Filigranı
-          </button>
-          <button
-            onClick={() => setForm((f: any) => ({ ...f, useImage: true }))}
-            className={cn("flex-1 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all",
-              form.useImage ? "bg-blue-500/10 border-blue-500/30 text-blue-400" : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555] hover:text-[#aaa]"
-            )}
-          >
-            Logo / Resim
-          </button>
+          {[{ v: false, l: "Metin Filigranı" }, { v: true, l: "Logo / Resim" }].map(({ v, l }) => (
+            <button key={String(v)} onClick={() => setForm((f: any) => ({ ...f, useImage: v }))}
+              className={cn("flex-1 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all",
+                form.useImage === v ? "bg-blue-500/10 border-blue-500/30 text-blue-400" : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555] hover:text-[#aaa]")}>
+              {l}
+            </button>
+          ))}
         </div>
 
         {form.useImage ? (
-          <div>
-            <label className="text-xs text-[#666] block mb-1.5">Logo URL (PNG/SVG önerilir)</label>
-            <input
-              value={form.imageUrl || ""}
-              onChange={e => setForm((f: any) => ({ ...f, imageUrl: e.target.value }))}
-              placeholder="https://example.com/logo.png"
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40"
-            />
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-[#666] block mb-1.5">Logo URL (PNG/SVG önerilir)</label>
+              <input value={form.imageUrl || ""} onChange={e => setForm((f: any) => ({ ...f, imageUrl: e.target.value }))}
+                placeholder="https://example.com/logo.png"
+                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40" />
+            </div>
+            <div className="relative">
+              <div className="flex items-center gap-2 text-xs text-[#555] mb-2"><span>veya</span><div className="flex-1 h-px bg-[#222]" /></div>
+              <input ref={fileRef} type="file" accept=".png,.svg,.jpg,.jpeg,.gif,.webp" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }} />
+              <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-[#333] text-xs text-[#666] hover:border-[#444] hover:text-[#aaa] transition-all disabled:opacity-50">
+                {uploading ? <><RefreshCw className="h-4 w-4 animate-spin" /> Yükleniyor...</> : <><Upload className="h-4 w-4" /> Dosyadan yükle (PNG, SVG, JPG, WebP)</>}
+              </button>
+              {uploadError && <p className="text-xs text-red-400 mt-1.5">{uploadError}</p>}
+            </div>
             {form.imageUrl && (
-              <div className="mt-2 flex items-center gap-2">
-                <img src={form.imageUrl} alt="preview" className="h-8 object-contain bg-[#1a1a1a] rounded p-1 border border-[#2a2a2a]" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              <div className="flex items-center gap-2">
+                <img src={form.imageUrl} alt="preview" className="h-8 object-contain bg-[#1a1a1a] rounded p-1 border border-[#2a2a2a]" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                 <span className="text-xs text-[#555]">Önizleme</span>
+                <button onClick={() => setForm((f: any) => ({ ...f, imageUrl: "" }))} className="text-[#555] hover:text-red-400 ml-auto"><X className="h-3.5 w-3.5" /></button>
               </div>
             )}
           </div>
         ) : (
           <div>
             <label className="text-xs text-[#666] block mb-1.5">Filigran Metni</label>
-            <input
-              value={form.text || ""}
-              onChange={e => setForm((f: any) => ({ ...f, text: e.target.value }))}
-              placeholder="Prnhbbbb"
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40"
-            />
+            <input value={form.text || ""} onChange={e => setForm((f: any) => ({ ...f, text: e.target.value }))}
+              placeholder="Prnhbbbb" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40" />
           </div>
         )}
       </div>
 
-      {/* Konum, boyut, opaklık */}
       <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
         <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Görünüm</p>
-
         <div>
           <label className="text-xs text-[#666] block mb-2">Konum</label>
           <div className="grid grid-cols-3 gap-1.5">
             {positions.map(p => (
               <button key={p.value} onClick={() => setForm((f: any) => ({ ...f, position: p.value }))}
                 className={cn("px-2 py-2 rounded-lg text-xs font-medium border transition-all",
-                  form.position === p.value
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555] hover:text-[#aaa]"
-                )}>
+                  form.position === p.value ? "bg-primary/10 border-primary/30 text-primary" : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555] hover:text-[#aaa]")}>
                 {p.label}
               </button>
             ))}
           </div>
         </div>
-
         <div>
           <label className="text-xs text-[#666] block mb-2">Boyut</label>
           <div className="flex gap-2">
             {[{ v: "small", l: "Küçük" }, { v: "medium", l: "Orta" }, { v: "large", l: "Büyük" }].map(s => (
               <button key={s.v} onClick={() => setForm((f: any) => ({ ...f, size: s.v }))}
                 className={cn("flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all",
-                  form.size === s.v
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555] hover:text-[#aaa]"
-                )}>
+                  form.size === s.v ? "bg-primary/10 border-primary/30 text-primary" : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555] hover:text-[#aaa]")}>
                 {s.l}
               </button>
             ))}
           </div>
         </div>
-
         <div>
-          <label className="text-xs text-[#666] block mb-2">
-            Opaklık — <span className="text-white font-medium">{Math.round((form.opacity ?? 0.4) * 100)}%</span>
-          </label>
-          <input
-            type="range" min="0.05" max="1" step="0.05"
-            value={form.opacity ?? 0.4}
+          <label className="text-xs text-[#666] block mb-2">Opaklık — <span className="text-white font-medium">{Math.round((form.opacity ?? 0.4) * 100)}%</span></label>
+          <input type="range" min="0.05" max="1" step="0.05" value={form.opacity ?? 0.4}
             onChange={e => setForm((f: any) => ({ ...f, opacity: parseFloat(e.target.value) }))}
-            className="w-full accent-primary"
-          />
-          <div className="flex justify-between text-[10px] text-[#444] mt-1">
-            <span>%5 (çok hafif)</span>
-            <span>%100 (tam)</span>
-          </div>
+            className="w-full accent-primary" />
+          <div className="flex justify-between text-[10px] text-[#444] mt-1"><span>%5</span><span>%100</span></div>
         </div>
-
-        {/* Canlı önizleme */}
         <div>
-          <label className="text-xs text-[#666] block mb-2">Önizleme</label>
+          <label className="text-xs text-[#666] block mb-2">Canlı Önizleme</label>
           <div className="relative bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden h-32">
             <div className="absolute inset-0 flex items-center justify-center text-[#333] text-xs">Video alanı</div>
             <div className={cn("absolute flex",
-              form.position === "top-left"     ? "top-2 left-2" :
-              form.position === "top-right"    ? "top-2 right-2" :
-              form.position === "bottom-left"  ? "bottom-2 left-2" :
-              form.position === "bottom-right" ? "bottom-2 right-2" :
-              "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-            )} style={{ opacity: form.opacity ?? 0.4 }}>
-              {form.useImage && form.imageUrl ? (
-                <img src={form.imageUrl} alt="wm"
-                  className={cn("object-contain", form.size === "small" ? "h-4" : form.size === "large" ? "h-8" : "h-6")} />
-              ) : (
-                <span className={cn("text-white font-bold bg-black/30 rounded px-1.5 py-0.5",
-                  form.size === "small" ? "text-[9px]" : form.size === "large" ? "text-sm" : "text-xs"
-                )}>
-                  {form.text || "Prnhbbbb"}
-                </span>
-              )}
+              form.position === "top-left" ? "top-2 left-2" : form.position === "top-right" ? "top-2 right-2" :
+              form.position === "bottom-left" ? "bottom-2 left-2" : form.position === "bottom-right" ? "bottom-2 right-2" :
+              "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2")} style={{ opacity: form.opacity ?? 0.4 }}>
+              {form.useImage && form.imageUrl
+                ? <img src={form.imageUrl} alt="wm" className={cn("object-contain", form.size === "small" ? "h-4" : form.size === "large" ? "h-8" : "h-6")} />
+                : <span className={cn("text-white font-bold bg-black/30 rounded px-1.5 py-0.5", form.size === "small" ? "text-[9px]" : form.size === "large" ? "text-sm" : "text-xs")}>{form.text || "Prnhbbbb"}</span>
+              }
             </div>
           </div>
         </div>
       </div>
 
-      <button
-        onClick={save} disabled={saving}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-medium text-sm hover:bg-primary/90 disabled:opacity-50 transition-all"
-      >
+      <button onClick={save} disabled={saving}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-medium text-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
         {saving ? "Kaydediliyor..." : <><Check className="h-4 w-4" /> Ayarları Kaydet</>}
       </button>
     </div>
   );
 }
 
+// ── SeoTab ───────────────────────────────────────────────────────────────────
 function SeoTab() {
+  const { token } = useAuth() as any;
   const [settings, setSettings] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [activeSection, setActiveSection] = useState<"basic" | "og" | "twitter" | "advanced" | "analytics">("basic");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetch("/api/seo/admin/settings")
+    fetch("/api/seo/admin/settings", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => setSettings(d.settings || {
-        siteTitle: "Prnhbbbb",
-        siteDescription: "Video streaming ve sosyal platform",
-        keywords: "video, streaming, creator, sosyal",
-        robots: "index,follow",
-        ogImage: "",
-      }));
-  }, []);
+      .then(d => setSettings(d.settings || {}));
+  }, [token]);
 
   const save = async () => {
     setSaving(true);
     await fetch("/api/seo/admin/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(settings),
     });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2500);
+  };
+
+  const copyMeta = () => {
+    if (!settings) return;
+    const meta = `<title>${settings.siteTitle || ''}</title>
+<meta name="description" content="${settings.siteDescription || ''}">
+<meta name="keywords" content="${settings.keywords || ''}">
+<meta name="robots" content="${settings.robots || 'index,follow'}">
+<link rel="canonical" href="${settings.canonicalUrl || ''}">
+<meta property="og:title" content="${settings.ogTitle || settings.siteTitle || ''}">
+<meta property="og:description" content="${settings.ogDescription || settings.siteDescription || ''}">
+<meta property="og:image" content="${settings.ogImage || ''}">
+<meta property="og:type" content="${settings.ogType || 'website'}">
+<meta name="twitter:card" content="${settings.twitterCard || 'summary_large_image'}">
+<meta name="twitter:site" content="${settings.twitterSite || ''}">`;
+    navigator.clipboard.writeText(meta);
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
   };
 
   if (!settings) return <div className="py-10 text-center text-[#555] text-sm">Yükleniyor...</div>;
 
+  const sectionTabs = [
+    { id: "basic", label: "Temel", icon: Globe },
+    { id: "og", label: "Open Graph", icon: Link2 },
+    { id: "twitter", label: "Twitter", icon: Twitter },
+    { id: "analytics", label: "Analytics", icon: BarChart2 },
+    { id: "advanced", label: "Gelişmiş", icon: Code2 },
+  ];
+
+  const Field = ({ label, k, placeholder, type = "text", hint }: { label: string; k: string; placeholder?: string; type?: string; hint?: string }) => (
+    <div>
+      <label className="text-xs text-[#666] block mb-1.5">{label}</label>
+      {type === "textarea"
+        ? <textarea value={settings[k] || ""} onChange={e => setSettings((p: any) => ({ ...p, [k]: e.target.value }))}
+            placeholder={placeholder} rows={3}
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40 resize-none" />
+        : <input value={settings[k] || ""} onChange={e => setSettings((p: any) => ({ ...p, [k]: e.target.value }))}
+            placeholder={placeholder}
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40" />}
+      {hint && <p className="text-[10px] text-[#444] mt-1">{hint}</p>}
+    </div>
+  );
+
+  const SelectField = ({ label, k, options, hint }: { label: string; k: string; options: { v: string; l: string }[]; hint?: string }) => (
+    <div>
+      <label className="text-xs text-[#666] block mb-1.5">{label}</label>
+      <select value={settings[k] || options[0].v} onChange={e => setSettings((p: any) => ({ ...p, [k]: e.target.value }))}
+        className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40">
+        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+      </select>
+      {hint && <p className="text-[10px] text-[#444] mt-1">{hint}</p>}
+    </div>
+  );
+
+  const BoolField = ({ label, desc, k }: { label: string; desc: string; k: string }) => (
+    <div className="flex items-center justify-between">
+      <div><p className="text-sm text-white">{label}</p><p className="text-xs text-[#555]">{desc}</p></div>
+      <button onClick={() => setSettings((p: any) => ({ ...p, [k]: !p[k] }))}
+        className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", settings[k] ? "bg-primary" : "bg-[#333]")}>
+        <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", settings[k] ? "left-6" : "left-1")} />
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
-        <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Search className="h-3.5 w-3.5" /> SEO Aracı</p>
-        {[
-          { key: "siteTitle", label: "Site Başlığı" },
-          { key: "siteDescription", label: "Site Açıklaması" },
-          { key: "keywords", label: "Anahtar Kelimeler" },
-          { key: "robots", label: "Robots" },
-          { key: "ogImage", label: "OG Görseli URL" },
-        ].map(f => (
-          <div key={f.key}>
-            <label className="text-xs text-[#666] block mb-1.5">{f.label}</label>
-            <input
-              value={settings[f.key] || ""}
-              onChange={e => setSettings((p: any) => ({ ...p, [f.key]: e.target.value }))}
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40"
-            />
-          </div>
-        ))}
-        <div className="grid md:grid-cols-3 gap-2 text-xs text-[#666]">
-          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3"><Globe className="h-4 w-4 text-blue-400 mb-2" /> Daha iyi indeksleme için sayfa başlıkları ve açıklamalar.</div>
-          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3"><Link2 className="h-4 w-4 text-green-400 mb-2" /> Open Graph ve sosyal paylaşım önizlemeleri.</div>
-          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3"><ShieldAlert className="h-4 w-4 text-yellow-400 mb-2" /> Robots yönergeleri ve temel SEO kontrolü.</div>
-        </div>
-        <button onClick={save} disabled={saving} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-medium text-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
-          {saving ? "Kaydediliyor..." : saved ? "Kaydedildi" : "SEO Ayarlarını Kaydet"}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-[#555]">Arama motorları ve sosyal medya için gelişmiş SEO yönetimi</p>
+        <button onClick={copyMeta}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-[#222] text-[#666] hover:text-[#aaa] hover:border-[#333] transition-all">
+          {copied ? <><CheckCheck className="h-3 w-3 text-green-400" /> Kopyalandı</> : <><Copy className="h-3 w-3" /> Meta Etiketleri Kopyala</>}
         </button>
       </div>
+
+      <div className="flex gap-1 bg-[#0e0e0e] p-1 rounded-xl border border-[#1a1a1a] flex-wrap">
+        {sectionTabs.map(({ id, label, icon: Icon }) => (
+          <button key={id} onClick={() => setActiveSection(id as any)}
+            className={cn("flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all",
+              activeSection === id ? "bg-[#1e1e1e] text-white border border-[#2a2a2a]" : "text-[#555] hover:text-[#aaa]")}>
+            <Icon className="h-3 w-3" />{label}
+          </button>
+        ))}
+      </div>
+
+      {activeSection === "basic" && (
+        <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
+          <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Globe className="h-3.5 w-3.5 text-blue-400" /> Temel SEO</p>
+          <Field label="Site Başlığı" k="siteTitle" placeholder="Prnhbbbb - Video Platform" hint="50-60 karakter ideal. Tarayıcı sekmesi ve Google'da görünür." />
+          <Field label="Site Açıklaması" k="siteDescription" type="textarea" placeholder="Video streaming ve sosyal platform" hint="150-160 karakter ideal. Google snippet olarak kullanılır." />
+          <Field label="Anahtar Kelimeler" k="keywords" placeholder="video, streaming, creator, sosyal" hint="Virgülle ayırın. Modern SEO'da az etkisi var ama yararlı." />
+          <SelectField label="Robots Direktifi" k="robots" hint="index,follow önerilir. Yeni site veya gizli içerik için noindex." options={[
+            { v: "index,follow", l: "index,follow (Önerilir — tam indeksleme)" },
+            { v: "noindex,follow", l: "noindex,follow — sayfayı indeksleme" },
+            { v: "index,nofollow", l: "index,nofollow — linkleri takip etme" },
+            { v: "noindex,nofollow", l: "noindex,nofollow — tamamen gizle" },
+          ]} />
+          <Field label="Canonical URL" k="canonicalUrl" placeholder="https://example.com" hint="Duplicate içerik sorununu önler. Sitenizin ana domain'i." />
+          <SelectField label="Sayfa Dili (hreflang)" k="hreflang" options={[
+            { v: "tr", l: "Türkçe (tr)" }, { v: "en", l: "English (en)" }, { v: "de", l: "Deutsch (de)" },
+            { v: "fr", l: "Français (fr)" }, { v: "es", l: "Español (es)" }, { v: "ar", l: "العربية (ar)" },
+            { v: "ru", l: "Русский (ru)" }, { v: "ja", l: "日本語 (ja)" },
+          ]} />
+        </div>
+      )}
+
+      {activeSection === "og" && (
+        <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
+          <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Link2 className="h-3.5 w-3.5 text-blue-400" /> Open Graph (Facebook, LinkedIn, WhatsApp)</p>
+          <Field label="OG Başlık" k="ogTitle" placeholder="Prnhbbbb — Video Platform" hint="Boş bırakılırsa Site Başlığı kullanılır." />
+          <Field label="OG Açıklama" k="ogDescription" type="textarea" placeholder="Video streaming platformu" hint="Sosyal medyada paylaşım önizlemesinde görünür." />
+          <Field label="OG Görsel URL" k="ogImage" placeholder="https://example.com/og-image.jpg" hint="1200x630 piksel PNG/JPG önerilir. Sosyal paylaşım kartında görünür." />
+          {settings.ogImage && <img src={settings.ogImage} alt="og preview" className="w-full max-h-32 object-cover rounded-xl border border-[#2a2a2a]" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />}
+          <SelectField label="OG Type" k="ogType" hint="Genellikle 'website'. Video sayfaları için 'video.other'." options={[
+            { v: "website", l: "website" }, { v: "article", l: "article" },
+            { v: "video.other", l: "video.other" }, { v: "profile", l: "profile" },
+          ]} />
+        </div>
+      )}
+
+      {activeSection === "twitter" && (
+        <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
+          <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Twitter className="h-3.5 w-3.5 text-blue-400" /> Twitter (X) Kartları</p>
+          <SelectField label="Kart Türü" k="twitterCard" hint="summary_large_image geniş görsel gösterir, daha fazla tıklama getirir." options={[
+            { v: "summary_large_image", l: "summary_large_image (Büyük Görsel)" },
+            { v: "summary", l: "summary (Küçük Görsel)" },
+            { v: "player", l: "player (Video Oynatıcı)" },
+          ]} />
+          <Field label="Twitter Hesabı (@)" k="twitterSite" placeholder="@hesap_adi" hint="Sitenin resmi Twitter hesabı." />
+          <Field label="İçerik Üreticisi (@)" k="twitterCreator" placeholder="@icerik_uretici" hint="İçerik üreticisinin Twitter hesabı (opsiyonel)." />
+          <div className="bg-[#0e0e0e] border border-[#1a1a1a] rounded-xl p-3">
+            <p className="text-[10px] text-[#555] mb-2 uppercase tracking-wider">Kart Önizlemesi</p>
+            <div className="border border-[#222] rounded-xl overflow-hidden">
+              <div className="bg-[#1a1a1a] h-20 flex items-center justify-center text-[#333] text-xs">
+                {settings.ogImage ? <img src={settings.ogImage} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} /> : "Görsel Alanı"}
+              </div>
+              <div className="p-2.5 bg-[#111]">
+                <p className="text-xs text-white font-medium">{settings.ogTitle || settings.siteTitle || "Site Başlığı"}</p>
+                <p className="text-[10px] text-[#555] mt-0.5 line-clamp-2">{settings.ogDescription || settings.siteDescription || "Açıklama"}</p>
+                <p className="text-[10px] text-[#444] mt-1">{settings.canonicalUrl?.replace(/^https?:\/\//, '') || "example.com"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSection === "analytics" && (
+        <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
+          <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><BarChart2 className="h-3.5 w-3.5 text-green-400" /> Analytics & Search Console</p>
+          <Field label="Google Analytics ID" k="googleAnalyticsId" placeholder="G-XXXXXXXXXX veya UA-XXXXXXXX-X" hint="Google Analytics 4 Measurement ID. Boş bırakılırsa tracking yapılmaz." />
+          <Field label="Google Search Console Doğrulama" k="googleSearchConsole" placeholder="google1234567890abcdef.html" hint="Search Console'dan alınan doğrulama metası veya dosya adı." />
+          <BoolField label="Sitemap.xml" desc="Arama motorları için XML sitemap oluştur" k="sitemapEnabled" />
+          <BoolField label="Yapısal Veri (Schema.org)" desc="JSON-LD ile zengin snippet desteği" k="structuredDataEnabled" />
+          <SelectField label="Schema.org Türü" k="schemaOrgType" hint="Sitenizi Google'a tanımlayan yapısal veri türü." options={[
+            { v: "Organization", l: "Organization" }, { v: "WebSite", l: "WebSite" },
+            { v: "VideoObject", l: "VideoObject" }, { v: "Person", l: "Person" },
+          ]} />
+          {settings.googleAnalyticsId && (
+            <div className="bg-green-500/5 border border-green-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
+              <BarChart2 className="h-3.5 w-3.5 text-green-400 shrink-0" />
+              <p className="text-xs text-green-400">Analytics aktif: <span className="font-mono">{settings.googleAnalyticsId}</span></p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeSection === "advanced" && (
+        <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
+          <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Code2 className="h-3.5 w-3.5 text-purple-400" /> Gelişmiş Ayarlar</p>
+          <div className="grid grid-cols-3 gap-2 text-xs text-[#666]">
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3">
+              <Globe className="h-4 w-4 text-blue-400 mb-2" />
+              <p className="text-white text-[11px] font-medium mb-0.5">Teknik SEO</p>
+              Canonical URL, robots.txt, hreflang
+            </div>
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3">
+              <Map className="h-4 w-4 text-green-400 mb-2" />
+              <p className="text-white text-[11px] font-medium mb-0.5">Sitemap</p>
+              Otomatik XML sitemap oluşturma
+            </div>
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3">
+              <Zap className="h-4 w-4 text-yellow-400 mb-2" />
+              <p className="text-white text-[11px] font-medium mb-0.5">Core Web Vitals</p>
+              LCP, FID, CLS optimizasyonu
+            </div>
+          </div>
+          <div className="bg-[#0e0e0e] border border-[#1a1a1a] rounded-xl p-3">
+            <p className="text-[10px] text-[#555] mb-2 uppercase tracking-wider font-bold">Üretilen Meta Etiketleri Önizlemesi</p>
+            <pre className="text-[10px] text-[#666] font-mono whitespace-pre-wrap leading-relaxed overflow-auto max-h-40">
+{`<title>${settings.siteTitle || ''}</title>
+<meta name="description" content="${settings.siteDescription || ''}">
+<meta name="robots" content="${settings.robots || 'index,follow'}">
+<link rel="canonical" href="${settings.canonicalUrl || ''}">
+<meta property="og:type" content="${settings.ogType || 'website'}">
+<meta property="og:image" content="${settings.ogImage || ''}">
+<meta name="twitter:card" content="${settings.twitterCard || 'summary_large_image'}">`}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      <button onClick={save} disabled={saving}
+        className={cn("w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all",
+          saved ? "bg-green-600 text-white" : "bg-primary hover:bg-primary/90 text-white disabled:opacity-50")}>
+        {saving ? "Kaydediliyor..." : saved ? <><Check className="h-4 w-4" /> Kaydedildi!</> : "SEO Ayarlarını Kaydet"}
+      </button>
+    </div>
+  );
+}
+
+// ── WebhookTab ───────────────────────────────────────────────────────────────
+const PLATFORM_META: Record<string, { name: string; color: string; icon: string; placeholder: string }> = {
+  discord:   { name: "Discord",         color: "#5865F2", icon: "💬", placeholder: "https://discord.com/api/webhooks/..." },
+  slack:     { name: "Slack",           color: "#4A154B", icon: "💼", placeholder: "https://hooks.slack.com/services/..." },
+  zapier:    { name: "Zapier",          color: "#FF4A00", icon: "⚡", placeholder: "https://hooks.zapier.com/hooks/catch/..." },
+  make:      { name: "Make (Integromat)",color: "#7E3AF2", icon: "🔄", placeholder: "https://hook.make.com/..." },
+  n8n:       { name: "n8n",             color: "#EA4B71", icon: "🔧", placeholder: "https://your-n8n.com/webhook/..." },
+  ifttt:     { name: "IFTTT",           color: "#009AE5", icon: "🔀", placeholder: "https://maker.ifttt.com/trigger/.../with/key/..." },
+  pipedream: { name: "Pipedream",       color: "#3CC877", icon: "🌊", placeholder: "https://eo.pipedream.net/..." },
+  teams:     { name: "Microsoft Teams", color: "#6264A7", icon: "🟦", placeholder: "https://...webhook.office.com/..." },
+  telegram:  { name: "Telegram Bot",   color: "#2AABEE", icon: "✈️", placeholder: "https://api.telegram.org/bot.../sendMessage" },
+  custom:    { name: "Özel HTTP",       color: "#6B7280", icon: "🌐", placeholder: "https://example.com/webhook" },
+};
+
+const ALL_EVENTS = [
+  "video.created", "video.updated", "video.deleted", "video.published",
+  "video.approved", "video.rejected",
+  "user.registered", "user.banned", "user.role_changed",
+  "payment.completed", "payment.failed", "subscription.created", "subscription.cancelled",
+  "creator.approved", "creator.rejected",
+  "comment.created", "report.created",
+  "live.started", "live.ended",
+];
+
+const EVENT_GROUPS = [
+  { label: "Video", events: ["video.created", "video.updated", "video.deleted", "video.published", "video.approved", "video.rejected"] },
+  { label: "Kullanıcı", events: ["user.registered", "user.banned", "user.role_changed"] },
+  { label: "Ödeme", events: ["payment.completed", "payment.failed", "subscription.created", "subscription.cancelled"] },
+  { label: "Creator", events: ["creator.approved", "creator.rejected"] },
+  { label: "İçerik", events: ["comment.created", "report.created", "live.started", "live.ended"] },
+];
+
+function WebhookEndpointCard({ ep, onChange, onDelete }: { ep: any; onChange: (ep: any) => void; onDelete: () => void }) {
+  const [expanded, setExpanded] = useState(!ep.url);
+  const meta = PLATFORM_META[ep.platform] || PLATFORM_META.custom;
+
+  const toggleEvent = (event: string) => {
+    const events = ep.events || [];
+    onChange({ ...ep, events: events.includes(event) ? events.filter((e: string) => e !== event) : [...events, event] });
+  };
+
+  return (
+    <div className={cn("bg-[#111] border rounded-xl overflow-hidden transition-all", ep.enabled ? "border-[#222]" : "border-[#1a1a1a] opacity-60")}>
+      <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={() => setExpanded(e => !e)}>
+        <span className="text-lg">{meta.icon}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white">{ep.name || meta.name}</p>
+          <p className="text-[11px] text-[#555] truncate">{ep.url || "URL girilmedi"}</p>
+        </div>
+        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: meta.color + "20", color: meta.color }}>{meta.name}</span>
+        <button onClick={e => { e.stopPropagation(); onChange({ ...ep, enabled: !ep.enabled }); }}
+          className={cn("w-9 h-5 rounded-full relative shrink-0 transition-all", ep.enabled ? "bg-primary" : "bg-[#333]")}>
+          <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", ep.enabled ? "left-4" : "left-0.5")} />
+        </button>
+        <ChevronRight className={cn("h-4 w-4 text-[#444] transition-transform", expanded && "rotate-90")} />
+      </div>
+
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3 border-t border-[#1a1a1a] pt-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-[#666] block mb-1">İsim</label>
+              <input value={ep.name || ""} onChange={e => onChange({ ...ep, name: e.target.value })}
+                placeholder={meta.name} className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-primary/40" />
+            </div>
+            <div>
+              <label className="text-xs text-[#666] block mb-1">Platform</label>
+              <select value={ep.platform} onChange={e => onChange({ ...ep, platform: e.target.value })}
+                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-primary/40">
+                {Object.entries(PLATFORM_META).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-[#666] block mb-1">Webhook URL</label>
+            <input value={ep.url || ""} onChange={e => onChange({ ...ep, url: e.target.value })}
+              placeholder={meta.placeholder} className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-primary/40 font-mono" />
+          </div>
+          {ep.platform === "custom" && (
+            <div>
+              <label className="text-xs text-[#666] block mb-1">Secret / Token</label>
+              <input value={ep.secret || ""} onChange={e => onChange({ ...ep, secret: e.target.value })}
+                placeholder="whsec_..." className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-primary/40 font-mono" />
+            </div>
+          )}
+          <div>
+            <label className="text-xs text-[#666] block mb-2">Olaylar (Events)</label>
+            <div className="space-y-2">
+              {EVENT_GROUPS.map(group => (
+                <div key={group.label}>
+                  <p className="text-[10px] text-[#444] uppercase tracking-wider mb-1">{group.label}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {group.events.map(event => (
+                      <button key={event} onClick={() => toggleEvent(event)}
+                        className={cn("px-2 py-1 rounded-full text-[10px] border transition-all",
+                          (ep.events || []).includes(event) ? "bg-primary/15 text-primary border-primary/30" : "bg-[#1a1a1a] text-[#555] border-[#2a2a2a] hover:text-[#aaa]")}>
+                        {event}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button onClick={onDelete} className="flex items-center gap-1.5 text-xs text-red-400/70 hover:text-red-400 transition-colors">
+            <Trash2 className="h-3 w-3" /> Bu webhook'u sil
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 function WebhookTab() {
+  const { token } = useAuth() as any;
   const [settings, setSettings] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showPlatformPicker, setShowPlatformPicker] = useState(false);
 
   useEffect(() => {
-    fetch("/api/webhooks/admin/settings")
+    fetch("/api/webhooks/admin/settings", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => setSettings(d.settings || {
-        isEnabled: false,
-        endpointUrl: "",
-        secret: "",
-        events: ["video.created", "user.registered", "payment.completed"],
-      }));
-  }, []);
+      .then(d => setSettings(d.settings || { isEnabled: false, endpoints: [] }));
+  }, [token]);
 
   const save = async () => {
     setSaving(true);
     await fetch("/api/webhooks/admin/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(settings),
     });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000);
   };
+
+  const addEndpoint = (platform: string) => {
+    const meta = PLATFORM_META[platform] || PLATFORM_META.custom;
+    const newEp = { id: Date.now().toString(), platform, name: meta.name, url: "", secret: "", enabled: true, events: ["video.created", "user.registered"] };
+    setSettings((p: any) => ({ ...p, endpoints: [...(p.endpoints || []), newEp] }));
+    setShowPlatformPicker(false);
+  };
+
+  const updateEndpoint = (id: string, updated: any) =>
+    setSettings((p: any) => ({ ...p, endpoints: (p.endpoints || []).map((e: any) => e.id === id ? updated : e) }));
+
+  const deleteEndpoint = (id: string) =>
+    setSettings((p: any) => ({ ...p, endpoints: (p.endpoints || []).filter((e: any) => e.id !== id) }));
 
   if (!settings) return <div className="py-10 text-center text-[#555] text-sm">Yükleniyor...</div>;
 
-  const toggleEvent = (event: string) => {
-    setSettings((p: any) => ({
-      ...p,
-      events: p.events.includes(event) ? p.events.filter((e: string) => e !== event) : [...p.events, event],
-    }));
+  const endpoints: any[] = settings.endpoints || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-[#111] border border-[#222] rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium flex items-center gap-2"><Webhook className="h-4 w-4 text-primary" /> Webhook Sistemi</p>
+          <p className="text-xs text-[#555] mt-0.5">{endpoints.length} webhook tanımlı • {endpoints.filter(e => e.enabled).length} aktif</p>
+        </div>
+        <button onClick={() => setSettings((p: any) => ({ ...p, isEnabled: !p.isEnabled }))}
+          className={cn("w-12 h-6 rounded-full transition-all relative shrink-0", settings.isEnabled ? "bg-primary" : "bg-[#333]")}>
+          <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", settings.isEnabled ? "left-7" : "left-1")} />
+        </button>
+      </div>
+
+      {!settings.isEnabled && (
+        <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-4 py-3 text-xs text-yellow-500/80">
+          Webhook sistemi pasif. Webhooklar tanımlanabilir ama gönderim yapılmaz.
+        </div>
+      )}
+
+      {endpoints.map(ep => (
+        <WebhookEndpointCard key={ep.id} ep={ep}
+          onChange={updated => updateEndpoint(ep.id, updated)}
+          onDelete={() => deleteEndpoint(ep.id)} />
+      ))}
+
+      {showPlatformPicker ? (
+        <div className="bg-[#111] border border-[#222] rounded-xl p-4">
+          <p className="text-xs font-bold text-[#666] uppercase tracking-wider mb-3">Platform Seç</p>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(PLATFORM_META).map(([k, v]) => (
+              <button key={k} onClick={() => addEndpoint(k)}
+                className="flex items-center gap-2.5 px-3 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl hover:border-[#333] hover:bg-[#1e1e1e] transition-all text-left">
+                <span className="text-xl">{v.icon}</span>
+                <div>
+                  <p className="text-xs font-medium text-white">{v.name}</p>
+                  <p className="text-[10px] text-[#555] truncate max-w-[120px]">{v.placeholder.split('/').slice(0, 3).join('/')}/...</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowPlatformPicker(false)} className="mt-3 w-full text-xs text-[#555] hover:text-[#aaa] py-1.5">İptal</button>
+        </div>
+      ) : (
+        <button onClick={() => setShowPlatformPicker(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-[#2a2a2a] text-xs text-[#555] hover:border-primary/30 hover:text-primary transition-all">
+          <Plus className="h-4 w-4" /> Webhook Ekle
+        </button>
+      )}
+
+      <button onClick={save} disabled={saving}
+        className={cn("w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all",
+          saved ? "bg-green-600 text-white" : "bg-primary hover:bg-primary/90 text-white disabled:opacity-50")}>
+        {saving ? "Kaydediliyor..." : saved ? <><Check className="h-4 w-4" /> Kaydedildi!</> : "Webhook Ayarlarını Kaydet"}
+      </button>
+    </div>
+  );
+}
+
+// ── CategoryManagerTab ────────────────────────────────────────────────────────
+function CategoryManagerTab() {
+  const { token } = useAuth() as any;
+  const { data: categoriesData, refetch } = useListCategories();
+  const categories: any[] = (categoriesData as any)?.categories ?? (Array.isArray(categoriesData) ? categoriesData : []);
+
+  const [editing, setEditing] = useState<Record<number, any>>({});
+  const [saving, setSaving] = useState<Record<number, boolean>>({});
+  const [deleting, setDeleting] = useState<Record<number, boolean>>({});
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [addForm, setAddForm] = useState({ name: "", slug: "", iconUrl: "" });
+  const [adding, setAdding] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+
+  const saveCategory = async (id: number) => {
+    setSaving(s => ({ ...s, [id]: true }));
+    try {
+      await fetch(`${API_BASE}/categories/${id}/update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(editing[id]),
+      });
+      await refetch();
+      setEditing(e => { const n = { ...e }; delete n[id]; return n; });
+    } catch {}
+    setSaving(s => ({ ...s, [id]: false }));
+  };
+
+  const deleteCategory = async (id: number) => {
+    setDeleting(d => ({ ...d, [id]: true }));
+    try {
+      await fetch(`${API_BASE}/categories/${id}/delete`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+      });
+      await refetch();
+      setConfirmDelete(null);
+    } catch {}
+    setDeleting(d => ({ ...d, [id]: false }));
+  };
+
+  const addCategory = async () => {
+    if (!addForm.name.trim()) return;
+    setAdding(true);
+    try {
+      await fetch(`${API_BASE}/categories/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: addForm.name, slug: addForm.slug || addForm.name.toLowerCase().replace(/\s+/g, '-'), iconUrl: addForm.iconUrl }),
+      });
+      await refetch();
+      setAddForm({ name: "", slug: "", iconUrl: "" });
+      setShowAdd(false);
+    } catch {}
+    setAdding(false);
   };
 
   return (
     <div className="space-y-4">
-      <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Webhook className="h-3.5 w-3.5" /> Webhook Sistemi</p>
-            <p className="text-xs text-[#555] mt-1">Pasif modda; kayıtlı ama tetiklenmez.</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-[#555]">{categories.length} kategori</p>
+        <button onClick={() => setShowAdd(s => !s)}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary/15 hover:bg-primary/25 text-primary transition-all">
+          <Plus className="h-3.5 w-3.5" /> Kategori Ekle
+        </button>
+      </div>
+
+      {showAdd && (
+        <div className="bg-[#111] border border-primary/20 rounded-xl p-4 space-y-3">
+          <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Yeni Kategori</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-[#666] block mb-1">İsim *</label>
+              <input value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value, slug: f.slug || e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
+                placeholder="Kategori adı" onKeyDown={e => e.key === "Enter" && addCategory()}
+                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2.5 py-2 text-sm text-white focus:outline-none focus:border-primary/40" />
+            </div>
+            <div>
+              <label className="text-xs text-[#666] block mb-1">Slug</label>
+              <input value={addForm.slug} onChange={e => setAddForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
+                placeholder="kategori-slug" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2.5 py-2 text-sm text-white focus:outline-none focus:border-primary/40 font-mono" />
+            </div>
           </div>
-          <button
-            onClick={() => setSettings((p: any) => ({ ...p, isEnabled: !p.isEnabled }))}
-            className={cn("w-12 h-6 rounded-full transition-all relative shrink-0", settings.isEnabled ? "bg-primary" : "bg-[#333]")}
-          >
-            <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", settings.isEnabled ? "left-7" : "left-1")} />
-          </button>
+          <div>
+            <label className="text-xs text-[#666] block mb-1">İkon URL (opsiyonel)</label>
+            <input value={addForm.iconUrl} onChange={e => setAddForm(f => ({ ...f, iconUrl: e.target.value }))}
+              placeholder="https://example.com/icon.png ya da emoji URL"
+              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2.5 py-2 text-sm text-white focus:outline-none focus:border-primary/40" />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={addCategory} disabled={adding || !addForm.name.trim()}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-xs font-medium disabled:opacity-50 transition-all">
+              {adding ? "Ekleniyor..." : <><Check className="h-3.5 w-3.5" /> Ekle</>}
+            </button>
+            <button onClick={() => { setShowAdd(false); setAddForm({ name: "", slug: "", iconUrl: "" }); }}
+              className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-[#666] text-xs hover:text-[#aaa] transition-all">
+              İptal
+            </button>
+          </div>
         </div>
-        {!settings.isEnabled && (
-          <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-4 py-3 text-xs text-yellow-500/80">
-            Webhook sistemi pasif. Eventler gösterilir ama gönderim yapılmaz.
+      )}
+
+      <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
+        {categories.length === 0 ? (
+          <div className="py-10 text-center text-[#555] text-sm">Kategori bulunamadı</div>
+        ) : (
+          <div className="divide-y divide-[#1a1a1a]">
+            {categories.map(cat => {
+              const isEditing = editing[cat.id] !== undefined;
+              const vals = editing[cat.id] ?? { name: cat.name, slug: cat.slug, iconUrl: cat.icon_url || "" };
+              return (
+                <div key={cat.id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-[#555] font-mono shrink-0">{cat.id}</div>
+                    {isEditing ? (
+                      <input value={vals.name} onChange={e => setEditing(p => ({ ...p, [cat.id]: { ...vals, name: e.target.value } }))}
+                        className="flex-1 bg-[#1a1a1a] border border-primary/40 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none" autoFocus />
+                    ) : (
+                      <span className="flex-1 text-sm text-white">{cat.name}</span>
+                    )}
+                    <span className="text-[11px] text-[#444] shrink-0">{cat.videoCount ?? 0} video</span>
+                    {!isEditing ? (
+                      <>
+                        <button onClick={() => setEditing(p => ({ ...p, [cat.id]: { name: cat.name, slug: cat.slug, iconUrl: cat.icon_url || "" } }))}
+                          className="text-[#444] hover:text-primary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
+                        {confirmDelete === cat.id ? (
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => deleteCategory(cat.id)} disabled={deleting[cat.id]}
+                              className="text-[10px] text-red-400 bg-red-900/20 border border-red-900/30 px-2 py-1 rounded-lg">{deleting[cat.id] ? "..." : "Sil"}</button>
+                            <button onClick={() => setConfirmDelete(null)} className="text-[10px] text-[#555] px-1.5 py-1">İptal</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setConfirmDelete(cat.id)} className="text-[#444] hover:text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => saveCategory(cat.id)} disabled={saving[cat.id]}
+                          className="flex items-center gap-1 text-xs bg-primary/20 hover:bg-primary/30 text-primary px-2.5 py-1 rounded-lg disabled:opacity-50">
+                          {saving[cat.id] ? "..." : <><Check className="h-3 w-3" /> Kaydet</>}
+                        </button>
+                        <button onClick={() => setEditing(p => { const n = { ...p }; delete n[cat.id]; return n; })} className="text-[#555] hover:text-white"><X className="h-4 w-4" /></button>
+                      </>
+                    )}
+                  </div>
+                  {isEditing && (
+                    <div className="grid grid-cols-2 gap-2 ml-10">
+                      <div>
+                        <label className="text-[10px] text-[#555] block mb-1">Slug</label>
+                        <input value={vals.slug} onChange={e => setEditing(p => ({ ...p, [cat.id]: { ...vals, slug: e.target.value } }))}
+                          className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none font-mono" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-[#555] block mb-1">İkon URL</label>
+                        <input value={vals.iconUrl} onChange={e => setEditing(p => ({ ...p, [cat.id]: { ...vals, iconUrl: e.target.value } }))}
+                          placeholder="https://..." className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
-        <div>
-          <label className="text-xs text-[#666] block mb-1.5">Endpoint URL</label>
-          <input
-            value={settings.endpointUrl || ""}
-            onChange={e => setSettings((p: any) => ({ ...p, endpointUrl: e.target.value }))}
-            placeholder="https://example.com/webhook"
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-[#666] block mb-1.5">Secret</label>
-          <input
-            value={settings.secret || ""}
-            onChange={e => setSettings((p: any) => ({ ...p, secret: e.target.value }))}
-            placeholder="whsec_..."
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-xs text-[#666]">Eventler</p>
-          <div className="flex flex-wrap gap-2">
-            {["video.created", "video.updated", "user.registered", "payment.completed", "creator.approved"].map(event => (
-              <button
-                key={event}
-                onClick={() => toggleEvent(event)}
-                className={cn("px-3 py-1.5 rounded-full text-xs border transition-all",
-                  settings.events.includes(event) ? "bg-primary/15 text-primary border-primary/30" : "bg-[#1a1a1a] text-[#666] border-[#2a2a2a]"
-                )}
-              >
-                {event}
-              </button>
-            ))}
-          </div>
-        </div>
-        <button onClick={save} disabled={saving} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-medium text-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
-          {saving ? "Kaydediliyor..." : saved ? "Kaydedildi" : "Webhook Ayarlarını Kaydet"}
-        </button>
       </div>
     </div>
   );
 }
 
+// ── Main AdminSiteSettings ───────────────────────────────────────────────────
 export default function AdminSiteSettings() {
   const { config, setNavItem, setSection, setMaintenance, resetAll } = useSiteConfig();
-  const { data: categoriesData, refetch } = useListCategories();
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"general" | "nav" | "categories" | "maintenance" | "watermark" | "seo" | "webhook">("general");
-  const [catEditing, setCatEditing] = useState<Record<number, string>>({});
-  const [catSaving, setCatSaving] = useState<Record<number, boolean>>({});
-
-  const categories: any[] = (categoriesData as any)?.categories ?? (Array.isArray(categoriesData) ? categoriesData : []);
+  const [activeTab, setActiveTab] = useState<string>("general");
 
   const groups = Array.from(new Set(Object.values(NAV_DEFAULTS).map(v => v.group)));
-
-  const saveCategoryName = async (id: number, name: string) => {
-    setCatSaving(s => ({ ...s, [id]: true }));
-    try {
-      const token = localStorage.getItem("token");
-      await fetch(`${API_BASE}/categories/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name }),
-      });
-      await refetch();
-      setCatEditing(e => { const n = { ...e }; delete n[id]; return n; });
-    } catch {}
-    setCatSaving(s => ({ ...s, [id]: false }));
-  };
-
   const globalMaint = config.maintenance["global"]?.enabled;
 
   return (
     <div className="space-y-5">
-      {/* Başlık */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="bg-blue-900/20 p-2.5 rounded-xl"><Settings2 className="h-5 w-5 text-blue-400" /></div>
           <div>
             <h2 className="text-lg font-bold text-white">Site Ayarları</h2>
-            <p className="text-[#666] text-xs mt-0.5">Navbar içerikleri, kategoriler ve bakım modları</p>
+            <p className="text-[#666] text-xs mt-0.5">SEO, Webhook, Filigran ve Kategori yönetimi</p>
           </div>
         </div>
-        <button onClick={resetAll} className="flex items-center gap-1.5 text-xs text-[#555] hover:text-red-400 transition-colors border border-[#222] hover:border-red-900/50 px-3 py-1.5 rounded-lg">
+        <button onClick={resetAll} className="flex items-center gap-1.5 text-xs text-[#555] hover:text-red-400 border border-[#222] hover:border-red-900/50 px-3 py-1.5 rounded-lg transition-colors">
           <RotateCcw className="h-3.5 w-3.5" /> Sıfırla
         </button>
       </div>
 
-      {/* Global Bakım Uyarısı */}
       {globalMaint && (
         <div className="bg-red-900/20 border border-red-900/40 rounded-xl p-3 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
-          <p className="text-red-300 text-xs">Site geneli bakım modu aktif. Ziyaretçiler bakım sayfası görüyor.</p>
+          <p className="text-red-300 text-xs">Site geneli bakım modu aktif.</p>
         </div>
       )}
 
-      {/* Sekmeler */}
       <div className="flex gap-1 bg-[#111] p-1 rounded-xl border border-[#222] flex-wrap">
         {[
           { id: "general", icon: Palette, label: "Genel" },
-          { id: "nav", icon: LayoutList, label: "Navbar & Menü" },
+          { id: "nav", icon: LayoutList, label: "Navbar" },
           { id: "categories", icon: Tag, label: "Kategoriler" },
           { id: "auto-category", icon: Sparkles, label: "Otomatik Kat." },
-          { id: "seo", icon: Search, label: "SEO Aracı" },
+          { id: "seo", icon: Search, label: "SEO" },
           { id: "webhook", icon: Webhook, label: "Webhook" },
-          { id: "maintenance", icon: Wrench, label: "Bakım Modu" },
+          { id: "maintenance", icon: Wrench, label: "Bakım" },
           { id: "watermark", icon: Stamp, label: "Filigran" },
         ].map(({ id, icon: Icon, label }) => (
-          <button key={id} onClick={() => setActiveTab(id as any)}
+          <button key={id} onClick={() => setActiveTab(id)}
             className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all",
-              activeTab === id ? "bg-[#1e1e1e] text-white border border-[#2a2a2a] shadow" : "text-[#555] hover:text-[#aaa]"
-            )}>
+              activeTab === id ? "bg-[#1e1e1e] text-white border border-[#2a2a2a] shadow" : "text-[#555] hover:text-[#aaa]")}>
             <Icon className="h-3.5 w-3.5" />{label}
           </button>
         ))}
       </div>
 
-      {/* ── GENEL ── */}
       {activeTab === "general" && <GeneralTab />}
 
-      {/* ── NAV ITEMS ── */}
       {activeTab === "nav" && (
         <div className="space-y-4">
-          {/* Section labels */}
           <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center gap-2">
               <ChevronRight className="h-3.5 w-3.5 text-[#555]" />
@@ -843,8 +1129,6 @@ export default function AdminSiteSettings() {
               })}
             </div>
           </div>
-
-          {/* Nav items grouped */}
           {groups.map(group => (
             <div key={group} className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center gap-2">
@@ -852,116 +1136,51 @@ export default function AdminSiteSettings() {
                 <span className="text-[11px] font-bold text-[#666] uppercase tracking-widest">{group}</span>
               </div>
               <div className="divide-y divide-[#1a1a1a]">
-                {Object.entries(NAV_DEFAULTS)
-                  .filter(([, v]) => v.group === group)
-                  .map(([id]) => {
-                    const cfg = config.nav[id] ?? { label: NAV_DEFAULTS[id].label, enabled: true };
-                    return (
-                      <div key={id} className={cn("flex items-center gap-3 px-4 py-3 transition-colors", !cfg.enabled && "opacity-50")}>
-                        <Toggle checked={cfg.enabled} onChange={v => setNavItem(id, { enabled: v })} />
-                        <InlineEdit value={cfg.label} onChange={v => setNavItem(id, { label: v })} />
-                        <span className="text-[10px] text-[#444] font-mono hidden sm:block">{id}</span>
-                        {!cfg.enabled && <EyeOff className="h-3.5 w-3.5 text-[#444] shrink-0" />}
-                      </div>
-                    );
-                  })}
+                {Object.entries(NAV_DEFAULTS).filter(([, v]) => v.group === group).map(([id]) => {
+                  const cfg = config.nav[id] ?? { label: NAV_DEFAULTS[id].label, enabled: true };
+                  return (
+                    <div key={id} className={cn("flex items-center gap-3 px-4 py-3 transition-colors", !cfg.enabled && "opacity-50")}>
+                      <Toggle checked={cfg.enabled} onChange={v => setNavItem(id, { enabled: v })} />
+                      <InlineEdit value={cfg.label} onChange={v => setNavItem(id, { label: v })} />
+                      <span className="text-[10px] text-[#444] font-mono hidden sm:block">{id}</span>
+                      {!cfg.enabled && <EyeOff className="h-3.5 w-3.5 text-[#444] shrink-0" />}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── KATEGORİLER ── */}
-      {activeTab === "categories" && (
-        <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#666] uppercase tracking-widest">DB Kategorileri</span>
-            <span className="text-[11px] text-[#555]">{categories.length} kategori</span>
-          </div>
-          {categories.length === 0 ? (
-            <div className="py-10 text-center text-[#555] text-sm">Kategori bulunamadı</div>
-          ) : (
-            <div className="divide-y divide-[#1a1a1a]">
-              {categories.map(cat => {
-                const isDirty = catEditing[cat.id] !== undefined;
-                const editVal = catEditing[cat.id] ?? cat.name;
-                return (
-                  <div key={cat.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="w-8 h-8 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-xs text-[#666] font-mono shrink-0">
-                      {cat.id}
-                    </div>
-                    <input
-                      value={editVal}
-                      onChange={e => setCatEditing(p => ({ ...p, [cat.id]: e.target.value }))}
-                      className={cn(
-                        "flex-1 bg-transparent text-sm text-white focus:outline-none focus:bg-[#1a1a1a] px-2 py-1 rounded transition-colors border",
-                        isDirty ? "border-primary/50" : "border-transparent"
-                      )}
-                    />
-                    <span className="text-[11px] text-[#444]">{cat.videoCount ?? 0} video</span>
-                    {isDirty && (
-                      <button
-                        onClick={() => saveCategoryName(cat.id, editVal)}
-                        disabled={catSaving[cat.id]}
-                        className="flex items-center gap-1 text-xs bg-primary/20 hover:bg-primary/30 text-primary px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        {catSaving[cat.id] ? "..." : <><Check className="h-3 w-3" /> Kaydet</>}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── SEO ── */}
+      {activeTab === "categories" && <CategoryManagerTab />}
+      {activeTab === "auto-category" && <AutoCategoryTab />}
       {activeTab === "seo" && <SeoTab />}
-
-      {/* ── WEBHOOK ── */}
       {activeTab === "webhook" && <WebhookTab />}
-
-      {/* ── FİLİGRAN ── */}
       {activeTab === "watermark" && <WatermarkTab />}
 
-      {/* ── BAKIM MODU ── */}
       {activeTab === "maintenance" && (
         <div className="space-y-3">
           {Object.entries(MAINTENANCE_DEFAULTS).map(([id]) => {
             const cfg = config.maintenance[id] ?? { enabled: false, message: MAINTENANCE_DEFAULTS[id] };
             const isGlobal = id === "global";
             return (
-              <div key={id} className={cn(
-                "bg-[#111] border rounded-xl overflow-hidden transition-all",
-                cfg.enabled ? (isGlobal ? "border-red-900/50" : "border-yellow-900/40") : "border-[#222]"
-              )}>
+              <div key={id} className={cn("bg-[#111] border rounded-xl overflow-hidden transition-all",
+                cfg.enabled ? (isGlobal ? "border-red-900/50" : "border-yellow-900/40") : "border-[#222]")}>
                 <div className="flex items-center gap-3 px-4 py-3">
                   <Toggle checked={cfg.enabled} onChange={v => setMaintenance(id, { enabled: v })} />
                   <div className="flex-1 min-w-0">
                     <p className={cn("text-sm font-medium", cfg.enabled ? (isGlobal ? "text-red-400" : "text-yellow-400") : "text-[#aaa]")}>
-                      {isGlobal ? "🔴 Tüm Site" :
-                       id === "videos" ? "📹 Videolar Sayfası" :
-                       id === "shorts" ? "⚡ Kısa Videolar" :
-                       id === "upload" ? "⬆️ Video Yükleme" :
-                       id === "payment" ? "💳 Ödeme Sistemi" :
-                       id === "register" ? "👤 Yeni Kayıt" : id}
+                      {isGlobal ? "🔴 Tüm Site" : id === "videos" ? "📹 Videolar" : id === "shorts" ? "⚡ Kısa Videolar" : id === "upload" ? "⬆️ Video Yükleme" : id === "payment" ? "💳 Ödeme" : id === "register" ? "👤 Yeni Kayıt" : id}
                     </p>
                   </div>
-                  {cfg.enabled && (
-                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold",
-                      isGlobal ? "bg-red-900/30 text-red-400" : "bg-yellow-900/30 text-yellow-400"
-                    )}>AKTİF</span>
-                  )}
+                  {cfg.enabled && <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold", isGlobal ? "bg-red-900/30 text-red-400" : "bg-yellow-900/30 text-yellow-400")}>AKTİF</span>}
                 </div>
                 {cfg.enabled && (
                   <div className="px-4 pb-3">
                     <label className="text-[11px] text-[#555] uppercase tracking-wider block mb-1">Ziyaretçi Mesajı</label>
-                    <input
-                      value={cfg.message}
-                      onChange={e => setMaintenance(id, { message: e.target.value })}
-                      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#444]"
-                    />
+                    <input value={cfg.message} onChange={e => setMaintenance(id, { message: e.target.value })}
+                      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#444]" />
                   </div>
                 )}
               </div>

@@ -38,6 +38,7 @@ urlpatterns = [
     path('categories', views.list_categories),
     path('categories/create', ex2.create_category),
     path('categories/<int:cat_id>/update', ex2.update_category),
+    path('categories/<int:cat_id>/delete', ex2.delete_category),
     path('categories/<slug:slug>', views.get_category),
     path('playlists', views.list_playlists),
     path('playlists/create', views.create_playlist),

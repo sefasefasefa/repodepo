@@ -119,11 +119,39 @@ class PaymentGateway(models.Model):
 
 
 class SeoSettings(models.Model):
+    ROBOTS_CHOICES = [
+        ('index,follow', 'index,follow'),
+        ('noindex,follow', 'noindex,follow'),
+        ('index,nofollow', 'index,nofollow'),
+        ('noindex,nofollow', 'noindex,nofollow'),
+    ]
+    OG_TYPE_CHOICES = [
+        ('website', 'website'), ('article', 'article'),
+        ('video.other', 'video.other'), ('profile', 'profile'),
+    ]
+    TWITTER_CARD_CHOICES = [
+        ('summary', 'summary'),
+        ('summary_large_image', 'summary_large_image'),
+        ('player', 'player'),
+    ]
     site_title = models.CharField(max_length=200, default='Prnhbbbb')
     site_description = models.TextField(default='Video streaming ve sosyal platform')
     keywords = models.TextField(default='video, streaming, creator, sosyal')
     robots = models.CharField(max_length=100, default='index,follow')
     og_image = models.TextField(default='')
+    og_title = models.CharField(max_length=200, default='')
+    og_description = models.TextField(default='')
+    og_type = models.CharField(max_length=30, default='website')
+    twitter_card = models.CharField(max_length=30, default='summary_large_image')
+    twitter_site = models.CharField(max_length=100, default='')
+    twitter_creator = models.CharField(max_length=100, default='')
+    canonical_url = models.TextField(default='')
+    google_analytics_id = models.CharField(max_length=50, default='')
+    google_search_console = models.CharField(max_length=200, default='')
+    structured_data_enabled = models.BooleanField(default=True)
+    sitemap_enabled = models.BooleanField(default=True)
+    hreflang = models.CharField(max_length=10, default='tr')
+    schema_org_type = models.CharField(max_length=50, default='Organization')
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -135,6 +163,7 @@ class WebhookSettings(models.Model):
     endpoint_url = models.TextField(default='')
     secret = models.TextField(default='')
     events = models.JSONField(default=list)
+    endpoints = models.JSONField(default=list)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

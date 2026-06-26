@@ -127,15 +127,34 @@ def update_category(request, cat_id):
         cat = Category.objects.get(id=cat_id)
     except Category.DoesNotExist:
         return Response({'error': 'Category not found'}, status=404)
-    name = ((request.data or {}).get('name') or '').strip()
+    d = request.data or {}
+    name = (d.get('name') or '').strip()
     if not name:
         return Response({'error': 'name is required'}, status=400)
     cat.name = name
-    cat.save(update_fields=['name'])
+    if 'slug' in d and d['slug']:
+        cat.slug = d['slug'].strip().lower().replace(' ', '-')
+    if 'iconUrl' in d:
+        cat.icon_url = d['iconUrl'] or None
+    cat.save()
     return Response({
         'id': cat.id, 'name': cat.name, 'slug': cat.slug,
         'iconUrl': cat.icon_url, 'videoCount': cat.video_count,
     })
+
+
+@api_view(['DELETE'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def delete_category(request, cat_id):
+    if not _is_admin(request.user):
+        return Response({'error': 'Admin gerekli'}, status=403)
+    try:
+        cat = Category.objects.get(id=cat_id)
+    except Category.DoesNotExist:
+        return Response({'error': 'Category not found'}, status=404)
+    cat.delete()
+    return Response({'message': 'Kategori silindi'})
 
 
 # ─── Upload supported formats ──────────────────────────────────────────
