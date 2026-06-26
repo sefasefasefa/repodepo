@@ -27,7 +27,7 @@ function GeneralTab() {
     fetch("/api/admin/settings", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setForm({
-        siteName: d.siteName ?? "Prnhbbbb",
+        siteName: d.siteName ?? "",
         siteDescription: d.siteDescription ?? "",
         logoUrl: d.logoUrl ?? "",
         faviconUrl: d.faviconUrl ?? "",
@@ -35,7 +35,10 @@ function GeneralTab() {
         registrationEnabled: d.registrationEnabled ?? true,
         maintenanceMode: d.maintenanceMode ?? false,
       }))
-      .catch(() => {});
+      .catch(() => setForm({
+        siteName: "", siteDescription: "", logoUrl: "", faviconUrl: "",
+        primaryColor: "#7c3aed", registrationEnabled: true, maintenanceMode: false,
+      }));
   }, [token]);
 
   const save = async () => {
@@ -151,12 +154,14 @@ function AutoCategoryTab() {
     fetch(`${API_BASE}/auto-category/rules`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => {
-        if (!d.rules) return;
-        const map: Record<number, { keywords: string[]; isEnabled: boolean }> = {};
-        for (const r of d.rules) map[r.categoryId] = { keywords: r.keywords ?? [], isEnabled: r.isEnabled ?? true };
-        setRules(map);
-        setLoaded(true);
-      });
+        if (d.rules) {
+          const map: Record<number, { keywords: string[]; isEnabled: boolean }> = {};
+          for (const r of d.rules) map[r.categoryId] = { keywords: r.keywords ?? [], isEnabled: r.isEnabled ?? true };
+          setRules(map);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, [token]);
 
   const addKeyword = (catId: number) => {
@@ -462,9 +467,11 @@ function SeoTab() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!token) return;
     fetch("/api/seo/admin/settings", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => setSettings(d.settings || {}));
+      .then(d => setSettings(d.settings || {}))
+      .catch(() => setSettings({}));
   }, [token]);
 
   const save = async () => {

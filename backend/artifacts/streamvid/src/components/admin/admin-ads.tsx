@@ -31,10 +31,15 @@ export function AdminAds() {
 
   const load = async () => {
     setLoading(true);
-    const r = await fetch("/api/ads?active=all");
-    const d = await r.json();
-    setAds(d.ads || []);
-    setLoading(false);
+    try {
+      const r = await fetch("/api/ads?active=all", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const d = await r.json();
+      setAds(d.ads || []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
