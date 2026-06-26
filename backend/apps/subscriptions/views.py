@@ -1,3 +1,4 @@
+import threading
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -5,6 +6,30 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import SubscriptionPlan, UserSubscription, Payment
+
+
+def _broadcast_plan_notification(title: str, message: str, action_url: str = "/pricing"):
+    """Tüm aktif kullanıcılara arka planda bildirim gönder."""
+    def _send():
+        try:
+            from apps.notifications.models import Notification
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            users = User.objects.filter(is_active=True).values_list("id", flat=True)
+            batch = [
+                Notification(
+                    user_id=uid,
+                    type="subscription",
+                    title=title,
+                    message=message,
+                    action_url=action_url,
+                )
+                for uid in users
+            ]
+            Notification.objects.bulk_create(batch, ignore_conflicts=True)
+        except Exception:
+            pass
+    threading.Thread(target=_send, daemon=True).start()
 
 
 def _fmt_plan(p):
@@ -50,6 +75,12 @@ def admin_create_plan(request):
         is_popular=bool(d.get('isPopular', False)),
         is_active=bool(d.get('isActive', True)),
     )
+    cycle_tr = {'monthly': 'aylık', 'yearly': 'yıllık', 'lifetime': 'ömür boyu'}.get(plan.billing_cycle, plan.billing_cycle)
+    _broadcast_plan_notification(
+        title=f"🎉 Yeni Plan: {plan.name}",
+        message=f"{plan.name} planı artık mevcut! ${plan.price}/{cycle_tr} — {plan.description or 'Hemen keşfet'}",
+        action_url="/pricing",
+    )
     return Response({'plan': _fmt_plan(plan)}, status=201)
 
 
@@ -84,6 +115,13 @@ def admin_plan_detail(request, plan_id):
     if 'isActive' in d:
         plan.is_active = bool(d['isActive'])
     plan.save()
+    if plan.is_active:
+        cycle_tr = {'monthly': 'aylık', 'yearly': 'yıllık', 'lifetime': 'ömür boyu'}.get(plan.billing_cycle, plan.billing_cycle)
+        _broadcast_plan_notification(
+            title=f"✨ Plan Güncellendi: {plan.name}",
+            message=f"{plan.name} planında değişiklikler yapıldı. Yeni fiyat: ${plan.price}/{cycle_tr}",
+            action_url="/pricing",
+        )
     return Response({'plan': _fmt_plan(plan)})
 
 
