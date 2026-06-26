@@ -3,10 +3,42 @@ from django.conf import settings
 
 
 ADAPTER_CHOICES = [
+    # Gerçek API entegrasyonları
+    ('streamtape',   'StreamTape API'),
+    ('doodstream',   'DoodStream API'),
+    ('mixdrop',      'Mixdrop API'),
+    ('vidoza',       'Vidoza API'),
+    ('filemoon',     'FileMoon API'),
+    ('streamwish',   'StreamWish API'),
+    ('voe',          'Voe.sx API'),
+    ('upstream',     'Upstream API'),
+    ('vidhide',      'VidHide API'),
+    ('luluvdo',      'Luluvdo API'),
+    ('uqload',       'Uqload API'),
+    ('streamhide',   'StreamHide API'),
+    ('supervideo',   'SuperVideo API'),
+    # Genel
     ('generic_webhook', 'Generic Webhook (POST JSON)'),
-    ('multipart_form', 'Multipart Form Upload'),
-    ('manual', 'Manual / No automation'),
+    ('multipart_form',  'Multipart Form Upload'),
+    ('manual',          'Manuel (otomatik yok)'),
 ]
+
+# provider_key → kullanılacak adapter
+PROVIDER_DEFAULT_ADAPTER = {
+    'streamtape': 'streamtape',
+    'doodstream': 'doodstream',
+    'mixdrop':    'mixdrop',
+    'vidoza':     'vidoza',
+    'filemoon':   'filemoon',
+    'streamwish': 'streamwish',
+    'voe':        'voe',
+    'upstream':   'upstream',
+    'vidhide':    'vidhide',
+    'luluvdo':    'luluvdo',
+    'uqload':     'uqload',
+    'streamhide': 'streamhide',
+    'supervideo': 'supervideo',
+}
 
 PROVIDER_CATALOG = [
     # +18 içeriği kabul eden video host servisleri

@@ -21,6 +21,25 @@ interface Props {
   onChange: (ids: number[]) => void;
 }
 
+// Her sağlayıcı için hangi kimlik alanları gerekli
+const PROVIDER_CREDENTIALS: Record<string, { needsUsername?: boolean; userLabel?: string; userPlaceholder?: string; needsApiKey?: boolean; apiKeyLabel?: string; apiKeyPlaceholder?: string; needsPassword?: boolean; hint?: string }> = {
+  streamtape:  { needsUsername: true, userLabel: "Login (kullanıcı adı)", userPlaceholder: "kullaniciadı", needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx-xxxx-xxxx", hint: "streamtape.com/api adresinden alabilirsin" },
+  doodstream:  { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "doodapi.com üzerinden API anahtarı al" },
+  mixdrop:     { needsUsername: true, userLabel: "E-posta", userPlaceholder: "email@örnek.com", needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "mixdrop.ag hesabından API anahtarı al" },
+  vidoza:      { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "vidoza.net hesabından API anahtarı al" },
+  filemoon:    { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "filemoon.sx hesabından API anahtarı al" },
+  streamwish:  { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "streamwish.com hesabından API anahtarı al" },
+  voe:         { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "voe.sx hesabından API anahtarı al" },
+  upstream:    { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "upstream.to hesabından API anahtarı al" },
+  vidhide:     { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "vidhide.com hesabından API anahtarı al" },
+  luluvdo:     { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "luluvdo.com hesabından API anahtarı al" },
+  uqload:      { needsUsername: true, userLabel: "E-posta", userPlaceholder: "email@örnek.com", needsPassword: true, hint: "uqload.io hesap bilgilerini gir" },
+  streamhide:  { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "streamhide.com hesabından API anahtarı al" },
+  supervideo:  { needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx...", hint: "supervideo.tv hesabından API anahtarı al" },
+};
+
+const DEFAULT_CREDS = { needsUsername: true, userLabel: "Kullanıcı Adı", userPlaceholder: "kullanici", needsApiKey: true, apiKeyLabel: "API Anahtarı", apiKeyPlaceholder: "xxxx..." };
+
 function AddSiteModal({
   provider,
   onClose,
@@ -31,13 +50,8 @@ function AddSiteModal({
   onAdded: (siteId: number) => void;
 }) {
   const { token } = useAuth() as any;
-  const [form, setForm] = useState({
-    username: "",
-    password: "",
-    apiKey: "",
-    uploadEndpoint: "",
-    adapter: "generic_webhook",
-  });
+  const creds = PROVIDER_CREDENTIALS[provider.key] ?? DEFAULT_CREDS;
+  const [form, setForm] = useState({ username: "", password: "", apiKey: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -47,18 +61,13 @@ function AddSiteModal({
     try {
       const res = await fetch("/api/cross-post/sites", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token ?? ""}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
         body: JSON.stringify({
           name: provider.name,
           providerKey: provider.key,
           username: form.username,
           password: form.password,
           apiKey: form.apiKey,
-          uploadEndpoint: form.uploadEndpoint,
-          adapter: form.adapter,
           enabled: true,
           autoPost: false,
         }),
@@ -81,69 +90,59 @@ function AddSiteModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="w-full max-w-md bg-[#111] border border-[#2a2a2a] rounded-2xl p-6 space-y-4 shadow-2xl">
+        {/* Header */}
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0"
-            style={{ backgroundColor: provider.color }}
-          >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0" style={{ backgroundColor: provider.color }}>
             {provider.letter}
           </div>
           <div>
             <p className="font-semibold text-white">{provider.name} Hesabı Ekle</p>
-            <p className="text-xs text-[#666]">{provider.baseUrl}</p>
+            <p className="text-xs text-[#555]">{provider.baseUrl}</p>
           </div>
         </div>
 
+        {/* Hint */}
+        {creds.hint && (
+          <div className="bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-xs text-primary/80">
+            💡 {creds.hint}
+          </div>
+        )}
+
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-xs text-[#888]">Kullanıcı Adı</label>
-            <input
-              className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
-              value={form.username}
-              onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-              placeholder="kullanici@örnek.com"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-[#888]">Şifre</label>
-            <input
-              type="password"
-              className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
-              value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              placeholder="••••••••"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-[#888]">API Anahtarı (opsiyonel)</label>
-            <input
-              className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
-              value={form.apiKey}
-              onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
-              placeholder="sk-..."
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-[#888]">Yükleme URL'si (opsiyonel)</label>
-            <input
-              className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
-              value={form.uploadEndpoint}
-              onChange={(e) => setForm((f) => ({ ...f, uploadEndpoint: e.target.value }))}
-              placeholder="https://api.örnek.com/upload"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-[#888]">Bağlantı Türü</label>
-            <select
-              className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
-              value={form.adapter}
-              onChange={(e) => setForm((f) => ({ ...f, adapter: e.target.value }))}
-            >
-              <option value="generic_webhook">Webhook (JSON)</option>
-              <option value="multipart_form">Multipart Form</option>
-              <option value="manual">Manuel</option>
-            </select>
-          </div>
+          {creds.needsUsername && (
+            <div className="space-y-1.5">
+              <label className="text-xs text-[#888]">{creds.userLabel ?? "Kullanıcı Adı"}</label>
+              <input
+                className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                value={form.username}
+                onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                placeholder={creds.userPlaceholder ?? ""}
+              />
+            </div>
+          )}
+          {creds.needsPassword && (
+            <div className="space-y-1.5">
+              <label className="text-xs text-[#888]">Şifre</label>
+              <input
+                type="password"
+                className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                value={form.password}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder="••••••••"
+              />
+            </div>
+          )}
+          {creds.needsApiKey && (
+            <div className="space-y-1.5">
+              <label className="text-xs text-[#888]">{creds.apiKeyLabel ?? "API Anahtarı"}</label>
+              <input
+                className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary font-mono"
+                value={form.apiKey}
+                onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
+                placeholder={creds.apiKeyPlaceholder ?? ""}
+              />
+            </div>
+          )}
         </div>
 
         {error && (

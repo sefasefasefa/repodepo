@@ -9,7 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from apps.videos.models import Video
 
 from .dispatcher import dispatch_for_video, test_login
-from .models import CrossPostJob, CrossPostSite, PROVIDER_CATALOG
+from .models import CrossPostJob, CrossPostSite, PROVIDER_CATALOG, PROVIDER_DEFAULT_ADAPTER
 
 
 def _site_or_404(user, site_id):
@@ -60,6 +60,8 @@ def sites_list_create(request):
     provider_key = d.get('providerKey', '') or ''
     catalog_entry = next((p for p in PROVIDER_CATALOG if p['key'] == provider_key), None)
 
+    default_adapter = PROVIDER_DEFAULT_ADAPTER.get(provider_key, 'generic_webhook')
+
     site = CrossPostSite.objects.create(
         user=request.user,
         name=d.get('name'),
@@ -70,7 +72,7 @@ def sites_list_create(request):
         base_url=catalog_entry['baseUrl'] if catalog_entry else (d.get('baseUrl', '') or ''),
         upload_endpoint=d.get('uploadEndpoint', '') or '',
         login_endpoint=d.get('loginEndpoint', '') or '',
-        adapter=d.get('adapter', 'generic_webhook'),
+        adapter=d.get('adapter', default_adapter),
         username=d.get('username', '') or '',
         password=d.get('password', '') or '',
         api_key=d.get('apiKey', '') or '',
