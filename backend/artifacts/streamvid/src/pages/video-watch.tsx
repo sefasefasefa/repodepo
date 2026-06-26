@@ -13,6 +13,7 @@ import { VideoCard } from "@/components/video/video-card";
 import { PremiumPaywall } from "@/components/video/premium-paywall";
 import { WatermarkOverlay } from "@/components/video/watermark-overlay";
 import { SubtitleOverlay } from "@/components/video/subtitle-overlay";
+import { CrosspostDispatchModal } from "@/components/crosspost/dispatch-modal";
 import { SubtitleManager } from "@/components/video/subtitle-manager";
 import { ScreenProtectionOverlay, getVideoProtectionProps } from "@/components/video/screen-protection-overlay";
 import { isScreenProtectionEnabled } from "@/lib/use-screen-protection";
@@ -255,6 +256,7 @@ export default function VideoWatch() {
   const [reportTarget, setReportTarget] = useState<{ type: "video" | "comment"; commentId?: number } | null>(null);
   const [showSubManager, setShowSubManager] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [showCrosspost, setShowCrosspost] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -407,6 +409,7 @@ export default function VideoWatch() {
           {isLocked && <div className="flex items-center justify-between gap-4 bg-primary/10 border border-primary/20 rounded-xl px-5 py-4"><div className="flex items-center gap-3"><Crown className="h-5 w-5 text-primary shrink-0" /><p className="text-sm text-white">{user ? "Bu içeriği izlemek için Premium üyelik gerekiyor." : "Giriş yap veya abone ol."}</p></div><Button size="sm" onClick={() => setLocation("/pricing")} className="shrink-0 bg-primary hover:bg-primary/90">{user ? "Premium'a Geç" : "Abone Ol"}</Button></div>}
           <div className="flex items-center gap-2 flex-wrap">
             {isCreatorOrAdmin && <button onClick={() => setShowSubManager(p => !p)} className="flex items-center gap-2 text-sm font-medium text-[#888] hover:text-white transition-colors"><Languages className="h-4 w-4" />Altyazı Yönetimi<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showSubManager && "rotate-180")} /></button>}
+            {isCreatorOrAdmin && <button onClick={() => setShowCrosspost(true)} className="flex items-center gap-2 text-sm font-medium text-[#888] hover:text-primary transition-colors"><Share2 className="h-4 w-4" />Crosspost Gönder</button>}
             {user && <button onClick={() => setShowTranscript(p => !p)} className="flex items-center gap-2 text-sm font-medium text-[#888] hover:text-white transition-colors"><FileText className="h-4 w-4" />Transcript<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showTranscript && "rotate-180")} /></button>}
           </div>
           {showTranscript && user && <SubtitleManager videoId={videoId} token={token} />}
@@ -421,6 +424,7 @@ export default function VideoWatch() {
       {showTip && video.creator && <TokenTipModal creator={{ id: video.creator.id, username: video.creator.username, displayName: video.creator.displayName ?? undefined, avatarUrl: video.creator.avatarUrl ?? undefined }} videoId={videoId} onClose={() => setShowTip(false)} />}
       {showRequest && video.creator && <CustomRequestModal creator={{ id: video.creator.id, username: video.creator.username, displayName: video.creator.displayName ?? undefined, avatarUrl: video.creator.avatarUrl ?? undefined }} currentBalance={tokenBalance} onClose={() => setShowRequest(false)} onSent={() => setShowRequest(false)} />}
       <ReportModal open={showReport} onClose={() => { setShowReport(false); setReportTarget(null); }} contentType={reportTarget?.type ?? "video"} videoId={reportTarget?.type === "video" ? videoId : undefined} commentId={reportTarget?.commentId} contentLabel={reportTarget?.type === "video" ? video.title : undefined} />
+      {showCrosspost && <CrosspostDispatchModal videoId={videoId} videoTitle={video.title} onClose={() => setShowCrosspost(false)} />}
     </AppLayout>
   );
 }
