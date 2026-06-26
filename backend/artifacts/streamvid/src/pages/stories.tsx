@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/layout/app-layout";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/lib/auth";
-import { X, ChevronLeft, ChevronRight, Plus, Heart, Eye, Lock, MessageCircle, Send, Smile } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Plus, Heart, Eye, Lock, MessageCircle, Send, Smile, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { processMessage } from "@/lib/link-filter";
@@ -46,14 +46,20 @@ export default function Stories() {
   const [showAdd, setShowAdd] = useState(false);
   const [newStory, setNewStory] = useState({ mediaUrl: "", mediaType: "image", caption: "", isPremium: false });
 
-  // Per-story state
   const [liked, setLiked] = useState<Record<number, boolean>>({});
   const [likeCounts, setLikeCounts] = useState<Record<number, number>>({});
+  const [likeLoading, setLikeLoading] = useState<Record<number, boolean>>({});
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Record<number, StoryComment[]>>({});
+  const [commentsLoaded, setCommentsLoaded] = useState<Record<number, boolean>>({});
   const [commentText, setCommentText] = useState("");
+  const [commentSending, setCommentSending] = useState(false);
   const [reactionPicker, setReactionPicker] = useState(false);
   const [floatingReaction, setFloatingReaction] = useState<string | null>(null);
+
+  const authHeaders = token
+    ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+    : { "Content-Type": "application/json" };
 
   const load = async () => {
     setLoading(true);
@@ -123,11 +129,22 @@ export default function Stories() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [activeGroup, activeStoryIdx, paused, showComments]);
 
+  // Load comments from API when panel opens
+  const loadComments = async (storyId: number) => {
+    if (commentsLoaded[storyId]) return;
+    try {
+      const r = await fetch(`/api/stories/${storyId}/comments`);
+      const d = await r.json();
+      setComments(p => ({ ...p, [storyId]: d.comments || [] }));
+      setCommentsLoaded(p => ({ ...p, [storyId]: true }));
+    } catch { /* keep local */ }
+  };
+
   const handleAddStory = async () => {
     if (!newStory.mediaUrl) return;
-    await fetch("/api/stories", {
+    await fetch("/api/stories/create", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: authHeaders,
       body: JSON.stringify(newStory),
     });
     setShowAdd(false);
@@ -135,35 +152,93 @@ export default function Stories() {
     load();
   };
 
-  const toggleLike = (storyId: number) => {
-    setLiked(p => ({ ...p, [storyId]: !p[storyId] }));
-    setLikeCounts(p => ({ ...p, [storyId]: (p[storyId] ?? 0) + (liked[storyId] ? -1 : 1) }));
+  const toggleLike = async (storyId: number) => {
+    if (!user) return;
+    if (likeLoading[storyId]) return;
+    const isLiked = liked[storyId] ?? false;
+    setLikeLoading(p => ({ ...p, [storyId]: true }));
+    // Optimistic update
+    setLiked(p => ({ ...p, [storyId]: !isLiked }));
+    setLikeCounts(p => ({ ...p, [storyId]: (p[storyId] ?? 0) + (isLiked ? -1 : 1) }));
+    try {
+      const r = await fetch(`/api/stories/${storyId}/like`, {
+        method: isLiked ? "DELETE" : "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ emoji: "❤️" }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setLiked(p => ({ ...p, [storyId]: d.liked }));
+        setLikeCounts(p => ({ ...p, [storyId]: d.likeCount }));
+      } else {
+        // Revert on error
+        setLiked(p => ({ ...p, [storyId]: isLiked }));
+        setLikeCounts(p => ({ ...p, [storyId]: (p[storyId] ?? 0) + (isLiked ? 1 : -1) }));
+      }
+    } catch {
+      setLiked(p => ({ ...p, [storyId]: isLiked }));
+    } finally {
+      setLikeLoading(p => ({ ...p, [storyId]: false }));
+    }
   };
 
-  const sendReaction = (emoji: string) => {
+  const sendReaction = async (emoji: string) => {
     if (storyKey === null || storyKey === undefined) return;
     setFloatingReaction(emoji);
     setReactionPicker(false);
     setTimeout(() => setFloatingReaction(null), 1200);
+    if (!user) return;
+    // Optimistic like state
     if (!liked[storyKey]) {
       setLiked(p => ({ ...p, [storyKey]: true }));
       setLikeCounts(p => ({ ...p, [storyKey]: (p[storyKey] ?? 0) + 1 }));
     }
+    try {
+      const r = await fetch(`/api/stories/${storyKey}/like`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ emoji }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setLiked(p => ({ ...p, [storyKey]: d.liked }));
+        setLikeCounts(p => ({ ...p, [storyKey]: d.likeCount }));
+      }
+    } catch { /* keep optimistic */ }
   };
 
-  const sendComment = () => {
+  const sendComment = async () => {
     const trimmed = commentText.trim();
-    if (!trimmed || storyKey === null || storyKey === undefined) return;
+    if (!trimmed || storyKey === null || storyKey === undefined || !user) return;
     const { filtered } = processMessage(trimmed, user?.username ?? "anonim", "comment", `story_${storyKey}`);
-    const newComment: StoryComment = {
+    setCommentSending(true);
+    // Optimistic add
+    const tempComment: StoryComment = {
       id: Date.now(),
       user: user?.username ?? "anonim",
       avatar: user?.avatarUrl,
       text: filtered,
       ts: Date.now(),
     };
-    setComments(p => ({ ...p, [storyKey]: [...(p[storyKey] ?? []), newComment] }));
+    setComments(p => ({ ...p, [storyKey]: [...(p[storyKey] ?? []), tempComment] }));
     setCommentText("");
+    try {
+      const r = await fetch(`/api/stories/${storyKey}/comments`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ text: filtered }),
+      });
+      if (r.ok) {
+        const saved = await r.json();
+        // Replace temp with server-saved comment
+        setComments(p => ({
+          ...p,
+          [storyKey]: (p[storyKey] ?? []).map(c => c.id === tempComment.id ? saved : c),
+        }));
+      }
+    } catch { /* keep optimistic */ } finally {
+      setCommentSending(false);
+    }
   };
 
   const activeStoryData = activeGroup !== null ? groups[activeGroup]?.stories[activeStoryIdx] : null;
@@ -372,7 +447,11 @@ export default function Stories() {
 
                   {/* Comment button */}
                   <button
-                    onClick={() => { setShowComments(true); setPaused(true); }}
+                    onClick={() => {
+                      setShowComments(true);
+                      setPaused(true);
+                      if (storyKey !== null && storyKey !== undefined) loadComments(storyKey);
+                    }}
                     className="no-pause flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white/70 hover:text-white text-xs transition-colors"
                   >
                     <MessageCircle className="h-4 w-4" />
@@ -382,9 +461,11 @@ export default function Stories() {
                   {/* Like button */}
                   <button
                     onClick={() => storyKey !== null && storyKey !== undefined && toggleLike(storyKey)}
-                    className="no-pause flex items-center gap-1.5 p-2 rounded-full bg-black/40 backdrop-blur-sm text-white/70 hover:text-white transition-colors"
+                    disabled={!user || (storyKey !== null && storyKey !== undefined && likeLoading[storyKey])}
+                    className="no-pause flex items-center gap-1.5 p-2 rounded-full bg-black/40 backdrop-blur-sm text-white/70 hover:text-white transition-colors disabled:opacity-50"
                   >
                     <Heart className={cn("h-5 w-5 transition-all", currentStoryLiked ? "fill-red-500 text-red-500 scale-110" : "")} />
+                    {currentLikeCount > 0 && <span className="text-xs">{currentLikeCount}</span>}
                   </button>
                 </div>
               </div>
@@ -425,16 +506,20 @@ export default function Stories() {
                     <input
                       value={commentText}
                       onChange={e => setCommentText(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && sendComment()}
+                      onKeyDown={e => e.key === "Enter" && !commentSending && sendComment()}
                       placeholder="Yorum yaz..."
-                      className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-3.5 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-primary/40"
+                      disabled={commentSending}
+                      className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-3.5 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-primary/40 disabled:opacity-50"
                     />
                     <button
                       onClick={sendComment}
-                      disabled={!commentText.trim()}
+                      disabled={!commentText.trim() || commentSending}
                       className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-white disabled:opacity-30 flex items-center justify-center shrink-0 transition-all"
                     >
-                      <Send className="h-4 w-4" />
+                      {commentSending
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Send className="h-4 w-4" />
+                      }
                     </button>
                   </div>
                 ) : (

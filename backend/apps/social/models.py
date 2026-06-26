@@ -44,6 +44,28 @@ class StoryView(models.Model):
         db_table = 'story_views'
 
 
+class StoryLike(models.Model):
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='likes')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='story_likes')
+    emoji = models.CharField(max_length=10, default='❤️')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'story_likes'
+        unique_together = ('story', 'user')
+
+
+class StoryComment(models.Model):
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='story_comments')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'story_comments'
+        ordering = ['created_at']
+
+
 class BadgeDefinition(models.Model):
     CRITERIA_CHOICES = [
         ('manual', 'Manual'), ('video_count', 'Video Count'), ('view_count', 'View Count'),

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .models import Follow, Story, StoryView, BadgeDefinition, UserBadge, CreatorApplication, CustomRequest
+from .models import Follow, Story, StoryView, StoryLike, StoryComment, BadgeDefinition, UserBadge, CreatorApplication, CustomRequest
 from apps.accounts.views import format_user
 
 User = get_user_model()
@@ -149,6 +149,58 @@ def delete_story(request, story_id):
         return Response({'error': 'Story not found'}, status=404)
     story.delete()
     return Response({'message': 'Story deleted'})
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def story_like(request, story_id):
+    try:
+        story = Story.objects.get(id=story_id)
+    except Story.DoesNotExist:
+        return Response({'error': 'Story not found'}, status=404)
+    if request.method == 'POST':
+        emoji = request.data.get('emoji', '❤️')
+        like, created = StoryLike.objects.get_or_create(story=story, user=request.user, defaults={'emoji': emoji})
+        if not created:
+            like.emoji = emoji
+            like.save(update_fields=['emoji'])
+        like_count = StoryLike.objects.filter(story=story).count()
+        return Response({'liked': True, 'likeCount': like_count})
+    else:
+        StoryLike.objects.filter(story=story, user=request.user).delete()
+        like_count = StoryLike.objects.filter(story=story).count()
+        return Response({'liked': False, 'likeCount': like_count})
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def story_comments(request, story_id):
+    try:
+        story = Story.objects.get(id=story_id)
+    except Story.DoesNotExist:
+        return Response({'error': 'Story not found'}, status=404)
+    if request.method == 'GET':
+        comments = StoryComment.objects.filter(story=story).select_related('user')
+        return Response({'comments': [{
+            'id': c.id,
+            'user': c.user.username,
+            'avatar': c.user.avatar_url,
+            'text': c.text,
+            'ts': int(c.created_at.timestamp() * 1000),
+        } for c in comments]})
+    if not request.user.is_authenticated:
+        return Response({'error': 'Authentication required'}, status=401)
+    text = request.data.get('text', '').strip()
+    if not text:
+        return Response({'error': 'Comment text required'}, status=400)
+    comment = StoryComment.objects.create(story=story, user=request.user, text=text)
+    return Response({
+        'id': comment.id,
+        'user': comment.user.username,
+        'avatar': comment.user.avatar_url,
+        'text': comment.text,
+        'ts': int(comment.created_at.timestamp() * 1000),
+    }, status=201)
 
 
 @api_view(['GET'])

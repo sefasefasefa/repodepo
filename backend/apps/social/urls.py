@@ -13,6 +13,8 @@ urlpatterns = [
     path('stories/create', views.create_story),
     path('stories/creator/<int:creator_id>', views.get_creator_stories),
     path('stories/<int:story_id>/view', views.view_story),
+    path('stories/<int:story_id>/like', views.story_like),
+    path('stories/<int:story_id>/comments', views.story_comments),
     path('stories/<int:story_id>', views.delete_story),
     path('badges', views.list_badges),
     path('badges/user/<int:user_id>', views.get_user_badges),

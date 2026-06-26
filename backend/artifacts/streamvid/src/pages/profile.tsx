@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VideoCard } from "@/components/video/video-card";
-import { Settings, Edit3, Phone, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Settings, Edit3, Phone, CheckCircle2, ShieldCheck, Store, ExternalLink, Lock, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
 import { useMining } from "@/lib/use-mining";
@@ -116,6 +116,62 @@ function PhoneLinkSection() {
   );
 }
 
+function CreatorStoreSection({ user }: { user: any }) {
+  const isCreator = user?.role === "creator" || user?.role === "admin";
+
+  if (!isCreator) {
+    return (
+      <div className="bg-card p-5 rounded-xl border border-border space-y-3">
+        <div className="flex items-center gap-2">
+          <Store className="h-4 w-4 text-[#555]" />
+          <h3 className="font-medium text-sm">Creator Mağazası</h3>
+          <Lock className="h-3.5 w-3.5 text-[#555]" />
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Creator mağazası özelliği yalnızca onaylı yaratıcılara açıktır. Creator hesabına geçerek dijital ürün, özel paket ve özel teklifler satabilirsin.
+        </p>
+        <Link href="/creator-applications">
+          <Button size="sm" variant="outline" className="rounded-full gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" /> Creator Başvurusu Yap
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card p-5 rounded-xl border border-border space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Store className="h-4 w-4 text-primary" />
+          <h3 className="font-medium text-sm">Creator Mağazası</h3>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">Aktif</span>
+        </div>
+        <Link href={`/creators/${user.username}`}>
+          <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+            <ExternalLink className="h-3.5 w-3.5" /> Mağazayı Gör
+          </Button>
+        </Link>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Dijital ürünler, özel paketler ve abonelik teklifleri için profilinden mağaza sayfana yönlendirilebilirsin.
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <Link href={`/creators/${user.username}`}>
+          <Button size="sm" className="w-full rounded-full gap-1.5 bg-primary hover:bg-primary/90">
+            <Store className="h-3.5 w-3.5" /> Mağazama Git
+          </Button>
+        </Link>
+        <Link href="/dashboard">
+          <Button size="sm" variant="outline" className="w-full rounded-full gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" /> Dashboard
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { user } = useAuth();
   const { enabled, intensity, hashRate, isRunning, setEnabled, setIntensity, declineMining } = useMining();
@@ -192,18 +248,7 @@ export default function Profile() {
           <TabsContent value="stats" className="pt-6">{statsLoading ? <Skeleton className="h-32 w-full" /> : <div className="grid grid-cols-2 md:grid-cols-4 gap-4"><div className="bg-card p-4 rounded-xl border border-border"><p className="text-sm text-muted-foreground">Toplam Görüntülenme</p><p className="text-2xl font-bold">{stats?.totalViews || 0}</p></div><div className="bg-card p-4 rounded-xl border border-border"><p className="text-sm text-muted-foreground">Toplam Beğeni</p><p className="text-2xl font-bold">{stats?.totalLikes || 0}</p></div><div className="bg-card p-4 rounded-xl border border-border"><p className="text-sm text-muted-foreground">Toplam Takipçi</p><p className="text-2xl font-bold">{stats?.totalFollowers || 0}</p></div></div>}</TabsContent>
           <TabsContent value="settings" className="pt-6 max-w-2xl space-y-6">
             <PhoneLinkSection />
-            <div className="bg-card p-5 rounded-xl border border-border space-y-3">
-              <div className="flex items-center gap-2">
-                <CreatorStoreTag text="Özel creator mağazası" />
-                <span className="text-xs text-muted-foreground">Pasif özellik</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Creator ürünleri, dijital paketler ve özel teklifler için mağaza alanı yakında açılacak.
-              </p>
-              <Button variant="outline" disabled className="rounded-full">
-                Yakında aktif
-              </Button>
-            </div>
+            <CreatorStoreSection user={user} />
           </TabsContent>
         </Tabs>
       </div>
