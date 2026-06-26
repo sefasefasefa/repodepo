@@ -345,7 +345,7 @@ requires-dist = [
     { name = "pillow", specifier = "==10.4.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.12" },
     { name = "python-dotenv", specifier = "==1.0.1" },
-    { name = "requests", specifier = ">=2.34.2" },
+    { name = "requests", specifier = ">=2.28.0" },
     { name = "waitress", specifier = "==3.0.1" },
     { name = "whitenoise", specifier = "==6.7.0" },
 ]
