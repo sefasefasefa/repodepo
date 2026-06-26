@@ -10,17 +10,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-key-in-pr
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS_ENV = os.environ.get(
-    'ALLOWED_HOSTS',
-    'localhost,127.0.0.1,0.0.0.0,hotpulse.me,www.hotpulse.me,.hotpulse.me,.pythonanywhere.com,.replit.dev,.repl.co,.replit.app'
-)
-ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(',') if h.strip()]
-if DEBUG:
-    ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS_ENV = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
-    'https://hotpulse.me,https://www.hotpulse.me,https://*.pythonanywhere.com,https://*.replit.dev,https://*.repl.co,https://*.replit.app,http://localhost:8000,http://127.0.0.1:8000'
+    'https://hotpulse.me,https://www.hotpulse.me,https://*.hotpulse.me,https://*.pythonanywhere.com,https://*.replit.dev,https://*.repl.co,https://*.replit.app,http://localhost:8000,http://127.0.0.1:8000'
 )
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS_ENV.split(',') if o.strip()]
 
@@ -138,7 +132,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-CORS_ALLOW_ALL_ORIGINS = DEBUG or os.environ.get('CORS_ALLOW_ALL', 'False').lower() in ('true', '1', 'yes')
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS_ENV = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000'
