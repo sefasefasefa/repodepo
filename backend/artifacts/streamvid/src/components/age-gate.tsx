@@ -100,7 +100,7 @@ export function AgeGate({ children }: { children: React.ReactNode }) {
               Bu platformda yazılı mesajlar, sesli mesajlar, arama kayıtları ve yüklenen medya içerikleri sunucuda saklanabilir; kalite ve depolama amacıyla otomatik sıkıştırma/optimizasyon uygulanabilir. Bu kayıtlar daha sonra güvenlik, hizmet geliştirme ve yapay zeka modeli eğitimi için kullanılabilir.
             </p>
             <p className="text-[#444] text-[10px]">
-              © 2025 {siteName}. Tüm hakları saklıdır. 18+ Platform.
+              © {new Date().getFullYear()} {siteName}. Tüm hakları saklıdır. 18+ Platform.
             </p>
           </div>
         </div>

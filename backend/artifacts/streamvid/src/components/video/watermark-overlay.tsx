@@ -74,7 +74,7 @@ export function WatermarkOverlay({ videoWatermarkEnabled, className }: Watermark
             sz.text
           )}
         >
-          {config.text || "Prnhbbbb"}
+          {config.text || "Soci"}
         </span>
       )}
     </div>

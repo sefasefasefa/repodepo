@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const PERIODS = [
   { id: "7d",  label: "7 Gün" },
@@ -203,7 +204,7 @@ export default function CreatorDashboard() {
     try {
       await apiFetch(`/videos/${id}/cancel-schedule`, { method: "POST" });
       loadScheduledVideos();
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { toast.error(e.message || "İşlem başarısız"); }
     finally { setScheduledAction(null); }
   };
 
@@ -212,7 +213,7 @@ export default function CreatorDashboard() {
     try {
       await apiFetch(`/videos/${id}/publish-now`, { method: "POST" });
       loadScheduledVideos();
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { toast.error(e.message || "İşlem başarısız"); }
     finally { setScheduledAction(null); }
   };
 
@@ -234,7 +235,7 @@ export default function CreatorDashboard() {
       });
       setEditingSchedule(null);
       loadScheduledVideos();
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { toast.error(e.message || "İşlem başarısız"); }
     finally { setScheduledAction(null); }
   };
 
@@ -244,7 +245,7 @@ export default function CreatorDashboard() {
       await apiFetch(`/custom-requests/${id}/${action}`, { method: "POST", body: JSON.stringify({ responseNote }) });
       setResponseNote(""); setRespondingId(null); setResponseAction(null);
       loadRequests();
-    } catch (e: any) { alert(e.message); setRespondingId(null); setResponseAction(null); }
+    } catch (e: any) { toast.error(e.message || "İşlem başarısız"); setRespondingId(null); setResponseAction(null); }
   };
 
   const refresh = async () => {

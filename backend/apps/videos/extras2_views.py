@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from apps.accounts.authentication import BearerTokenAuthentication
 from .models import (
     Video, VideoReport, WatchHistory, Category, Ad, WatermarkSettings,
     VideoLike,
@@ -276,7 +277,7 @@ def recommendations_for_you(request):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
+@authentication_classes([BearerTokenAuthentication, JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def recommendations_profile(request):
     me = request.user

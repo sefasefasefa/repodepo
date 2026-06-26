@@ -17,6 +17,7 @@ import { useListCategories } from "@workspace/api-client-react";
 import { ChunkedUploadZone } from "@/components/upload/chunked-upload-zone";
 import { ProviderSelector } from "@/components/upload/provider-selector";
 import { useRef } from "react";
+import { toast } from "sonner";
 
 const uploadSchema = z.object({
   title: z.string().min(3, "En az 3 karakter"),
@@ -168,29 +169,28 @@ export default function UploadPage() {
   const watchTitle = uploadForm.watch("title");
   const watchDescription = uploadForm.watch("description");
 
-  // Benzerlik kontrolü (pasif — gerçek backend bağlantısı olmadan title pattern kontrolü)
+  // Benzerlik kontrolü — gerçek API çağrısı ile
   useEffect(() => {
-    const t = setTimeout(() => {
+    const t = setTimeout(async () => {
       if (!watchTitle || watchTitle.length < 5) { setSimilarityWarning(null); return; }
       setAdminSimilarityApproved(false);
       setSimilarityChecking(true);
-      // Pasif simülasyon: gerçek uygulamada API çağrısı yapılır
-      const lower = watchTitle.toLowerCase();
-      const SAMPLE_TITLES = [
-        "yaz koleksiyonu 2025", "plaj günü vlog", "studio shoot bts",
-        "backstage fashion week", "yeni sezon tanıtımı", "özel çekim",
-      ];
-      const match = SAMPLE_TITLES.find(t => {
-        const words = t.split(" ");
-        return words.some(w => w.length > 3 && lower.includes(w));
-      });
-      if (match) {
-        setSimilarityWarning({
-          level: "medium",
-          message: "Benzer başlıklı bir video zaten mevcut.",
-          matchTitle: match,
+      try {
+        const res = await fetch(`/api/videos/search?q=${encodeURIComponent(watchTitle)}&limit=5`);
+        const data = await res.json();
+        const videos: any[] = data.videos || data.results || [];
+        const lower = watchTitle.toLowerCase();
+        const match = videos.find((v: any) => {
+          const vTitle: string = (v.title || "").toLowerCase();
+          const words = lower.split(" ").filter((w: string) => w.length > 3);
+          return words.some((w: string) => vTitle.includes(w));
         });
-      } else {
+        if (match) {
+          setSimilarityWarning({ level: "medium", message: "Benzer başlıklı bir video zaten mevcut.", matchTitle: match.title });
+        } else {
+          setSimilarityWarning(null);
+        }
+      } catch {
         setSimilarityWarning(null);
       }
       setSimilarityChecking(false);
@@ -362,7 +362,7 @@ export default function UploadPage() {
         setApplication(data.application);
         setApplyDone(true);
       } else {
-        alert(data.error || "Başvuru gönderilemedi");
+        toast.error(data.error || "Başvuru gönderilemedi");
       }
     } finally {
       setApplyLoading(false);
