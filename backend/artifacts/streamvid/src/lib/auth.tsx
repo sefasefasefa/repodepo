@@ -39,13 +39,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleLogin = async (data: LoginBody) => {
     const res = await loginMutation.mutateAsync({ data });
-    setToken(res.token);
+    // JWT access token'ı tercih et (JWTAuthentication ile uyumlu), yoksa session token kullan
+    setToken((res as any).access ?? res.token);
     await refetch();
   };
 
   const handleRegister = async (data: RegisterBody) => {
     const res = await registerMutation.mutateAsync({ data });
-    setToken(res.token);
+    setToken((res as any).access ?? res.token);
     await refetch();
   };
 
