@@ -91,6 +91,14 @@ export default function CrosspostJobsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Bekleyen veya çalışan görev varsa 5 saniyede bir otomatik yenile
+  useEffect(() => {
+    const hasActive = jobs.some(j => j.status === "pending" || j.status === "running");
+    if (!hasActive) return;
+    const timer = setInterval(load, 5000);
+    return () => clearInterval(timer);
+  }, [jobs, load]);
+
   const retry = async (jobId: number) => {
     setRetrying(jobId);
     try {
