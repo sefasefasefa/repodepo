@@ -36,7 +36,11 @@ export function AgeGate({ children }: { children: React.ReactNode }) {
     setStatus("denied");
   };
 
-  if (status === "loading") return null;
+  if (status === "loading") return (
+    <div className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-[9999]">
+      <div className="w-8 h-8 border-2 border-white/10 border-t-white/60 rounded-full animate-spin" />
+    </div>
+  );
 
   if (status === "denied") {
     return (
