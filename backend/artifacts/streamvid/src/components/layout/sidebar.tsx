@@ -15,14 +15,15 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useListCategories } from "@workspace/api-client-react";
 import { Switch } from "@/components/ui/switch";
+import { useCrosspostBadge } from "@/hooks/use-crosspost-badge";
 
 function Row({
-  icon: Icon, label, href, onClick, active, flag,
+  icon: Icon, label, href, onClick, active, flag, badge,
   expandable, expanded, onToggle, sub = false,
 }: {
   icon?: React.ComponentType<{ className?: string }>;
   label: string; href?: string; onClick?: () => void;
-  active?: boolean; flag?: string; expandable?: boolean;
+  active?: boolean; flag?: string; badge?: number; expandable?: boolean;
   expanded?: boolean; onToggle?: () => void; sub?: boolean;
 }) {
   const inner = (
@@ -34,6 +35,11 @@ function Row({
     )} onClick={onToggle}>
       {Icon && <Icon className={cn("shrink-0", sub ? "h-4 w-4 text-[#666]" : "h-[18px] w-[18px] text-[#bbb]")} />}
       <span className="flex-1 leading-tight">{label}</span>
+      {badge != null && badge > 0 && (
+        <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center leading-none shrink-0 animate-pulse">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
       {flag && <span className="text-lg">{flag}</span>}
       {expandable && (expanded
         ? <ChevronUp className="h-4 w-4 text-[#888] shrink-0" />
@@ -79,6 +85,7 @@ export function Sidebar() {
 
   const isCreator = user?.role === "creator" || user?.role === "admin";
   const isAdmin = user?.role === "admin";
+  const crosspostBadge = useCrosspostBadge();
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -262,7 +269,7 @@ export function Sidebar() {
               <SectionDivider label={sec("section-creator").label} />
               {nav("upload").enabled && <Row icon={PlusCircle} label={nav("upload").label} href="/upload" onClick={onClose} />}
               {nav("creator-dash").enabled && <Row icon={LayoutDashboard} label={nav("creator-dash").label} href="/creator/dashboard" onClick={onClose} />}
-              <Row icon={Share2} label="Crosspost Görevleri" href="/crosspost-jobs" onClick={onClose} />
+              <Row icon={Share2} label="Crosspost Görevleri" href="/crosspost-jobs" onClick={onClose} badge={crosspostBadge} />
             </>
           )}
 
