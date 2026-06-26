@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, Phone, Smartphone } from "lucide-react";
+import { LogIn, Phone, Smartphone, Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 
@@ -34,6 +34,7 @@ export default function Login() {
   const [pendingPhone, setPendingPhone] = useState("");
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [smsBusy, setSmsBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Handle Google OAuth redirect token
   useEffect(() => {
@@ -206,13 +207,23 @@ export default function Login() {
                     <FormItem>
                       <FormLabel className="text-[#aaa] text-sm">Şifre</FormLabel>
                       <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="••••••••"
-                          autoComplete="current-password"
-                          className="bg-[#1e1e1e] border-[#333] text-white placeholder:text-[#555] focus:border-primary"
-                          {...field}
-                        />
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            autoComplete="current-password"
+                            className="bg-[#1e1e1e] border-[#333] text-white placeholder:text-[#555] focus:border-primary pr-10"
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] hover:text-[#aaa] transition-colors"
+                            tabIndex={-1}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </FormControl>
                       <FormMessage className="text-red-400 text-xs" />
                     </FormItem>

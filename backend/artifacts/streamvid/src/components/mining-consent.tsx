@@ -2,11 +2,14 @@ import { useMining } from "@/lib/use-mining";
 import { Bitcoin, Zap, X, ChevronDown, ChevronUp, Server, Heart } from "lucide-react";
 import { useState } from "react";
 
+const AUTH_PATHS = ["/login", "/register"];
+
 export function MiningConsent() {
   const { consent, acceptMining, declineMining } = useMining();
   const [expanded, setExpanded] = useState(false);
 
   if (consent !== "pending") return null;
+  if (AUTH_PATHS.includes(window.location.pathname)) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9990] p-3 md:p-4 pointer-events-none flex justify-center">
