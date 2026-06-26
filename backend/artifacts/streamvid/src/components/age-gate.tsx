@@ -4,10 +4,17 @@ import { Shield, AlertTriangle, X } from "lucide-react";
 const AGE_KEY = "prnhbbbb_age_verified";
 const DENIED_KEY = "prnhbbbb_age_denied";
 
+const BYPASS_PATHS = ["/login", "/register"];
+
 export function AgeGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"loading" | "pending" | "verified" | "denied">("loading");
 
   useEffect(() => {
+    const path = window.location.pathname;
+    if (BYPASS_PATHS.some(p => path === p || path.startsWith(p + "?"))) {
+      setStatus("verified");
+      return;
+    }
     const verified = localStorage.getItem(AGE_KEY);
     const denied = localStorage.getItem(DENIED_KEY);
     if (verified === "1") setStatus("verified");
