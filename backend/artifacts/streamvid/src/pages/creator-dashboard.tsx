@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/lib/auth";
 import { useGetCreatorEarnings, useGetCreatorAnalytics } from "@workspace/api-client-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend, PieChart, Pie, Cell,
@@ -77,6 +77,64 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     </div>
   );
 };
+
+function useCountdown(targetIso: string) {
+  const calc = useCallback(() => {
+    const diff = new Date(targetIso).getTime() - Date.now();
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, done: true };
+    return {
+      days:    Math.floor(diff / 86400000),
+      hours:   Math.floor((diff % 86400000) / 3600000),
+      minutes: Math.floor((diff % 3600000) / 60000),
+      seconds: Math.floor((diff % 60000) / 1000),
+      done: false,
+    };
+  }, [targetIso]);
+
+  const [tick, setTick] = useState(calc);
+  useEffect(() => {
+    const id = setInterval(() => setTick(calc()), 1000);
+    return () => clearInterval(id);
+  }, [calc]);
+  return tick;
+}
+
+function CountdownBadge({ targetIso, onDone }: { targetIso: string; onDone?: () => void }) {
+  const t = useCountdown(targetIso);
+  const prevDone = useRef(false);
+  useEffect(() => {
+    if (t.done && !prevDone.current) { prevDone.current = true; onDone?.(); }
+  }, [t.done, onDone]);
+
+  if (t.done) return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-400 bg-green-900/20 border border-green-800/40 px-2 py-0.5 rounded-full animate-pulse">
+      ● Yayına giriyor...
+    </span>
+  );
+
+  const parts: string[] = [];
+  if (t.days > 0)    parts.push(`${t.days}g`);
+  if (t.hours > 0)   parts.push(`${t.hours}s`);
+  parts.push(`${t.minutes}d`);
+  parts.push(`${String(t.seconds).padStart(2, "0")}sn`);
+
+  const urgency = t.days === 0 && t.hours < 1;
+  const soon    = t.days === 0 && t.hours < 6;
+
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold px-2.5 py-1 rounded-full border tabular-nums",
+      urgency
+        ? "text-red-400 bg-red-900/20 border-red-800/40"
+        : soon
+        ? "text-amber-400 bg-amber-900/20 border-amber-800/40"
+        : "text-primary/90 bg-primary/10 border-primary/20"
+    )}>
+      <Clock className="h-3 w-3 shrink-0" />
+      {parts.join(" ")}
+    </span>
+  );
+}
 
 async function apiFetch(path: string, opts: RequestInit = {}) {
   const token = localStorage.getItem("token");
@@ -520,40 +578,34 @@ export default function CreatorDashboard() {
                   <div className="divide-y divide-[#1a1a1a]">
                     {scheduledVideos.map((video: any) => {
                       const publishAt = new Date(video.scheduledPublishAt);
-                      const now = new Date();
-                      const diffMs = publishAt.getTime() - now.getTime();
-                      const diffH = Math.floor(diffMs / 3600000);
-                      const diffM = Math.floor((diffMs % 3600000) / 60000);
                       const isLoading = scheduledAction === video.id;
                       return (
-                        <div key={video.id} className="flex items-center gap-4 px-5 py-4">
+                        <div key={video.id} className="flex items-start gap-4 px-5 py-4">
                           {/* Thumbnail */}
-                          <div className="w-20 h-12 rounded-lg overflow-hidden bg-[#111] shrink-0">
+                          <div className="w-20 h-12 rounded-lg overflow-hidden bg-[#111] shrink-0 mt-0.5">
                             {video.thumbnailUrl
                               ? <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
                               : <div className="w-full h-full flex items-center justify-center"><Video className="h-5 w-5 text-[#333]" /></div>
                             }
                           </div>
                           {/* Bilgiler */}
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 space-y-1.5">
                             <p className="text-sm font-semibold text-white truncate">{video.title}</p>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className="inline-flex items-center gap-1 text-[11px] text-amber-400">
-                                <Clock className="h-3 w-3" />
-                                {publishAt.toLocaleString("tr", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                              </span>
-                              {diffMs > 0 && (
-                                <span className="text-[11px] text-[#555]">
-                                  ({diffH > 0 ? `${diffH} sa ` : ""}{diffM} dk sonra)
-                                </span>
-                              )}
+                            <div className="flex items-center gap-1.5 text-[11px] text-[#666]">
+                              <Clock className="h-3 w-3 shrink-0" />
+                              {publishAt.toLocaleString("tr", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                               {video.category && (
-                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#222] text-[#777]">{video.category.name}</span>
+                                <span className="ml-1 px-2 py-0.5 rounded-full bg-[#222] text-[#777]">{video.category.name}</span>
                               )}
                             </div>
+                            {/* Canlı geri sayım */}
+                            <CountdownBadge
+                              targetIso={video.scheduledPublishAt}
+                              onDone={loadScheduledVideos}
+                            />
                           </div>
                           {/* Aksiyonlar */}
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex flex-col items-end gap-2 shrink-0">
                             <Button
                               size="sm"
                               variant="outline"
