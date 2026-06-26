@@ -4,6 +4,7 @@ from . import extra_views
 from . import extras2_views as ex2
 from . import subtitles_views as subs
 from . import downloads_views as dl
+from . import chunk_upload_views as cu
 
 urlpatterns = [
     path('videos', views.list_videos),
@@ -75,6 +76,12 @@ urlpatterns = [
     path('watermark/video/<int:video_id>', ex2.video_watermark),
     # Upload metadata
     path('upload/supported-formats', ex2.supported_formats),
+    # Chunked upload
+    path('upload/chunk-init', cu.chunk_init),
+    path('upload/chunk-part', cu.chunk_part),
+    path('upload/chunk-complete', cu.chunk_complete),
+    path('upload/chunk-status/<str:upload_id>', cu.chunk_status),
+    path('upload/chunk-cancel/<str:upload_id>', cu.chunk_cancel),
     # Search trending
     path('search/trending', ex2.search_trending),
     # Recommendations

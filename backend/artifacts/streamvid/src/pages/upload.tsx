@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCreateVideo } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import { Upload, Lock, Clock, CheckCircle, XCircle, HelpCircle, AlertTriangle, Crown, FileVideo, Calendar, Stamp, Sparkles, Tag, ScanSearch } from "lucide-react";
+import { Upload, Lock, Clock, CheckCircle, XCircle, HelpCircle, AlertTriangle, Crown, FileVideo, Calendar, Stamp, Sparkles, Tag, ScanSearch, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useListCategories } from "@workspace/api-client-react";
+import { ChunkedUploadZone } from "@/components/upload/chunked-upload-zone";
 
 const uploadSchema = z.object({
   title: z.string().min(3, "En az 3 karakter"),
@@ -420,6 +421,7 @@ export default function UploadPage() {
   // ── Yükleyici — günlük limit kontrolü ────────────────────────────
   const dailyMax = limits?.maxDailyUploads ?? 5;
   const limitReached = uploadedToday >= dailyMax;
+  const [uploadMode, setUploadMode] = useState<"file" | "url">("file");
 
   return (
     <AppLayout>
@@ -454,7 +456,44 @@ export default function UploadPage() {
           </div>
         )}
 
-        <div className={cn("bg-card border border-border p-6 md:p-8 rounded-xl", limitReached && "opacity-50 pointer-events-none")}>
+        {/* Yükleme modu seçici */}
+        <div className="flex gap-2 bg-[#111] border border-[#1e1e1e] rounded-2xl p-1.5">
+          <button
+            onClick={() => setUploadMode("file")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all",
+              uploadMode === "file"
+                ? "bg-primary text-white shadow-[0_0_16px_rgba(168,85,247,0.3)]"
+                : "text-[#666] hover:text-[#aaa]"
+            )}
+          >
+            <FileVideo className="h-4 w-4" /> Dosyadan Yükle
+          </button>
+          <button
+            onClick={() => setUploadMode("url")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all",
+              uploadMode === "url"
+                ? "bg-primary text-white shadow-[0_0_16px_rgba(168,85,247,0.3)]"
+                : "text-[#666] hover:text-[#aaa]"
+            )}
+          >
+            <Link2 className="h-4 w-4" /> URL ile Ekle
+          </button>
+        </div>
+
+        {/* Dosyadan yükleme paneli */}
+        {uploadMode === "file" && !limitReached && (
+          <div className="bg-card border border-border p-6 md:p-8 rounded-xl">
+            <ChunkedUploadZone onDone={(videoId) => setLocation(`/videos/${videoId}`)} />
+          </div>
+        )}
+
+        <div className={cn(
+          uploadMode === "url" ? "block" : "hidden",
+          "bg-card border border-border p-6 md:p-8 rounded-xl",
+          limitReached && "opacity-50 pointer-events-none"
+        )}>
           <div className="mb-6 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
