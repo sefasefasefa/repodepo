@@ -138,12 +138,12 @@ def _extract_url(data) -> str:
     """Çeşitli API yanıtı formatlarından video URL'si çıkar."""
     if not isinstance(data, dict):
         return ""
-    for k in ("url", "file_url", "filePage", "link", "embed_url", "result"):
+    for k in ("url", "file_url", "filePage", "link", "embed_url", "result", "filelink"):
         v = data.get(k)
         if isinstance(v, str) and v.startswith("http"):
             return v
         if isinstance(v, dict):
-            for k2 in ("url", "file_url", "link"):
+            for k2 in ("url", "file_url", "link", "filePage"):
                 v2 = v.get(k2)
                 if isinstance(v2, str) and v2.startswith("http"):
                     return v2
@@ -207,7 +207,6 @@ def _streamtape(job, site, video, r):
     if not login or not key:
         return _fail(job, "StreamTape: login ve API anahtarı gerekli")
     try:
-        # 1. Upload URL al
         resp = r.get(
             "https://api.streamtape.com/file/ul",
             params={"login": login, "key": key},
@@ -222,7 +221,6 @@ def _streamtape(job, site, video, r):
         if not path or not os.path.exists(path):
             return _fail(job, f"Dosya bulunamadı: {path}")
 
-        # 2. Dosyayı yükle
         with open(path, "rb") as f:
             up = r.post(upload_url, files={"file1": (os.path.basename(path), f, "video/mp4")},
                         headers={"User-Agent": UA}, timeout=3600)
@@ -341,17 +339,32 @@ def _vidoza(job, site, video, r):
 # ─────────────────────────────────────────────────────────────────────────────
 # Ortak "API anahtarı ile upload sunucu al → dosya POST et" adaptörü
 # FileMoon, StreamWish, Voe, Upstream, VidHide, Luluvdo, StreamHide, SuperVideo
+# Dropload, Embedsito, Vidlox, Streamlare, ClipWatching, StreamSB, HXFile,
+# VidPlay, Nxbex, DropGalaxy, Evoload, Fembed, Hotlinking
 # ─────────────────────────────────────────────────────────────────────────────
 _API_KEY_HOSTS = {
-    "filemoon":   "https://filemoonapi.com/api/upload/server",
-    "streamwish": "https://api.streamwish.com/api/upload/server",
-    "voe":        "https://voe.sx/api/upload/server",
-    "upstream":   "https://upstream.to/api/upload/server",
-    "vidhide":    "https://vidhide.com/api/upload/server",
-    "luluvdo":    "https://luluvdo.com/api/upload/server",
-    "uqload":     "https://uqload.io/api/upload/server",
-    "streamhide": "https://streamhide.com/api/upload/server",
-    "supervideo": "https://supervideo.tv/api/upload/server",
+    "filemoon":     "https://filemoonapi.com/api/upload/server",
+    "streamwish":   "https://api.streamwish.com/api/upload/server",
+    "voe":          "https://voe.sx/api/upload/server",
+    "upstream":     "https://upstream.to/api/upload/server",
+    "vidhide":      "https://vidhide.com/api/upload/server",
+    "luluvdo":      "https://luluvdo.com/api/upload/server",
+    "uqload":       "https://uqload.io/api/upload/server",
+    "streamhide":   "https://streamhide.com/api/upload/server",
+    "supervideo":   "https://supervideo.tv/api/upload/server",
+    "dropload":     "https://dropload.io/api/upload/server",
+    "embedsito":    "https://embedsito.com/api/upload/server",
+    "vidlox":       "https://vidlox.me/api/upload/server",
+    "streamlare":   "https://streamlare.com/api/upload/server",
+    "clipwatching": "https://clipwatching.com/api/upload/server",
+    "streamsb":     "https://streamsb.net/api/upload/server",
+    "hxfile":       "https://hxfile.ch/api/upload/server",
+    "vidplay":      "https://vidplay.online/api/upload/server",
+    "nxbex":        "https://nxbex.com/api/upload/server",
+    "dropgalaxy":   "https://dropgalaxy.com/api/upload/server",
+    "evoload":      "https://evoload.io/api/upload/server",
+    "fembed":       "https://www.fembed.com/api/upload/server",
+    "hotlinking":   "https://hotlinking.co/api/upload/server",
 }
 
 
@@ -413,19 +426,32 @@ _ADAPTERS = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 _TEST_ENDPOINTS = {
-    "streamtape": lambda s: f"https://api.streamtape.com/account/info?login={s.username}&key={s.api_key or s.password}",
-    "doodstream": lambda s: f"https://doodapi.com/api/account/info?key={s.api_key or s.password}",
-    "mixdrop":    lambda s: f"https://ul.mixdrop.ag/api/account?email={s.username}&key={s.api_key or s.password}",
-    "vidoza":     lambda s: f"https://vidoza.net/api/account/info?api_key={s.api_key or s.password}",
-    "filemoon":   lambda s: f"https://filemoonapi.com/api/account/info?key={s.api_key or s.password}",
-    "streamwish": lambda s: f"https://api.streamwish.com/api/account/info?key={s.api_key or s.password}",
-    "voe":        lambda s: f"https://voe.sx/api/account/info?key={s.api_key or s.password}",
-    "upstream":   lambda s: f"https://upstream.to/api/account/info?key={s.api_key or s.password}",
-    "vidhide":    lambda s: f"https://vidhide.com/api/account/info?key={s.api_key or s.password}",
-    "luluvdo":    lambda s: f"https://luluvdo.com/api/account/info?key={s.api_key or s.password}",
-    "uqload":     lambda s: f"https://uqload.io/api/account/info?key={s.api_key or s.password}",
-    "streamhide": lambda s: f"https://streamhide.com/api/account/info?key={s.api_key or s.password}",
-    "supervideo": lambda s: f"https://supervideo.tv/api/account/info?key={s.api_key or s.password}",
+    "streamtape":   lambda s: f"https://api.streamtape.com/account/info?login={s.username}&key={s.api_key or s.password}",
+    "doodstream":   lambda s: f"https://doodapi.com/api/account/info?key={s.api_key or s.password}",
+    "mixdrop":      lambda s: f"https://ul.mixdrop.ag/api/account?email={s.username}&key={s.api_key or s.password}",
+    "vidoza":       lambda s: f"https://vidoza.net/api/account/info?api_key={s.api_key or s.password}",
+    "filemoon":     lambda s: f"https://filemoonapi.com/api/account/info?key={s.api_key or s.password}",
+    "streamwish":   lambda s: f"https://api.streamwish.com/api/account/info?key={s.api_key or s.password}",
+    "voe":          lambda s: f"https://voe.sx/api/account/info?key={s.api_key or s.password}",
+    "upstream":     lambda s: f"https://upstream.to/api/account/info?key={s.api_key or s.password}",
+    "vidhide":      lambda s: f"https://vidhide.com/api/account/info?key={s.api_key or s.password}",
+    "luluvdo":      lambda s: f"https://luluvdo.com/api/account/info?key={s.api_key or s.password}",
+    "uqload":       lambda s: f"https://uqload.io/api/account/info?key={s.api_key or s.password}",
+    "streamhide":   lambda s: f"https://streamhide.com/api/account/info?key={s.api_key or s.password}",
+    "supervideo":   lambda s: f"https://supervideo.tv/api/account/info?key={s.api_key or s.password}",
+    "dropload":     lambda s: f"https://dropload.io/api/account/info?key={s.api_key or s.password}",
+    "embedsito":    lambda s: f"https://embedsito.com/api/account/info?key={s.api_key or s.password}",
+    "vidlox":       lambda s: f"https://vidlox.me/api/account/info?key={s.api_key or s.password}",
+    "streamlare":   lambda s: f"https://streamlare.com/api/account/info?key={s.api_key or s.password}",
+    "clipwatching": lambda s: f"https://clipwatching.com/api/account/info?key={s.api_key or s.password}",
+    "streamsb":     lambda s: f"https://streamsb.net/api/account/info?key={s.api_key or s.password}",
+    "hxfile":       lambda s: f"https://hxfile.ch/api/account/info?key={s.api_key or s.password}",
+    "vidplay":      lambda s: f"https://vidplay.online/api/account/info?key={s.api_key or s.password}",
+    "nxbex":        lambda s: f"https://nxbex.com/api/account/info?key={s.api_key or s.password}",
+    "dropgalaxy":   lambda s: f"https://dropgalaxy.com/api/account/info?key={s.api_key or s.password}",
+    "evoload":      lambda s: f"https://evoload.io/api/account/info?key={s.api_key or s.password}",
+    "fembed":       lambda s: f"https://www.fembed.com/api/account/info?key={s.api_key or s.password}",
+    "hotlinking":   lambda s: f"https://hotlinking.co/api/account/info?key={s.api_key or s.password}",
 }
 
 

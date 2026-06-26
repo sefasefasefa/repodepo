@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCreateVideo } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import { Upload, Lock, Clock, CheckCircle, XCircle, HelpCircle, AlertTriangle, Crown, FileVideo, Calendar, Stamp, Sparkles, Tag, ScanSearch, Link2, ImageIcon, X as XIcon } from "lucide-react";
+import { Upload, Lock, Clock, CheckCircle, XCircle, HelpCircle, AlertTriangle, Crown, FileVideo, Calendar, Stamp, Sparkles, Tag, ScanSearch, Link2, ImageIcon, X as XIcon, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useListCategories } from "@workspace/api-client-react";
 import { ChunkedUploadZone } from "@/components/upload/chunked-upload-zone";
+import { ProviderSelector } from "@/components/upload/provider-selector";
 import { useRef } from "react";
 
 const uploadSchema = z.object({
@@ -94,6 +95,9 @@ export default function UploadPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkMsg, setBulkMsg] = useState("");
   const createVideoMutation = useCreateVideo();
+
+  // URL formu için cross-post sağlayıcı seçimi
+  const [urlCrosspostSiteIds, setUrlCrosspostSiteIds] = useState<number[]>([]);
 
   // URL formu için lokal thumbnail seçici
   const thumbFileRef = useRef<HTMLInputElement>(null);
@@ -257,7 +261,21 @@ export default function UploadPage() {
         scheduledPublishAt: scheduleEnabled && scheduleValue ? new Date(scheduleValue).toISOString() : null,
       };
       const res = await createVideoMutation.mutateAsync({ data: payload });
-      if (res) setLocation(`/videos/${res.id}`);
+      if (res) {
+        // Cross-post seçili sağlayıcılara gönder
+        if (urlCrosspostSiteIds.length > 0) {
+          try {
+            await fetch("/api/cross-post/dispatch", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ videoId: res.id, siteIds: urlCrosspostSiteIds }),
+            });
+          } catch (_e) {
+            // crosspost hatası video yüklemeyi engellemesin
+          }
+        }
+        setLocation(`/videos/${res.id}`);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -1068,6 +1086,19 @@ export default function UploadPage() {
                 )}
               </div>
 
+              {/* Cross-post sağlayıcı seçimi */}
+              <div className="pt-4 border-t border-border">
+                <div className="flex items-center gap-2 mb-3">
+                  <Share2 className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Çapraz Yayın (Cross-post)</span>
+                  <span className="text-xs text-muted-foreground">— Video yüklenince seçili sitelere de gönderilir</span>
+                </div>
+                <ProviderSelector
+                  selectedIds={urlCrosspostSiteIds}
+                  onChange={setUrlCrosspostSiteIds}
+                />
+              </div>
+
               <div className="pt-4 border-t border-border flex justify-end">
                 <Button type="submit" disabled={createVideoMutation.isPending || limitReached || requiresAdminApproval || (scheduleEnabled && !scheduleValue)}>
                   {createVideoMutation.isPending
@@ -1076,6 +1107,8 @@ export default function UploadPage() {
                     ? "Admin Onayı Gerekli"
                     : scheduleEnabled && scheduleValue
                     ? "Zamanla"
+                    : urlCrosspostSiteIds.length > 0
+                    ? `Yayınla + ${urlCrosspostSiteIds.length} Siteye Cross-post`
                     : "Videoyu Yayınla"}
                 </Button>
               </div>
