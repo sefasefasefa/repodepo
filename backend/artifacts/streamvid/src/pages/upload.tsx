@@ -100,6 +100,10 @@ export default function UploadPage() {
   const [thumbFile, setThumbFile] = useState<File | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
 
+  // Zamanlanmış yayın (URL formu)
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleValue, setScheduleValue] = useState("");
+
   const pickThumb = (file: File) => {
     setThumbFile(file);
     const url = URL.createObjectURL(file);
@@ -243,6 +247,7 @@ export default function UploadPage() {
         isPPV: values.isPPV,
         ppvPrice: values.isPPV && values.ppvPrice ? parseFloat(values.ppvPrice) : undefined,
         categoryId: values.categoryId ? Number(values.categoryId) : undefined,
+        scheduledPublishAt: scheduleEnabled && scheduleValue ? new Date(scheduleValue).toISOString() : null,
       };
       const res = await createVideoMutation.mutateAsync({ data: payload });
       if (res) setLocation(`/videos/${res.id}`);

@@ -175,13 +175,27 @@ def chunk_complete(request):
     video_type = request.data.get('type', 'video')
     category_id = request.data.get('categoryId') or None
 
+    # Zamanlanmış yayın
+    from django.utils.dateparse import parse_datetime
+    from django.utils import timezone as tz
+    scheduled_dt = None
+    scheduled_raw = request.data.get('scheduledPublishAt')
+    if scheduled_raw:
+        try:
+            scheduled_dt = parse_datetime(scheduled_raw)
+            if scheduled_dt and tz.is_naive(scheduled_dt):
+                scheduled_dt = tz.make_aware(scheduled_dt)
+        except Exception:
+            scheduled_dt = None
+
     video = Video.objects.create(
         title=title,
         description=request.data.get('description') or '',
         video_url=local_url,
         creator=request.user,
         category_id=category_id,
-        is_published=True,
+        is_published=not bool(scheduled_dt),
+        scheduled_publish_at=scheduled_dt,
         is_premium=is_premium,
         type=video_type,
     )

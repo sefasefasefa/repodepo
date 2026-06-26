@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   Upload, FileVideo, X, Pause, Play, CheckCircle2,
   AlertTriangle, Loader2, Zap, Clock, BarChart2, Layers,
-  Camera, RefreshCw, ImageIcon
+  Camera, RefreshCw, ImageIcon, CalendarClock
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -75,7 +75,11 @@ export function ChunkedUploadZone({ onDone }: Props) {
     isPremium: false,
     type: "video",
     categoryId: undefined,
+    scheduledPublishAt: null,
   });
+
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleValue, setScheduleValue] = useState("");
 
   // ── Thumbnail state ──────────────────────────────────────────────────────
   const [thumbBlob, setThumbBlob] = useState<Blob | null>(null);
@@ -159,7 +163,11 @@ export function ChunkedUploadZone({ onDone }: Props) {
   const handleStart = () => {
     const file = fileRef.current?.files?.[0] ?? state.file;
     if (!file) return;
-    start(file, meta);
+    const finalMeta = {
+      ...meta,
+      scheduledPublishAt: scheduleEnabled && scheduleValue ? new Date(scheduleValue).toISOString() : null,
+    };
+    start(file, finalMeta);
   };
 
   // Upload thumbnail after video done
@@ -482,12 +490,44 @@ export function ChunkedUploadZone({ onDone }: Props) {
               <span className="text-sm text-[#aaa]">Premium içerik</span>
             </label>
 
+            {/* Zamanlanmış yayın */}
+            <div className="space-y-2.5">
+              <label className="flex items-center gap-2.5 cursor-pointer" onClick={() => setScheduleEnabled(v => !v)}>
+                <span className={cn("relative w-10 h-5 rounded-full transition-all shrink-0", scheduleEnabled ? "bg-primary" : "bg-[#333]")}>
+                  <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", scheduleEnabled ? "left-5" : "left-0.5")} />
+                </span>
+                <CalendarClock className="h-3.5 w-3.5 text-[#888]" />
+                <span className="text-sm text-[#aaa]">Zamanlanmış yayın</span>
+              </label>
+              {scheduleEnabled && (
+                <div className="space-y-1">
+                  <input
+                    type="datetime-local"
+                    value={scheduleValue}
+                    min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                    onChange={(e) => setScheduleValue(e.target.value)}
+                    className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary [color-scheme:dark]"
+                  />
+                  {scheduleValue && (
+                    <p className="text-[11px] text-primary flex items-center gap-1">
+                      <CalendarClock className="h-3 w-3" />
+                      Video {new Date(scheduleValue).toLocaleString("tr-TR")} tarihinde yayınlanacak
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <Button
               onClick={handleStart}
-              disabled={!meta.title.trim()}
+              disabled={!meta.title.trim() || (scheduleEnabled && !scheduleValue)}
               className="w-full bg-primary hover:bg-primary/90 text-white gap-2 h-11 rounded-xl font-bold shadow-[0_0_20px_rgba(168,85,247,0.25)]"
             >
-              <Upload className="h-4 w-4" /> Yüklemeyi Başlat
+              {scheduleEnabled && scheduleValue ? (
+                <><CalendarClock className="h-4 w-4" /> Zamanla ve Yükle</>
+              ) : (
+                <><Upload className="h-4 w-4" /> Yüklemeyi Başlat</>
+              )}
             </Button>
 
             <div className="flex items-center gap-2 text-xs text-[#555]">

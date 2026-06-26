@@ -34,6 +34,7 @@ export interface UploadMeta {
   categoryId?: number;
   isPremium?: boolean;
   type?: "video" | "short";
+  scheduledPublishAt?: string | null;
 }
 
 const INITIAL: ChunkUploadState = {
@@ -232,6 +233,7 @@ export function useChunkedUpload() {
             categoryId: meta.categoryId,
             isPremium: meta.isPremium ?? false,
             type: meta.type ?? "video",
+            scheduledPublishAt: meta.scheduledPublishAt ?? null,
           }),
         });
         if (!res.ok) {

@@ -41,6 +41,7 @@ def enrich_video(v, user=None):
         'isPPV': v.is_ppv,
         'ppvPrice': float(v.ppv_price) if v.ppv_price else None,
         'isPublished': v.is_published,
+        'scheduledPublishAt': v.scheduled_publish_at.isoformat() if v.scheduled_publish_at else None,
         'tags': v.tags or [],
         'categoryId': v.category_id,
         'category': {
@@ -95,9 +96,20 @@ def enrich_videos_bulk(videos, user=None):
             'isLiked': v.id in liked_ids,
             'isBookmarked': v.id in bookmarked_ids,
             'watermarkEnabled': v.watermark_enabled,
+            'scheduledPublishAt': v.scheduled_publish_at.isoformat() if v.scheduled_publish_at else None,
             'createdAt': v.created_at.isoformat(),
         })
     return result
+
+
+def auto_publish_scheduled():
+    """Zamanı gelen zamanlanmış videoları yayınla."""
+    now = timezone.now()
+    Video.objects.filter(
+        is_published=False,
+        scheduled_publish_at__isnull=False,
+        scheduled_publish_at__lte=now,
+    ).update(is_published=True)
 
 
 @api_view(['GET'])
@@ -112,6 +124,7 @@ def list_videos(request):
     sort = request.query_params.get('sort', 'latest')
     creator_id = request.query_params.get('creatorId')
 
+    auto_publish_scheduled()
     qs = Video.objects.filter(is_published=True).select_related('creator', 'category')
     if category_id:
         qs = qs.filter(category_id=category_id)
@@ -189,6 +202,24 @@ def create_video(request):
     if user.role not in ('creator', 'admin', 'moderator'):
         return Response({'error': 'Creator hesabı gerekli'}, status=403)
     data = request.data
+
+    # Zamanlanmış yayın tarihi
+    from django.utils.dateparse import parse_datetime
+    scheduled_raw = data.get('scheduledPublishAt', data.get('scheduled_publish_at'))
+    scheduled_dt = None
+    if scheduled_raw:
+        try:
+            scheduled_dt = parse_datetime(scheduled_raw)
+            if scheduled_dt and timezone.is_naive(scheduled_dt):
+                scheduled_dt = timezone.make_aware(scheduled_dt)
+        except Exception:
+            scheduled_dt = None
+
+    # Zamanlanmışsa yayına çıkma, yoksa normal
+    is_published = data.get('isPublished', data.get('is_published', True))
+    if scheduled_dt:
+        is_published = False
+
     video = Video.objects.create(
         title=data.get('title', 'Başlıksız Video'),
         description=data.get('description'),
@@ -200,7 +231,8 @@ def create_video(request):
         is_premium=data.get('isPremium', data.get('is_premium', False)),
         is_ppv=data.get('isPPV', data.get('is_ppv', False)),
         ppv_price=data.get('ppvPrice', data.get('ppv_price')),
-        is_published=data.get('isPublished', data.get('is_published', True)),
+        is_published=is_published,
+        scheduled_publish_at=scheduled_dt,
         tags=data.get('tags', []),
         creator=user,
         category_id=data.get('categoryId', data.get('category_id')),
@@ -233,6 +265,22 @@ def update_video(request, video_id):
     if video.creator != request.user and request.user.role != 'admin':
         return Response({'error': 'Forbidden'}, status=403)
     data = request.data
+
+    from django.utils.dateparse import parse_datetime
+    scheduled_raw = data.get('scheduledPublishAt', data.get('scheduled_publish_at'))
+    if scheduled_raw is not None:
+        try:
+            dt = parse_datetime(scheduled_raw) if scheduled_raw else None
+            if dt and timezone.is_naive(dt):
+                dt = timezone.make_aware(dt)
+            video.scheduled_publish_at = dt
+            if dt:
+                video.is_published = False
+        except Exception:
+            pass
+    elif 'scheduledPublishAt' in data and data['scheduledPublishAt'] is None:
+        video.scheduled_publish_at = None
+
     for field, value in {
         'title': data.get('title'),
         'description': data.get('description'),
