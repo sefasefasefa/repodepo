@@ -214,6 +214,46 @@ def chunk_status(request, upload_id):
     })
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser])
+def upload_thumbnail(request):
+    user = request.user
+    if user.role not in ('creator', 'admin', 'moderator'):
+        return Response({'error': 'Creator hesabı gerekli'}, status=403)
+
+    video_id = request.data.get('videoId')
+    img_file = request.FILES.get('thumbnail')
+    if not img_file or not video_id:
+        return Response({'error': 'videoId ve thumbnail zorunlu'}, status=400)
+
+    ALLOWED_IMG = {'.jpg', '.jpeg', '.png', '.webp'}
+    ext = os.path.splitext(img_file.name)[1].lower() or '.jpg'
+    if ext not in ALLOWED_IMG:
+        ext = '.jpg'
+
+    filename = f'thumb_{uuid.uuid4().hex}{ext}'
+    thumb_dir = os.path.join(settings.MEDIA_ROOT, 'thumbnails')
+    os.makedirs(thumb_dir, exist_ok=True)
+    thumb_path = os.path.join(thumb_dir, filename)
+
+    with open(thumb_path, 'wb+') as f:
+        for chunk in img_file.chunks():
+            f.write(chunk)
+
+    thumb_url = f'/media/thumbnails/{filename}'
+
+    try:
+        from .models import Video
+        video = Video.objects.get(id=int(video_id), creator=user)
+        video.thumbnail_url = thumb_url
+        video.save(update_fields=['thumbnail_url'])
+    except Exception as e:
+        return Response({'error': f'Video güncellenemedi: {e}'}, status=400)
+
+    return Response({'thumbnailUrl': thumb_url}, status=200)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def chunk_cancel(request, upload_id):

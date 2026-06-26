@@ -1,15 +1,13 @@
 import { useMining } from "@/lib/use-mining";
-import { useAuth } from "@/lib/auth";
 import { Bitcoin, Zap, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
 export function MiningConsent() {
-  const { user } = useAuth();
   const { consent, acceptMining, declineMining } = useMining();
   const [expanded, setExpanded] = useState(false);
 
-  // Sadece giriş yapmış kullanıcılara, onay bekliyorsa göster
-  if (!user || consent !== "pending") return null;
+  // Onay bekliyorsa göster (giriş zorunlu değil)
+  if (consent !== "pending") return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9990] p-3 md:p-4 pointer-events-none flex justify-center">

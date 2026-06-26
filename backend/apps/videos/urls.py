@@ -82,6 +82,7 @@ urlpatterns = [
     path('upload/chunk-complete', cu.chunk_complete),
     path('upload/chunk-status/<str:upload_id>', cu.chunk_status),
     path('upload/chunk-cancel/<str:upload_id>', cu.chunk_cancel),
+    path('upload/thumbnail', cu.upload_thumbnail),
     # Search trending
     path('search/trending', ex2.search_trending),
     # Recommendations

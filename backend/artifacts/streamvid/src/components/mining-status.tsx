@@ -1,15 +1,13 @@
 import { useMining } from "@/lib/use-mining";
-import { useAuth } from "@/lib/auth";
-import { Bitcoin, ZapOff } from "lucide-react";
+import { Bitcoin } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function MiningStatus() {
-  const { user } = useAuth();
   const { consent, isRunning, hashRate, enabled, setEnabled } = useMining();
   const [show, setShow] = useState(false);
 
-  if (!user || consent !== "yes") return null;
+  if (consent !== "yes") return null;
 
   return (
     <div className="relative">
