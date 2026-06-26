@@ -6,6 +6,7 @@ export interface PublicSiteSettings {
   logoUrl: string | null;
   faviconUrl: string | null;
   primaryColor: string;
+  registrationEnabled: boolean;
 }
 
 const DEFAULT: PublicSiteSettings = {
@@ -14,6 +15,7 @@ const DEFAULT: PublicSiteSettings = {
   logoUrl: null,
   faviconUrl: null,
   primaryColor: "#7c3aed",
+  registrationEnabled: true,
 };
 
 const CACHE_KEY = "pub_site_settings_v1";

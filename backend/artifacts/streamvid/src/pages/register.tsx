@@ -8,8 +8,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Lock } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
+import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 
 const registerSchema = z.object({
   username: z.string().min(3, "En az 3 karakter"),
@@ -19,6 +20,7 @@ const registerSchema = z.object({
 });
 
 export default function Register() {
+  const { settings } = usePublicSiteSettings();
   const { register } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -27,6 +29,8 @@ export default function Register() {
     resolver: zodResolver(registerSchema),
     defaultValues: { username: "", email: "", password: "", displayName: "" },
   });
+
+  const registrationClosed = settings.registrationEnabled === false;
 
   const onSubmit = async (values: z.infer<typeof registerSchema>) => {
     try {
@@ -44,6 +48,29 @@ export default function Register() {
   const onGoogleRegister = () => {
     window.location.href = "/api/auth/google";
   };
+
+  if (registrationClosed) {
+    return (
+      <AppLayout>
+        <div className="min-h-[60vh] flex items-center justify-center p-6">
+          <div className="text-center max-w-sm">
+            <div className="w-16 h-16 bg-red-900/20 border border-red-800/30 rounded-2xl flex items-center justify-center mx-auto mb-5">
+              <Lock className="h-7 w-7 text-red-400" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">Kayıtlar Kapalı</h2>
+            <p className="text-[#666] text-sm mb-6 leading-relaxed">
+              Şu anda yeni üye kaydı kabul edilmemektedir. Daha sonra tekrar deneyiniz.
+            </p>
+            <Link href="/login">
+              <button className="bg-primary hover:bg-primary/90 text-white rounded-xl px-6 py-2.5 text-sm transition-colors">
+                Giriş Yap
+              </button>
+            </Link>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

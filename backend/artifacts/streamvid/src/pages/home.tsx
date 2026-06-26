@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { StoriesLiveBar } from "@/components/live/stories-live-bar";
+import { useFeatureState } from "@/lib/feature-flags";
 import type { Video, Category } from "@workspace/api-client-react";
 
 function SectionSkeleton({ count = 4 }: { count?: number }) {
@@ -364,6 +365,14 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  const ffVideos = useFeatureState("videos");
+  const ffShorts = useFeatureState("shorts");
+  const ffCategories = useFeatureState("categories");
+  const ffCreators = useFeatureState("creators");
+  const ffStories = useFeatureState("stories");
+  const ffLive = useFeatureState("live_streams");
+  const ffSubscriptions = useFeatureState("subscriptions");
+
   const { data: trendingData, isLoading: trendingLoading } = useGetTrendingVideos({ limit: 8 } as any);
 
   const { data: mostViewedData, isLoading: mostViewedLoading } = useListVideos({
@@ -406,63 +415,67 @@ export default function Home() {
   return (
     <AppLayout>
       {/* Instagram-style Stories + Live bar */}
-      <StoriesLiveBar />
+      {(ffStories !== "disabled" || ffLive !== "disabled") && <StoriesLiveBar />}
 
       <div className="max-w-[1600px] mx-auto px-3 md:px-6 py-4 space-y-10">
 
         {/* Category filter bar */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-3 px-3">
-          <Button
-            onClick={() => setShowFilters(v => !v)}
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "shrink-0 text-[#888] hover:text-white border h-8 px-3",
-              showFilters ? "bg-primary/10 text-primary border-primary/30" : "border-[#333] hover:border-[#555]"
-            )}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />
-            Filtre
-          </Button>
-          {showFilters && FILTER_TAGS.map((tag) => (
-            <button
-              key={tag.label}
-              onClick={() => setActiveCategory(tag.value)}
+        {ffVideos !== "disabled" && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-3 px-3">
+            <Button
+              onClick={() => setShowFilters(v => !v)}
+              variant="ghost"
+              size="sm"
               className={cn(
-                "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
-                activeCategory === tag.value
-                  ? "bg-primary text-white border-primary"
-                  : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
+                "shrink-0 text-[#888] hover:text-white border h-8 px-3",
+                showFilters ? "bg-primary/10 text-primary border-primary/30" : "border-[#333] hover:border-[#555]"
               )}
             >
-              {tag.label}
-            </button>
-          ))}
-        </div>
+              <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />
+              Filtre
+            </Button>
+            {showFilters && FILTER_TAGS.map((tag) => (
+              <button
+                key={tag.label}
+                onClick={() => setActiveCategory(tag.value)}
+                className={cn(
+                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
+                  activeCategory === tag.value
+                    ? "bg-primary text-white border-primary"
+                    : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
+                )}
+              >
+                {tag.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* SANA ÖZEL */}
-        <ForYouSection />
+        {ffVideos !== "disabled" && <ForYouSection />}
 
         {/* TRENDING */}
-        <section>
-          <SectionHeader
-            icon={Flame}
-            title="En Trend"
-            subtitle="Şu an en çok izlenenler"
-            href="/videos?sort=trending"
-            iconColor="text-orange-500"
-          />
-          {trendingLoading ? (
-            <SectionSkeleton count={4} />
-          ) : trendingData?.videos && trendingData.videos.length > 0 ? (
-            <VideoGrid videos={trendingData.videos.slice(0, 8)} />
-          ) : (
-            <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
-          )}
-        </section>
+        {ffVideos !== "disabled" && (
+          <section>
+            <SectionHeader
+              icon={Flame}
+              title="En Trend"
+              subtitle="Şu an en çok izlenenler"
+              href="/videos?sort=trending"
+              iconColor="text-orange-500"
+            />
+            {trendingLoading ? (
+              <SectionSkeleton count={4} />
+            ) : trendingData?.videos && trendingData.videos.length > 0 ? (
+              <VideoGrid videos={trendingData.videos.slice(0, 8)} />
+            ) : (
+              <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
+            )}
+          </section>
+        )}
 
         {/* TOP MODELS */}
-        {creators.length > 0 && (
+        {ffCreators !== "disabled" && creators.length > 0 && (
           <section>
             <SectionHeader
               icon={Star}
@@ -480,25 +493,27 @@ export default function Home() {
         )}
 
         {/* MOST VIEWED */}
-        <section>
-          <SectionHeader
-            icon={Eye}
-            title="En Çok İzlenenler"
-            subtitle="Tüm zamanların en popüler videoları"
-            href="/videos?sort=most_viewed"
-            iconColor="text-blue-400"
-          />
-          {mostViewedLoading ? (
-            <SectionSkeleton count={4} />
-          ) : mostViewedData?.videos && mostViewedData.videos.length > 0 ? (
-            <VideoGrid videos={mostViewedData.videos.slice(0, 8)} />
-          ) : (
-            <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
-          )}
-        </section>
+        {ffVideos !== "disabled" && (
+          <section>
+            <SectionHeader
+              icon={Eye}
+              title="En Çok İzlenenler"
+              subtitle="Tüm zamanların en popüler videoları"
+              href="/videos?sort=most_viewed"
+              iconColor="text-blue-400"
+            />
+            {mostViewedLoading ? (
+              <SectionSkeleton count={4} />
+            ) : mostViewedData?.videos && mostViewedData.videos.length > 0 ? (
+              <VideoGrid videos={mostViewedData.videos.slice(0, 8)} />
+            ) : (
+              <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
+            )}
+          </section>
+        )}
 
         {/* CATEGORIES GRID */}
-        {visibleCategories.length > 0 && (
+        {ffCategories !== "disabled" && visibleCategories.length > 0 && (
           <section>
             <SectionHeader
               icon={Users}
@@ -515,7 +530,7 @@ export default function Home() {
         )}
 
         {/* SHORTS / KISA VİDEOLAR */}
-        {shortData?.videos && shortData.videos.length > 0 && (
+        {ffShorts !== "disabled" && shortData?.videos && shortData.videos.length > 0 && (
           <section>
             <SectionHeader
               icon={Play}
@@ -529,25 +544,27 @@ export default function Home() {
         )}
 
         {/* MOST LIKED */}
-        <section>
-          <SectionHeader
-            icon={ThumbsUp}
-            title="En Çok Beğenilenler"
-            subtitle="Topluluktan en çok beğeni alan videolar"
-            href="/videos?sort=most_liked"
-            iconColor="text-green-400"
-          />
-          {mostLikedLoading ? (
-            <SectionSkeleton count={4} />
-          ) : mostLikedData?.videos && mostLikedData.videos.length > 0 ? (
-            <VideoGrid videos={mostLikedData.videos.slice(0, 8)} />
-          ) : (
-            <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
-          )}
-        </section>
+        {ffVideos !== "disabled" && (
+          <section>
+            <SectionHeader
+              icon={ThumbsUp}
+              title="En Çok Beğenilenler"
+              subtitle="Topluluktan en çok beğeni alan videolar"
+              href="/videos?sort=most_liked"
+              iconColor="text-green-400"
+            />
+            {mostLikedLoading ? (
+              <SectionSkeleton count={4} />
+            ) : mostLikedData?.videos && mostLikedData.videos.length > 0 ? (
+              <VideoGrid videos={mostLikedData.videos.slice(0, 8)} />
+            ) : (
+              <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
+            )}
+          </section>
+        )}
 
         {/* PREMIUM */}
-        {premiumData?.videos && premiumData.videos.length > 0 && (
+        {ffSubscriptions !== "disabled" && premiumData?.videos && premiumData.videos.length > 0 && (
           <section>
             <SectionHeader
               icon={Crown}
@@ -561,25 +578,27 @@ export default function Home() {
         )}
 
         {/* NEWEST */}
-        <section>
-          <SectionHeader
-            icon={Clock}
-            title="En Yeni Yüklenenler"
-            subtitle="Az önce yüklendi"
-            href="/videos?sort=newest"
-            iconColor="text-cyan-400"
-          />
-          {newestLoading ? (
-            <SectionSkeleton count={4} />
-          ) : newestData?.videos && newestData.videos.length > 0 ? (
-            <VideoGrid videos={newestData.videos.slice(0, 8)} />
-          ) : (
-            <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
-          )}
-        </section>
+        {ffVideos !== "disabled" && (
+          <section>
+            <SectionHeader
+              icon={Clock}
+              title="En Yeni Yüklenenler"
+              subtitle="Az önce yüklendi"
+              href="/videos?sort=newest"
+              iconColor="text-cyan-400"
+            />
+            {newestLoading ? (
+              <SectionSkeleton count={4} />
+            ) : newestData?.videos && newestData.videos.length > 0 ? (
+              <VideoGrid videos={newestData.videos.slice(0, 8)} />
+            ) : (
+              <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
+            )}
+          </section>
+        )}
 
-        {/* PER-CATEGORY BEST: render one row per category with videos */}
-        {visibleCategories.slice(0, 5).map((cat: Category) => (
+        {/* PER-CATEGORY BEST */}
+        {ffVideos !== "disabled" && ffCategories !== "disabled" && visibleCategories.slice(0, 5).map((cat: Category) => (
           <CategorySection key={cat.id} category={cat} />
         ))}
 

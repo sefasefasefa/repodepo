@@ -11,6 +11,18 @@ import { useToast } from "@/hooks/use-toast";
 import { LogIn, Phone, Smartphone, Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
+import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
+
+function RegistrationLink() {
+  const { settings } = usePublicSiteSettings();
+  if (settings.registrationEnabled === false) return null;
+  return (
+    <div className="mt-6 text-center text-sm">
+      <span className="text-[#555]">Hesabınız yok mu? </span>
+      <Link href="/register" className="text-primary hover:underline font-medium">Kayıt Ol</Link>
+    </div>
+  );
+}
 
 const loginSchema = z.object({
   email: z.string().min(1, "Kullanıcı adı veya e-posta zorunludur"),
@@ -333,10 +345,7 @@ export default function Login() {
             </Form>
           )}
 
-          <div className="mt-6 text-center text-sm">
-            <span className="text-[#555]">Hesabınız yok mu? </span>
-            <Link href="/register" className="text-primary hover:underline font-medium">Kayıt Ol</Link>
-          </div>
+          <RegistrationLink />
         </div>
       </div>
     </AppLayout>
