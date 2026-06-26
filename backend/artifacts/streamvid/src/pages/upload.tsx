@@ -104,6 +104,13 @@ export default function UploadPage() {
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleValue, setScheduleValue] = useState("");
 
+  // Toplu zamanlanmış yayın
+  const [bulkScheduleEnabled, setBulkScheduleEnabled] = useState(false);
+  const [bulkScheduleStart, setBulkScheduleStart] = useState("");
+  const [bulkScheduleInterval, setBulkScheduleInterval] = useState("24");
+  const [bulkScheduleUnit, setBulkScheduleUnit] = useState<"hours" | "days">("hours");
+  const [bulkSchedulePreview, setBulkSchedulePreview] = useState<string[]>([]);
+
   const pickThumb = (file: File) => {
     setThumbFile(file);
     const url = URL.createObjectURL(file);
@@ -268,8 +275,20 @@ export default function UploadPage() {
       setBulkMsg("Başlık ve URL sayısı eşleşmeli");
       return;
     }
+    if (bulkScheduleEnabled && !bulkScheduleStart) {
+      setBulkMsg("Zamanlanmış yayın için başlangıç tarihi seçmelisin");
+      return;
+    }
+    const intervalMs = parseFloat(bulkScheduleInterval || "24") *
+      (bulkScheduleUnit === "days" ? 86400000 : 3600000);
+    const startMs = bulkScheduleEnabled && bulkScheduleStart
+      ? new Date(bulkScheduleStart).getTime()
+      : null;
     try {
       for (let i = 0; i < titles.length; i++) {
+        const scheduledPublishAt = startMs !== null
+          ? new Date(startMs + i * intervalMs).toISOString()
+          : null;
         await createVideoMutation.mutateAsync({
           data: {
             title: values.prefix ? `${values.prefix} ${titles[i]}` : titles[i],
@@ -281,14 +300,33 @@ export default function UploadPage() {
             isPPV: values.isPPV,
             ppvPrice: values.isPPV && values.ppvPrice ? parseFloat(values.ppvPrice) : undefined,
             categoryId: values.categoryId ? Number(values.categoryId) : undefined,
+            scheduledPublishAt,
           },
         });
       }
-      setBulkMsg("✓ Toplu yükleme tamamlandı");
+      setBulkMsg(
+        bulkScheduleEnabled
+          ? `✓ ${titles.length} video zamanlandı`
+          : "✓ Toplu yükleme tamamlandı"
+      );
       bulkForm.reset();
+      setBulkScheduleEnabled(false);
+      setBulkScheduleStart("");
+      setBulkSchedulePreview([]);
     } catch (e: any) {
       setBulkMsg(e?.message || "Toplu yükleme başarısız");
     }
+  };
+
+  // Önizleme listesini güncelle
+  const updateBulkPreview = (start: string, interval: string, unit: "hours" | "days", count: number) => {
+    if (!start || count < 1) { setBulkSchedulePreview([]); return; }
+    const intervalMs = parseFloat(interval || "24") * (unit === "days" ? 86400000 : 3600000);
+    const startMs = new Date(start).getTime();
+    const previews = Array.from({ length: Math.min(count, 10) }, (_, i) =>
+      new Date(startMs + i * intervalMs).toLocaleString("tr", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    );
+    setBulkSchedulePreview(previews);
   };
 
   const onApplySubmit = async (values: z.infer<typeof applySchema>) => {
@@ -626,8 +664,114 @@ export default function UploadPage() {
                       </FormItem>
                     )} />
                   )}
-                  <Button type="submit" variant="secondary" className="w-full">Toplu Yükle</Button>
-                  {bulkMsg && <p className="text-sm text-[#888]">{bulkMsg}</p>}
+                  {/* Toplu Zamanlanmış Yayın */}
+                  <div className="border border-[#2a2a2a] rounded-xl p-4 space-y-3 bg-[#111]">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" /> Aralıklı Zamanlama
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !bulkScheduleEnabled;
+                          setBulkScheduleEnabled(next);
+                          if (!next) { setBulkScheduleStart(""); setBulkSchedulePreview([]); }
+                        }}
+                        className={cn(
+                          "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                          bulkScheduleEnabled ? "bg-primary" : "bg-[#333]"
+                        )}
+                      >
+                        <span className={cn(
+                          "inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform",
+                          bulkScheduleEnabled ? "translate-x-4" : "translate-x-1"
+                        )} />
+                      </button>
+                    </div>
+
+                    {bulkScheduleEnabled && (
+                      <div className="space-y-3">
+                        {/* İlk video tarihi */}
+                        <div className="space-y-1">
+                          <label className="text-xs text-[#666]">1. videonun yayın tarihi</label>
+                          <input
+                            type="datetime-local"
+                            value={bulkScheduleStart}
+                            min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
+                            onChange={e => {
+                              setBulkScheduleStart(e.target.value);
+                              const count = bulkForm.getValues("titles").split("\n").filter(Boolean).length;
+                              updateBulkPreview(e.target.value, bulkScheduleInterval, bulkScheduleUnit, count);
+                            }}
+                            className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60 [color-scheme:dark]"
+                          />
+                        </div>
+
+                        {/* Aralık */}
+                        <div className="space-y-1">
+                          <label className="text-xs text-[#666]">Videolar arası aralık</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              max="720"
+                              value={bulkScheduleInterval}
+                              onChange={e => {
+                                setBulkScheduleInterval(e.target.value);
+                                const count = bulkForm.getValues("titles").split("\n").filter(Boolean).length;
+                                updateBulkPreview(bulkScheduleStart, e.target.value, bulkScheduleUnit, count);
+                              }}
+                              className="w-24 bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60"
+                            />
+                            <select
+                              value={bulkScheduleUnit}
+                              onChange={e => {
+                                const unit = e.target.value as "hours" | "days";
+                                setBulkScheduleUnit(unit);
+                                const count = bulkForm.getValues("titles").split("\n").filter(Boolean).length;
+                                updateBulkPreview(bulkScheduleStart, bulkScheduleInterval, unit, count);
+                              }}
+                              className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60"
+                            >
+                              <option value="hours">Saat</option>
+                              <option value="days">Gün</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Önizleme */}
+                        {bulkSchedulePreview.length > 0 && (
+                          <div className="rounded-xl bg-[#0d0d0d] border border-[#222] divide-y divide-[#1a1a1a] overflow-hidden">
+                            <p className="px-3 py-2 text-[11px] text-[#555] font-semibold uppercase tracking-wide">Yayın Takvimi Önizlemesi</p>
+                            {bulkSchedulePreview.map((date, i) => (
+                              <div key={i} className="flex items-center justify-between px-3 py-2">
+                                <span className="text-xs text-[#666]">Video {i + 1}</span>
+                                <span className="text-xs text-primary/80 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />{date}
+                                </span>
+                              </div>
+                            ))}
+                            {bulkSchedulePreview.length === 10 && (
+                              <p className="px-3 py-2 text-[11px] text-[#444] text-center">... ve devamı aynı aralıkta</p>
+                            )}
+                          </div>
+                        )}
+
+                        {!bulkScheduleStart && (
+                          <p className="text-xs text-[#555]">Başlangıç tarihi seçince tüm videolar için takvim oluşturulur.</p>
+                        )}
+                      </div>
+                    )}
+
+                    {!bulkScheduleEnabled && (
+                      <p className="text-xs text-[#555]">Aktif edilirse her video belirtilen aralıkla otomatik zamanlanır.</p>
+                    )}
+                  </div>
+
+                  <Button type="submit" variant="secondary" className="w-full">
+                    {bulkScheduleEnabled ? "Toplu Zamanla" : "Toplu Yükle"}
+                  </Button>
+                  {bulkMsg && <p className={cn("text-sm", bulkMsg.startsWith("✓") ? "text-green-400" : "text-[#888]")}>{bulkMsg}</p>}
                 </form>
               </Form>
             )}
