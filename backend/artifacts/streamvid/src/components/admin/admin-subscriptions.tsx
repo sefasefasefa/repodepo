@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { useAuth } from "@/lib/auth";
 import { CreditCard, Users, CheckCircle, Star, Filter, Search, MoreVertical,
          DollarSign, XCircle, AlertCircle, RefreshCw, Plus, Trash2, Edit3,
-         X, Save, Loader2 } from "lucide-react";
+         X, Save, Loader2, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -10,12 +9,7 @@ const STATUS_OPTIONS = ["Tümü", "Aktif", "İptal Edildi", "Süresi Doldu", "De
 const PLAN_FILTERS   = ["Tümü", "Ücretsiz", "Premium", "Creator", "VIP"];
 
 const MOCK_SUBS = [
-  { id: 1, user: "ahmet_k",  plan: "Premium",  price: 9.99,  status: "Aktif",        start: "2025-01-15", end: "2026-01-15", method: "Kart" },
-  { id: 2, user: "zeynep_s", plan: "Creator",  price: 24.99, status: "Aktif",        start: "2025-03-10", end: "2026-03-10", method: "Kripto" },
-  { id: 3, user: "mert_d",   plan: "VIP",      price: 49.99, status: "İptal Edildi", start: "2024-10-01", end: "2025-10-01", method: "Kart" },
-  { id: 4, user: "selin_y",  plan: "Premium",  price: 9.99,  status: "Deneme",       start: "2025-06-20", end: "2025-07-20", method: "—" },
-  { id: 5, user: "emre_t",   plan: "Creator",  price: 24.99, status: "Süresi Doldu", start: "2024-05-01", end: "2025-05-01", method: "Kart" },
-  { id: 6, user: "ayse_b",   plan: "Premium",  price: 9.99,  status: "Aktif",        start: "2025-05-01", end: "2026-05-01", method: "PayPal" },
+  { id: 1, user: "ahmet_k", plan: "Premium", price: 9.99, status: "Aktif", start: "2025-01-15", end: "2026-01-15", method: "Kart" },
 ];
 
 const STATUS_STYLE: Record<string, string> = {
@@ -180,7 +174,6 @@ function PlanModal({
 }
 
 export function AdminSubscriptions() {
-  const { token } = useAuth() as any;
   const qc = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState("Tümü");
@@ -192,12 +185,15 @@ export function AdminSubscriptions() {
     form: EMPTY_FORM,
   });
 
-  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` };
+  const getHeaders = () => ({
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-plans"],
     queryFn: async () => {
-      const r = await fetch("/api/admin/subscription-plans", { headers });
+      const r = await fetch("/api/admin/subscription-plans", { headers: getHeaders() });
       if (!r.ok) throw new Error("Planlar alınamadı");
       return r.json();
     },
@@ -214,12 +210,12 @@ export function AdminSubscriptions() {
 
       if (form.id) {
         const r = await fetch(`/api/admin/subscription-plans/${form.id}`, {
-          method: "PATCH", headers, body: JSON.stringify(payload),
+          method: "PATCH", headers: getHeaders(), body: JSON.stringify(payload),
         });
         if (!r.ok) throw new Error("Güncelleme başarısız");
       } else {
         const r = await fetch("/api/admin/subscription-plans/create", {
-          method: "POST", headers, body: JSON.stringify(payload),
+          method: "POST", headers: getHeaders(), body: JSON.stringify(payload),
         });
         if (!r.ok) throw new Error("Oluşturma başarısız");
       }
@@ -232,7 +228,7 @@ export function AdminSubscriptions() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const r = await fetch(`/api/admin/subscription-plans/${id}`, { method: "DELETE", headers });
+      const r = await fetch(`/api/admin/subscription-plans/${id}`, { method: "DELETE", headers: getHeaders() });
       if (!r.ok) throw new Error("Silme başarısız");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-plans"] }),
@@ -403,7 +399,13 @@ export function AdminSubscriptions() {
 
       {/* Abone Listesi */}
       <div>
-        <h2 className="text-sm font-bold text-[#666] uppercase tracking-widest mb-3">Aboneler</h2>
+        <div className="flex items-center gap-3 mb-3">
+          <h2 className="text-sm font-bold text-[#666] uppercase tracking-widest">Aboneler</h2>
+          <div className="flex items-center gap-1.5 text-xs text-yellow-500/80 bg-yellow-900/20 border border-yellow-800/30 rounded-full px-2.5 py-0.5">
+            <Info className="h-3 w-3 shrink-0" />
+            Aşağıdaki satır örnek veridir — gerçek abone listesi ödeme sistemi entegrasyonu sonrası buraya yansır
+          </div>
+        </div>
         <div className="bg-[#0d0d0d] border border-[#1e1e1e] rounded-xl p-4 space-y-3 mb-4">
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-48">

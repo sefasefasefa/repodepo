@@ -1,8 +1,9 @@
 from django.utils import timezone
 from django.db.models import Q
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import SubscriptionPlan, UserSubscription, Payment
 
 
@@ -22,6 +23,7 @@ def list_plans(request):
 
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_list_plans(request):
     if request.user.role != 'admin':
@@ -31,6 +33,7 @@ def admin_list_plans(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_create_plan(request):
     if request.user.role != 'admin':
@@ -51,6 +54,7 @@ def admin_create_plan(request):
 
 
 @api_view(['PATCH', 'DELETE'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_plan_detail(request, plan_id):
     if request.user.role != 'admin':
