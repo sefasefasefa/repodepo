@@ -6,3 +6,9 @@ id = "oYh5RWTtyP8OYvzbDE8tj"
 uri = "file://AKTARIM_PROMPT.md"
 type = "text"
 title = "Tam Aktarım Promptu"
+
+[[outputs]]
+id = "GQfgr8roV4bAKEmdux3Um"
+uri = "file://REPO_ARSIV.md"
+type = "text"
+title = "Tam Repo Arşivi (1.7 MB)"
