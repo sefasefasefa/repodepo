@@ -156,6 +156,7 @@ dependencies = [
     { name = "gunicorn" },
     { name = "pillow" },
     { name = "python-dotenv" },
+    { name = "waitress" },
     { name = "whitenoise" },
 ]
 
@@ -168,6 +169,7 @@ requires-dist = [
     { name = "gunicorn", specifier = "==22.0.0" },
     { name = "pillow", specifier = "==10.4.0" },
     { name = "python-dotenv", specifier = "==1.0.1" },
+    { name = "waitress", specifier = "==3.0.1" },
     { name = "whitenoise", specifier = "==6.7.0" },
 ]
 
@@ -187,6 +189,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ba/19/1b9b0e29f30c6d35cb345486df41110984ea67ae69dddbc0e8a100999493/tzdata-2026.2.tar.gz", hash = "sha256:9173fde7d80d9018e02a662e168e5a2d04f87c41ea174b139fbef642eda62d10", size = 198254, upload-time = "2026-04-24T15:22:08.651Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ce/e4/dccd7f47c4b64213ac01ef921a1337ee6e30e8c6466046018326977efd95/tzdata-2026.2-py2.py3-none-any.whl", hash = "sha256:bbe9af844f658da81a5f95019480da3a89415801f6cc966806612cc7169bffe7", size = 349321, upload-time = "2026-04-24T15:22:05.876Z" },
+]
+
+[[package]]
+name = "waitress"
+version = "3.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/0b/5920c63f93c17f9b04117f271f97619a74e087bf3de0aeed2cfd28510194/waitress-3.0.1.tar.gz", hash = "sha256:ef0c1f020d9f12a515c4ec65c07920a702613afcad1dbfdc3bcec256b6c072b3", size = 180560, upload-time = "2024-10-29T00:13:03.947Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/77/7a/e3d9728774c66c84cdab509955539720fc0dc55781b8d79b299665752749/waitress-3.0.1-py3-none-any.whl", hash = "sha256:26cdbc593093a15119351690752c99adc13cbc6786d75f7b6341d1234a3730ac", size = 56678, upload-time = "2024-10-29T00:13:02.439Z" },
 ]
 
 [[package]]
