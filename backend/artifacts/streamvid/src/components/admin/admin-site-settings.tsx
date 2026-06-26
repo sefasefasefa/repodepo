@@ -884,19 +884,19 @@ export default function AdminSiteSettings() {
         </div>
       )}
 
-      <div className="flex gap-1 bg-[#111] p-1 rounded-xl border border-[#222] flex-wrap">
+      <div className="flex gap-1 bg-[#111] p-1 rounded-xl border border-[#222] overflow-x-auto scrollbar-none">
         {[
-          { id: "general", icon: Palette, label: "Genel" },
-          { id: "nav", icon: LayoutList, label: "Navbar" },
-          { id: "categories", icon: Tag, label: "Kategoriler" },
-          { id: "auto-category", icon: Sparkles, label: "Otomatik Kat." },
-          { id: "seo", icon: Search, label: "SEO" },
-          { id: "webhook", icon: Webhook, label: "Webhook" },
-          { id: "maintenance", icon: Wrench, label: "Bakım" },
-          { id: "watermark", icon: Stamp, label: "Filigran" },
+          { id: "general",       icon: Palette,    label: "Genel Ayarlar" },
+          { id: "nav",           icon: LayoutList, label: "Navbar" },
+          { id: "categories",    icon: Tag,        label: "Kategoriler" },
+          { id: "auto-category", icon: Sparkles,   label: "Otomatik Kategori" },
+          { id: "seo",           icon: Search,     label: "SEO" },
+          { id: "webhook",       icon: Webhook,    label: "Webhook" },
+          { id: "maintenance",   icon: Wrench,     label: "Bakım" },
+          { id: "watermark",     icon: Stamp,      label: "Filigran" },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setActiveTab(id)}
-            className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all",
+            className={cn("flex shrink-0 items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
               activeTab === id ? "bg-[#1e1e1e] text-white border border-[#2a2a2a] shadow" : "text-[#555] hover:text-[#aaa]")}>
             <Icon className="h-3.5 w-3.5" />{label}
           </button>
