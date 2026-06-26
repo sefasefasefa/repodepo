@@ -55,7 +55,7 @@ function AddVideoModal({ categories, onClose, onSuccess }: {
     try {
       const token = localStorage.getItem("token");
       const fd = new FormData();
-      fd.append("video", file);
+      fd.append("file", file);
       const res = await fetch("/api/upload/video", {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
