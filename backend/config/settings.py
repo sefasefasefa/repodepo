@@ -12,7 +12,7 @@ DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS_ENV = os.environ.get(
     'ALLOWED_HOSTS',
-    'localhost,127.0.0.1,0.0.0.0,.pythonanywhere.com,.replit.dev,.repl.co,.replit.app'
+    'localhost,127.0.0.1,0.0.0.0,hotpulse.me,www.hotpulse.me,.hotpulse.me,.pythonanywhere.com,.replit.dev,.repl.co,.replit.app'
 )
 ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(',') if h.strip()]
 if DEBUG:
@@ -20,7 +20,7 @@ if DEBUG:
 
 CSRF_TRUSTED_ORIGINS_ENV = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
-    'https://*.pythonanywhere.com,https://*.replit.dev,https://*.repl.co,https://*.replit.app,http://localhost:8000,http://127.0.0.1:8000'
+    'https://hotpulse.me,https://www.hotpulse.me,https://*.pythonanywhere.com,https://*.replit.dev,https://*.repl.co,https://*.replit.app,http://localhost:8000,http://127.0.0.1:8000'
 )
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS_ENV.split(',') if o.strip()]
 
@@ -145,6 +145,9 @@ CORS_ALLOWED_ORIGINS_ENV = os.environ.get(
 )
 CORS_ALLOWED_ORIGINS = [o.strip() for o in CORS_ALLOWED_ORIGINS_ENV.split(',') if o.strip()]
 CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://hotpulse\.me$',
+    r'^https://www\.hotpulse\.me$',
+    r'^https://.*\.hotpulse\.me$',
     r'^https://.*\.pythonanywhere\.com$',
     r'^https://.*\.replit\.dev$',
     r'^https://.*\.replit\.app$',
