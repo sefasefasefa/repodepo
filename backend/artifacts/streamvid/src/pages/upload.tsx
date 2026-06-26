@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCreateVideo } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import { Upload, Lock, Clock, CheckCircle, XCircle, HelpCircle, AlertTriangle, Crown, FileVideo, Calendar, Stamp, Sparkles, Tag, ScanSearch, Link2 } from "lucide-react";
+import { Upload, Lock, Clock, CheckCircle, XCircle, HelpCircle, AlertTriangle, Crown, FileVideo, Calendar, Stamp, Sparkles, Tag, ScanSearch, Link2, ImageIcon, X as XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useListCategories } from "@workspace/api-client-react";
 import { ChunkedUploadZone } from "@/components/upload/chunked-upload-zone";
+import { useRef } from "react";
 
 const uploadSchema = z.object({
   title: z.string().min(3, "En az 3 karakter"),
@@ -93,6 +94,24 @@ export default function UploadPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkMsg, setBulkMsg] = useState("");
   const createVideoMutation = useCreateVideo();
+
+  // URL formu için lokal thumbnail seçici
+  const thumbFileRef = useRef<HTMLInputElement>(null);
+  const [thumbFile, setThumbFile] = useState<File | null>(null);
+  const [thumbPreview, setThumbPreview] = useState<string | null>(null);
+
+  const pickThumb = (file: File) => {
+    setThumbFile(file);
+    const url = URL.createObjectURL(file);
+    setThumbPreview(url);
+    uploadForm.setValue("thumbnailUrl", "");
+  };
+  const clearThumb = () => {
+    setThumbFile(null);
+    if (thumbPreview) URL.revokeObjectURL(thumbPreview);
+    setThumbPreview(null);
+    if (thumbFileRef.current) thumbFileRef.current.value = "";
+  };
 
   const { data: catData } = useListCategories();
   const categories: any[] = (catData as any)?.categories ?? [];
@@ -196,16 +215,30 @@ export default function UploadPage() {
   });
 
   const onUploadSubmit = async (values: z.infer<typeof uploadSchema>) => {
-    if (requiresAdminApproval) {
-      return;
-    }
+    if (requiresAdminApproval) return;
     try {
+      // Lokal thumbnail seçildiyse önce yükle
+      let resolvedThumbUrl = values.thumbnailUrl || undefined;
+      if (thumbFile) {
+        const fd = new FormData();
+        fd.append("thumbnail", thumbFile, thumbFile.name);
+        const res = await fetch("/api/upload/thumbnail-image", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          resolvedThumbUrl = data.thumbnailUrl;
+        }
+      }
+
       const payload: any = {
         title: values.title,
         description: values.description,
         type: values.type,
         videoUrl: values.videoUrl || undefined,
-        thumbnailUrl: values.thumbnailUrl || undefined,
+        thumbnailUrl: resolvedThumbUrl,
         isPremium: values.isPremium,
         isPPV: values.isPPV,
         ppvPrice: values.isPPV && values.ppvPrice ? parseFloat(values.ppvPrice) : undefined,
@@ -710,15 +743,56 @@ export default function UploadPage() {
                   )}
                 />
 
-                <FormField control={uploadForm.control} name="thumbnailUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Thumbnail URL</FormLabel>
-                      <FormControl><Input placeholder="https://..." {...field} className="bg-input/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
+                {/* Thumbnail — URL veya lokal dosya */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-1.5">
+                    <ImageIcon className="h-3.5 w-3.5 text-[#777]" /> Thumbnail
+                  </label>
+
+                  {/* Önizleme */}
+                  {thumbPreview ? (
+                    <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#2a2a2a] bg-[#0d0d0d]">
+                      <img src={thumbPreview} alt="Thumbnail" className="w-full h-full object-contain" />
+                      <button
+                        type="button"
+                        onClick={clearThumb}
+                        className="absolute top-2 right-2 p-1.5 bg-black/70 rounded-lg text-white hover:bg-red-600/80 transition-all"
+                      >
+                        <XIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => thumbFileRef.current?.click()}
+                      className="w-full aspect-video rounded-xl border-2 border-dashed border-[#2a2a2a] bg-[#111] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all"
+                    >
+                      <ImageIcon className="h-6 w-6 text-[#444]" />
+                      <span className="text-xs text-[#555]">Tıkla veya sürükle — JPG, PNG, WebP</span>
+                    </div>
                   )}
-                />
+
+                  <input
+                    ref={thumbFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) pickThumb(f); }}
+                  />
+
+                  {/* Ya da URL gir */}
+                  {!thumbPreview && (
+                    <FormField control={uploadForm.control} name="thumbnailUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="veya harici URL gir: https://..." {...field} className="bg-input/50 text-xs" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
               </div>
 
               <FormField control={uploadForm.control} name="videoUrl"

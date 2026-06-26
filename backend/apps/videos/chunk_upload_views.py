@@ -217,6 +217,34 @@ def chunk_status(request, upload_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser])
+def upload_thumbnail_image(request):
+    """Thumbnail resmi yükle — sadece URL döner, video güncellemez. URL formu için."""
+    user = request.user
+    if user.role not in ('creator', 'admin', 'moderator'):
+        return Response({'error': 'Creator hesabı gerekli'}, status=403)
+
+    img_file = request.FILES.get('thumbnail')
+    if not img_file:
+        return Response({'error': 'thumbnail zorunlu'}, status=400)
+
+    ext = os.path.splitext(img_file.name)[1].lower() or '.jpg'
+    if ext not in {'.jpg', '.jpeg', '.png', '.webp', '.gif'}:
+        ext = '.jpg'
+
+    filename = f'thumb_{uuid.uuid4().hex}{ext}'
+    thumb_dir = os.path.join(settings.MEDIA_ROOT, 'thumbnails')
+    os.makedirs(thumb_dir, exist_ok=True)
+
+    with open(os.path.join(thumb_dir, filename), 'wb+') as f:
+        for chunk in img_file.chunks():
+            f.write(chunk)
+
+    return Response({'thumbnailUrl': f'/media/thumbnails/{filename}'}, status=200)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser])
 def upload_thumbnail(request):
     user = request.user
     if user.role not in ('creator', 'admin', 'moderator'):
