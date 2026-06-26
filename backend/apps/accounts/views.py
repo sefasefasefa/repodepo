@@ -77,7 +77,7 @@ def register(request):
 def login_view(request):
     data = request.data
     # Accept both `email` and `username` keys so frontend clients work either way.
-    identifier = (data.get('email') or data.get('username') or '').strip()
+    identifier = (data.get('email') or data.get('username') or '').strip().lower()
     password = data.get('password', '')
 
     if not identifier or not password:
