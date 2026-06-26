@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Award, Plus, Trash2, RefreshCw, Users, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Edit2, Check, X } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 const CRITERIA_LABELS: Record<string, string> = {
   manual: "Elle Verilir",
@@ -19,6 +20,7 @@ const CRITERIA_LABELS: Record<string, string> = {
 const CRITERIA_OPTIONS = Object.entries(CRITERIA_LABELS);
 
 export function AdminBadges() {
+  const { token } = useAuth() as any;
   const [settings, setSettings] = useState<any>(null);
   const [defs, setDefs] = useState<any[]>([]);
   const [userBadges, setUserBadges] = useState<any[]>([]);
@@ -37,18 +39,26 @@ export function AdminBadges() {
 
   const [awardForm, setAwardForm] = useState({ userId: "", badgeId: "", note: "" });
 
+  const authHeader = useCallback(() =>
+    token ? { Authorization: `Bearer ${token}` } : {} as Record<string, string>,
+  [token]);
+
   const load = useCallback(async () => {
     setLoading(true);
-    const [s, d, u] = await Promise.all([
-      fetch("/api/badges/admin/settings").then(r => r.json()),
-      fetch("/api/badges/admin/definitions").then(r => r.json()),
-      fetch("/api/badges/admin/users").then(r => r.json()),
-    ]);
-    setSettings(s.settings);
-    setDefs(d.definitions || []);
-    setUserBadges(u.userBadges || []);
-    setLoading(false);
-  }, []);
+    try {
+      const h = authHeader();
+      const [s, d, u] = await Promise.all([
+        fetch("/api/badges/admin/settings", { headers: h }).then(r => r.json()),
+        fetch("/api/badges/admin/definitions", { headers: h }).then(r => r.json()),
+        fetch("/api/badges/admin/users", { headers: h }).then(r => r.json()),
+      ]);
+      setSettings(s.settings ?? null);
+      setDefs(d.definitions || []);
+      setUserBadges(u.userBadges || []);
+    } finally {
+      setLoading(false);
+    }
+  }, [authHeader]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -56,7 +66,7 @@ export function AdminBadges() {
     setSaving(true);
     const val = field === "isActive" ? !settings?.isActive : !settings?.autoAwardEnabled;
     const res = await fetch("/api/badges/admin/settings", {
-      method: "PUT", headers: { "Content-Type": "application/json" },
+      method: "PUT", headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify({ [field]: val }),
     });
     const d = await res.json();
@@ -67,7 +77,7 @@ export function AdminBadges() {
   const createBadge = async () => {
     if (!newBadge.slug || !newBadge.name) return;
     const res = await fetch("/api/badges/admin/definitions", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify(newBadge),
     });
     if (res.ok) {
@@ -79,7 +89,7 @@ export function AdminBadges() {
 
   const updateBadge = async (id: number) => {
     await fetch(`/api/badges/admin/definitions/${id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
+      method: "PATCH", headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify(editForm),
     });
     setEditingId(null);
@@ -88,13 +98,13 @@ export function AdminBadges() {
 
   const deleteBadge = async (id: number) => {
     if (!confirm("Bu rozeti silmek istediğinizden emin misiniz? Kullanıcılardan da kaldırılacak.")) return;
-    await fetch(`/api/badges/admin/definitions/${id}`, { method: "DELETE" });
+    await fetch(`/api/badges/admin/definitions/${id}`, { method: "DELETE", headers: authHeader() });
     load();
   };
 
   const toggleBadgeEnabled = async (b: any) => {
     await fetch(`/api/badges/admin/definitions/${b.id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
+      method: "PATCH", headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify({ isEnabled: !b.isEnabled }),
     });
     load();
@@ -103,7 +113,7 @@ export function AdminBadges() {
   const awardBadge = async () => {
     if (!awardForm.userId || !awardForm.badgeId) return;
     const res = await fetch("/api/badges/admin/award", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify({ userId: parseInt(awardForm.userId), badgeId: parseInt(awardForm.badgeId), note: awardForm.note }),
     });
     if (res.ok) {
@@ -118,13 +128,13 @@ export function AdminBadges() {
 
   const revokeAward = async (id: number) => {
     if (!confirm("Bu rozeti kullanıcıdan geri almak istediğinizden emin misiniz?")) return;
-    await fetch(`/api/badges/admin/award/${id}`, { method: "DELETE" });
+    await fetch(`/api/badges/admin/award/${id}`, { method: "DELETE", headers: authHeader() });
     load();
   };
 
   const autoAward = async () => {
     setAutoAwarding(true);
-    const res = await fetch("/api/badges/admin/auto-award", { method: "POST" });
+    const res = await fetch("/api/badges/admin/auto-award", { method: "POST", headers: authHeader() });
     const d = await res.json();
     setAutoAwarding(false);
     alert(`Otomatik dağıtım tamamlandı. ${d.awarded} yeni rozet verildi.`);

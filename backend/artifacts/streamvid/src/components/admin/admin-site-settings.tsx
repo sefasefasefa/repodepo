@@ -284,10 +284,12 @@ function WatermarkTab() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/watermark/admin/settings");
+    const r = await fetch("/api/watermark/admin/settings", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     const d = await r.json();
-    setSettings(d.settings); setForm(d.settings || {});
-  }, []);
+    setSettings(d.settings ?? null); setForm(d.settings || {});
+  }, [token]);
 
   useEffect(() => { load(); }, [load]);
 
