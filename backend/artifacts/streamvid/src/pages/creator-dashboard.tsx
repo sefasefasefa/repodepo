@@ -10,7 +10,7 @@ import {
   TrendingUp, DollarSign, Eye, Users, Heart,
   RefreshCw, Calendar, Video, ArrowUpRight, ArrowDownRight,
   Crown, ShoppingBag, Zap, Coins, Wallet, Send, Clock, CheckCircle, XCircle, Loader2,
-  FileText, CheckCheck, Ban, MessageSquare, Radio, Store,
+  FileText, CheckCheck, Ban, MessageSquare, Radio, Store, Pencil, Check, X,
 } from "lucide-react";
 import { CreatorLivePanel } from "@/components/live/creator-live-panel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -164,6 +164,8 @@ export default function CreatorDashboard() {
   const [scheduledVideos, setScheduledVideos] = useState<any[]>([]);
   const [scheduledLoading, setScheduledLoading] = useState(false);
   const [scheduledAction, setScheduledAction] = useState<number | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState<string>("");
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [respondingId, setRespondingId]   = useState<number | null>(null);
   const [responseNote, setResponseNote]   = useState("");
@@ -209,6 +211,28 @@ export default function CreatorDashboard() {
     setScheduledAction(id);
     try {
       await apiFetch(`/videos/${id}/publish-now`, { method: "POST" });
+      loadScheduledVideos();
+    } catch (e: any) { alert(e.message); }
+    finally { setScheduledAction(null); }
+  };
+
+  const startEditSchedule = (video: any) => {
+    const dt = new Date(video.scheduledPublishAt);
+    const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000)
+      .toISOString().slice(0, 16);
+    setEditingValue(local);
+    setEditingSchedule(video.id);
+  };
+
+  const handleReschedule = async (id: number) => {
+    if (!editingValue) return;
+    setScheduledAction(id);
+    try {
+      await apiFetch(`/videos/${id}/reschedule`, {
+        method: "POST",
+        body: JSON.stringify({ scheduledPublishAt: new Date(editingValue).toISOString() }),
+      });
+      setEditingSchedule(null);
       loadScheduledVideos();
     } catch (e: any) { alert(e.message); }
     finally { setScheduledAction(null); }
@@ -591,18 +615,54 @@ export default function CreatorDashboard() {
                           {/* Bilgiler */}
                           <div className="flex-1 min-w-0 space-y-1.5">
                             <p className="text-sm font-semibold text-white truncate">{video.title}</p>
-                            <div className="flex items-center gap-1.5 text-[11px] text-[#666]">
-                              <Clock className="h-3 w-3 shrink-0" />
-                              {publishAt.toLocaleString("tr", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                              {video.category && (
-                                <span className="ml-1 px-2 py-0.5 rounded-full bg-[#222] text-[#777]">{video.category.name}</span>
-                              )}
-                            </div>
-                            {/* Canlı geri sayım */}
-                            <CountdownBadge
-                              targetIso={video.scheduledPublishAt}
-                              onDone={loadScheduledVideos}
-                            />
+
+                            {editingSchedule === video.id ? (
+                              /* ── Inline düzenleme modu ── */
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <input
+                                  type="datetime-local"
+                                  value={editingValue}
+                                  onChange={e => setEditingValue(e.target.value)}
+                                  className="h-8 rounded-lg border border-[#333] bg-[#111] px-2 text-xs text-white focus:outline-none focus:border-primary"
+                                />
+                                <button
+                                  disabled={isLoading}
+                                  onClick={() => handleReschedule(video.id)}
+                                  className="inline-flex items-center gap-1 h-8 px-3 rounded-lg bg-primary/20 border border-primary/40 text-primary text-xs font-semibold hover:bg-primary/30 disabled:opacity-50"
+                                >
+                                  {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3" />Kaydet</>}
+                                </button>
+                                <button
+                                  onClick={() => setEditingSchedule(null)}
+                                  className="inline-flex items-center h-8 px-2 rounded-lg border border-[#333] text-[#666] hover:text-white text-xs"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              /* ── Normal görünüm ── */
+                              <>
+                                <div className="flex items-center gap-1.5 text-[11px] text-[#666]">
+                                  <Clock className="h-3 w-3 shrink-0" />
+                                  {publishAt.toLocaleString("tr", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                  {video.category && (
+                                    <span className="ml-1 px-2 py-0.5 rounded-full bg-[#222] text-[#777]">{video.category.name}</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <CountdownBadge
+                                    targetIso={video.scheduledPublishAt}
+                                    onDone={loadScheduledVideos}
+                                  />
+                                  <button
+                                    onClick={() => startEditSchedule(video)}
+                                    className="inline-flex items-center gap-1 text-[10px] text-[#555] hover:text-[#999] transition-colors"
+                                  >
+                                    <Pencil className="h-2.5 w-2.5" />Yeniden zamanla
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </div>
                           {/* Aksiyonlar */}
                           <div className="flex flex-col items-end gap-2 shrink-0">

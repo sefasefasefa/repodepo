@@ -342,6 +342,34 @@ def cancel_schedule(request, video_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def reschedule_video(request, video_id):
+    """Zamanlanmış videonun yayın tarihini güncelle."""
+    try:
+        video = Video.objects.get(id=video_id)
+    except Video.DoesNotExist:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+    if video.creator != request.user and request.user.role != 'admin':
+        return Response({'error': 'Yetkisiz'}, status=403)
+    from django.utils.dateparse import parse_datetime
+    raw = request.data.get('scheduledPublishAt')
+    if not raw:
+        return Response({'error': 'scheduledPublishAt gerekli'}, status=400)
+    try:
+        dt = parse_datetime(raw)
+        if dt and timezone.is_naive(dt):
+            dt = timezone.make_aware(dt)
+    except Exception:
+        return Response({'error': 'Geçersiz tarih formatı'}, status=400)
+    if not dt or dt <= timezone.now():
+        return Response({'error': 'Tarih gelecekte olmalı'}, status=400)
+    video.scheduled_publish_at = dt
+    video.is_published = False
+    video.save(update_fields=['scheduled_publish_at', 'is_published'])
+    return Response(enrich_video(video, request.user))
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def publish_now(request, video_id):
     """Zamanlanmış videoyu hemen yayınla."""
     try:

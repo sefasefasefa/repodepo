@@ -67,6 +67,7 @@ urlpatterns = [
     # Reports sub-resource
     path('videos/scheduled', views.list_scheduled_videos),
     path('videos/<int:video_id>/cancel-schedule', views.cancel_schedule),
+    path('videos/<int:video_id>/reschedule', views.reschedule_video),
     path('videos/<int:video_id>/publish-now', views.publish_now),
     path('videos/<int:video_id>/report', ex2.report_video),
     # Watch history mgmt
