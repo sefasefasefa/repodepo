@@ -7,23 +7,20 @@ const DENIED_KEY = "prnhbbbb_age_denied";
 
 const BYPASS_PATHS = ["/login", "/register"];
 
+function getInitialStatus(): "pending" | "verified" | "denied" {
+  try {
+    const path = window.location.pathname;
+    if (BYPASS_PATHS.some(p => path === p || path.startsWith(p + "?"))) return "verified";
+    if (localStorage.getItem(AGE_KEY) === "1") return "verified";
+    if (localStorage.getItem(DENIED_KEY) === "1") return "denied";
+  } catch {}
+  return "pending";
+}
+
 export function AgeGate({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<"loading" | "pending" | "verified" | "denied">("loading");
+  const [status, setStatus] = useState<"pending" | "verified" | "denied">(getInitialStatus);
   const { settings } = usePublicSiteSettings();
   const siteName = settings.siteName || "Prnhbbbb";
-
-  useEffect(() => {
-    const path = window.location.pathname;
-    if (BYPASS_PATHS.some(p => path === p || path.startsWith(p + "?"))) {
-      setStatus("verified");
-      return;
-    }
-    const verified = localStorage.getItem(AGE_KEY);
-    const denied = localStorage.getItem(DENIED_KEY);
-    if (verified === "1") setStatus("verified");
-    else if (denied === "1") setStatus("denied");
-    else setStatus("pending");
-  }, []);
 
   const handleConfirm = () => {
     localStorage.setItem(AGE_KEY, "1");
@@ -35,12 +32,6 @@ export function AgeGate({ children }: { children: React.ReactNode }) {
     localStorage.setItem(DENIED_KEY, "1");
     setStatus("denied");
   };
-
-  if (status === "loading") return (
-    <div className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-[9999]">
-      <div className="w-8 h-8 border-2 border-white/10 border-t-white/60 rounded-full animate-spin" />
-    </div>
-  );
 
   if (status === "denied") {
     return (

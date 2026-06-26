@@ -13,37 +13,54 @@ interface GeoGuardProps {
   children: React.ReactNode;
 }
 
+const GEO_CACHE_KEY = "geo_check_v1";
+const GEO_CACHE_TTL = 10 * 60 * 1000; // 10 dakika
+const GEO_TIMEOUT_MS = 2000; // 2 saniyede cevap gelmezse geçir
+
+function loadGeoCache(): GeoCheckResult | null {
+  try {
+    const raw = localStorage.getItem(GEO_CACHE_KEY);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts < GEO_CACHE_TTL) return data as GeoCheckResult;
+  } catch {}
+  return null;
+}
+
 /**
  * Uygulama kök bileşenini sarar.
  * Sunucudan coğrafi kısıt durumunu alır; engellenmişse tam ekran uyarı gösterir.
  * Sistem pasifse (isEnabled = false) şeffaf geçiş yapar.
  */
 export function GeoGuard({ children }: GeoGuardProps) {
-  const [status, setStatus] = useState<"checking" | "ok" | "blocked">("checking");
-  const [result, setResult] = useState<GeoCheckResult | null>(null);
+  const cached = loadGeoCache();
+  // Önce izin ver, arka planda kontrol et — kullanıcıyı beklettirme
+  const [status, setStatus] = useState<"ok" | "blocked">(
+    cached?.blocked ? "blocked" : "ok"
+  );
+  const [result, setResult] = useState<GeoCheckResult | null>(cached?.blocked ? cached : null);
 
   useEffect(() => {
+    // Cache varsa sadece bloklu ülkeyse tekrar kontrol et, yoksa geç
+    if (cached && !cached.blocked) return;
+
     let cancelled = false;
+    const timer = setTimeout(() => { /* timeout — sessizce geç */ }, GEO_TIMEOUT_MS);
+
     fetch("/api/geo/check")
       .then(r => r.json())
       .then((data: GeoCheckResult) => {
         if (cancelled) return;
-        setResult(data);
-        setStatus(data.blocked ? "blocked" : "ok");
+        clearTimeout(timer);
+        localStorage.setItem(GEO_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+        if (data.blocked) {
+          setResult(data);
+          setStatus("blocked");
+        }
       })
-      .catch(() => {
-        if (!cancelled) setStatus("ok"); // hata durumunda izin ver
-      });
-    return () => { cancelled = true; };
+      .catch(() => { if (!cancelled) clearTimeout(timer); });
+    return () => { cancelled = true; clearTimeout(timer); };
   }, []);
-
-  if (status === "checking") {
-    return (
-      <div className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-[9999]">
-        <div className="w-8 h-8 border-2 border-white/10 border-t-white/60 rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   if (status === "blocked" && result) {
     if (result.redirectUrl) {
