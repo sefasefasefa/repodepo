@@ -880,9 +880,59 @@ export default function UploadPage() {
                 <p className="text-xs text-[#555]">Filigran, videonun üzerinde yarı saydam site logosu/adı olarak görünür. Admin panelinden özelleştirilebilir.</p>
               </div>
 
+              {/* Zamanlanmış Yayın */}
+              <div className="border border-[#2a2a2a] rounded-xl p-4 space-y-3 bg-[#1a1a1a]">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" /> Zamanlanmış Yayın
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setScheduleEnabled(v => !v); setScheduleValue(""); }}
+                    className={cn(
+                      "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                      scheduleEnabled ? "bg-primary" : "bg-[#333]"
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform",
+                      scheduleEnabled ? "translate-x-4" : "translate-x-1"
+                    )} />
+                  </button>
+                </div>
+                {scheduleEnabled ? (
+                  <div className="space-y-2">
+                    <input
+                      type="datetime-local"
+                      value={scheduleValue}
+                      min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
+                      onChange={e => setScheduleValue(e.target.value)}
+                      className="w-full bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60 [color-scheme:dark]"
+                    />
+                    {scheduleValue && (
+                      <p className="text-xs text-primary/80 flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        {new Date(scheduleValue).toLocaleString("tr", { dateStyle: "long", timeStyle: "short" })} tarihinde yayınlanacak
+                      </p>
+                    )}
+                    {!scheduleValue && (
+                      <p className="text-xs text-[#555]">Tarih ve saat seçilmezse video hemen yayınlanır.</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#555]">Aktif edilirse video seçilen tarihte otomatik yayınlanır.</p>
+                )}
+              </div>
+
               <div className="pt-4 border-t border-border flex justify-end">
-                <Button type="submit" disabled={createVideoMutation.isPending || limitReached || requiresAdminApproval}>
-                  {createVideoMutation.isPending ? "Yükleniyor..." : requiresAdminApproval ? "Admin Onayı Gerekli" : "Videoyu Yayınla"}
+                <Button type="submit" disabled={createVideoMutation.isPending || limitReached || requiresAdminApproval || (scheduleEnabled && !scheduleValue)}>
+                  {createVideoMutation.isPending
+                    ? "Kaydediliyor..."
+                    : requiresAdminApproval
+                    ? "Admin Onayı Gerekli"
+                    : scheduleEnabled && scheduleValue
+                    ? "Zamanla"
+                    : "Videoyu Yayınla"}
                 </Button>
               </div>
             </form>

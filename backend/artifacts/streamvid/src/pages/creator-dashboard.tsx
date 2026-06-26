@@ -101,8 +101,11 @@ export default function CreatorDashboard() {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
   const [activeChart, setActiveChart] = useState<"views" | "earnings" | "followers" | "likes">("views");
-  const [activeTab, setActiveTab] = useState<"analytics" | "tokens" | "requests" | "live">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "tokens" | "requests" | "live" | "scheduled">("analytics");
   const [requests, setRequests] = useState<any[]>([]);
+  const [scheduledVideos, setScheduledVideos] = useState<any[]>([]);
+  const [scheduledLoading, setScheduledLoading] = useState(false);
+  const [scheduledAction, setScheduledAction] = useState<number | null>(null);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [respondingId, setRespondingId]   = useState<number | null>(null);
   const [responseNote, setResponseNote]   = useState("");
@@ -130,6 +133,29 @@ export default function CreatorDashboard() {
     apiFetch("/custom-requests/received").then(d => setRequests(d.requests || [])).catch(() => {}).finally(() => setRequestsLoading(false));
   };
 
+  const loadScheduledVideos = () => {
+    setScheduledLoading(true);
+    apiFetch("/videos/scheduled").then(d => setScheduledVideos(d.videos || [])).catch(() => {}).finally(() => setScheduledLoading(false));
+  };
+
+  const handleCancelSchedule = async (id: number) => {
+    setScheduledAction(id);
+    try {
+      await apiFetch(`/videos/${id}/cancel-schedule`, { method: "POST" });
+      loadScheduledVideos();
+    } catch (e: any) { alert(e.message); }
+    finally { setScheduledAction(null); }
+  };
+
+  const handlePublishNow = async (id: number) => {
+    setScheduledAction(id);
+    try {
+      await apiFetch(`/videos/${id}/publish-now`, { method: "POST" });
+      loadScheduledVideos();
+    } catch (e: any) { alert(e.message); }
+    finally { setScheduledAction(null); }
+  };
+
   const handleRequestAction = async (id: number, action: "accept" | "reject" | "complete") => {
     setRespondingId(id); setResponseAction(action);
     try {
@@ -147,7 +173,7 @@ export default function CreatorDashboard() {
   };
 
   useEffect(() => {
-    if (user) { loadTokenData(); loadRequests(); }
+    if (user) { loadTokenData(); loadRequests(); loadScheduledVideos(); }
   }, [user]);
 
   const handleWithdraw = async () => {
@@ -238,6 +264,12 @@ export default function CreatorDashboard() {
                 </button>
                 <button onClick={() => setActiveTab("live")} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all", activeTab === "live" ? "bg-red-600/20 text-red-400 shadow" : "text-[#555] hover:text-[#aaa]")}>
                   <Radio className="h-3.5 w-3.5" /> Canlı Yayın
+                </button>
+                <button onClick={() => { setActiveTab("scheduled"); loadScheduledVideos(); }} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all", activeTab === "scheduled" ? "bg-primary/20 text-primary shadow" : "text-[#555] hover:text-[#aaa]")}>
+                  <Calendar className="h-3.5 w-3.5" /> Zamanlanmış
+                  {scheduledVideos.length > 0 && (
+                    <span className="bg-primary/30 text-primary px-1.5 py-0.5 rounded-full text-[10px] font-bold">{scheduledVideos.length}</span>
+                  )}
                 </button>
               </div>
               {activeTab === "analytics" && (
@@ -425,6 +457,137 @@ export default function CreatorDashboard() {
           {activeTab === "live" && (
             <div className="space-y-5">
               <CreatorLivePanel />
+            </div>
+          )}
+
+          {/* ── ZAMANLANMIŞ YAYINLAR PANELİ ──────────────────────────── */}
+          {activeTab === "scheduled" && (
+            <div className="space-y-5">
+              {/* Özet */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="bg-[#161616] border border-[#222] rounded-2xl p-5">
+                  <div className="p-2 bg-primary/10 rounded-xl w-fit mb-3"><Calendar className="h-4 w-4 text-primary" /></div>
+                  <p className="text-[#666] text-xs mb-1">Zamanlanmış Video</p>
+                  <p className="text-2xl font-bold text-white">{scheduledVideos.length}</p>
+                </div>
+                <div className="bg-[#161616] border border-[#222] rounded-2xl p-5">
+                  <div className="p-2 bg-amber-500/10 rounded-xl w-fit mb-3"><Clock className="h-4 w-4 text-amber-400" /></div>
+                  <p className="text-[#666] text-xs mb-1">En Yakın Yayın</p>
+                  <p className="text-sm font-bold text-white">
+                    {scheduledVideos[0]
+                      ? new Date(scheduledVideos[0].scheduledPublishAt).toLocaleString("tr", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                      : "—"}
+                  </p>
+                </div>
+                <div className="bg-[#161616] border border-[#222] rounded-2xl p-5 md:col-span-1 col-span-2">
+                  <div className="p-2 bg-green-500/10 rounded-xl w-fit mb-3"><CheckCircle className="h-4 w-4 text-green-400" /></div>
+                  <p className="text-[#666] text-xs mb-1">Bu Hafta Yayınlanacak</p>
+                  <p className="text-2xl font-bold text-white">
+                    {scheduledVideos.filter(v => {
+                      const d = new Date(v.scheduledPublishAt);
+                      const now = new Date();
+                      return d <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                    }).length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Video listesi */}
+              <div className="bg-[#161616] border border-[#222] rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#1e1e1e] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <h3 className="font-semibold text-sm">Zamanlanmış Videolar</h3>
+                    <span className="text-xs text-[#555]">({scheduledVideos.length})</span>
+                  </div>
+                  <button onClick={loadScheduledVideos} disabled={scheduledLoading}
+                    className="flex items-center gap-1.5 text-xs text-[#555] hover:text-white transition-colors">
+                    <RefreshCw className={cn("h-3.5 w-3.5", scheduledLoading && "animate-spin")} /> Yenile
+                  </button>
+                </div>
+
+                {scheduledLoading ? (
+                  <div className="py-12 flex items-center justify-center gap-2 text-[#555]">
+                    <Loader2 className="h-5 w-5 animate-spin" /><span className="text-sm">Yükleniyor...</span>
+                  </div>
+                ) : scheduledVideos.length === 0 ? (
+                  <div className="py-16 flex flex-col items-center gap-3 text-center">
+                    <Calendar className="h-10 w-10 text-[#333]" />
+                    <p className="text-[#555] text-sm font-medium">Zamanlanmış video yok</p>
+                    <p className="text-[#444] text-xs">Video yüklerken "Zamanlanmış Yayın" seçeneğini kullanabilirsin.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-[#1a1a1a]">
+                    {scheduledVideos.map((video: any) => {
+                      const publishAt = new Date(video.scheduledPublishAt);
+                      const now = new Date();
+                      const diffMs = publishAt.getTime() - now.getTime();
+                      const diffH = Math.floor(diffMs / 3600000);
+                      const diffM = Math.floor((diffMs % 3600000) / 60000);
+                      const isLoading = scheduledAction === video.id;
+                      return (
+                        <div key={video.id} className="flex items-center gap-4 px-5 py-4">
+                          {/* Thumbnail */}
+                          <div className="w-20 h-12 rounded-lg overflow-hidden bg-[#111] shrink-0">
+                            {video.thumbnailUrl
+                              ? <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
+                              : <div className="w-full h-full flex items-center justify-center"><Video className="h-5 w-5 text-[#333]" /></div>
+                            }
+                          </div>
+                          {/* Bilgiler */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">{video.title}</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span className="inline-flex items-center gap-1 text-[11px] text-amber-400">
+                                <Clock className="h-3 w-3" />
+                                {publishAt.toLocaleString("tr", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                              {diffMs > 0 && (
+                                <span className="text-[11px] text-[#555]">
+                                  ({diffH > 0 ? `${diffH} sa ` : ""}{diffM} dk sonra)
+                                </span>
+                              )}
+                              {video.category && (
+                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#222] text-[#777]">{video.category.name}</span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Aksiyonlar */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={isLoading}
+                              onClick={() => handlePublishNow(video.id)}
+                              className="h-8 text-xs rounded-lg border-green-800/50 text-green-400 hover:bg-green-900/20"
+                            >
+                              {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Şimdi Yayınla"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={isLoading}
+                              onClick={() => handleCancelSchedule(video.id)}
+                              className="h-8 text-xs rounded-lg border-red-800/50 text-red-400 hover:bg-red-900/20"
+                            >
+                              {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "İptal"}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Yükleme kısayolu */}
+              <div className="bg-[#161616] border border-[#222] border-dashed rounded-2xl p-6 flex flex-col items-center gap-3 text-center">
+                <Calendar className="h-8 w-8 text-[#333]" />
+                <p className="text-sm text-[#555]">Yeni zamanlanmış video eklemek için</p>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => window.location.href = "/upload"}>
+                  Video Yükle
+                </Button>
+              </div>
             </div>
           )}
 

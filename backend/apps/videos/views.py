@@ -312,6 +312,50 @@ def update_video(request, video_id):
     return Response(enrich_video(video, request.user))
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_scheduled_videos(request):
+    """Kullanıcının zamanlanmış (henüz yayınlanmamış) videolarını listele."""
+    qs = Video.objects.filter(
+        creator=request.user,
+        is_published=False,
+        scheduled_publish_at__isnull=False,
+    ).select_related('category').order_by('scheduled_publish_at')
+    return Response({'videos': [enrich_video(v, request.user) for v in qs]})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_schedule(request, video_id):
+    """Zamanlanmış yayını iptal et — taslak olarak tut."""
+    try:
+        video = Video.objects.get(id=video_id)
+    except Video.DoesNotExist:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+    if video.creator != request.user and request.user.role != 'admin':
+        return Response({'error': 'Yetkisiz'}, status=403)
+    video.scheduled_publish_at = None
+    video.is_published = False
+    video.save(update_fields=['scheduled_publish_at', 'is_published'])
+    return Response(enrich_video(video, request.user))
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def publish_now(request, video_id):
+    """Zamanlanmış videoyu hemen yayınla."""
+    try:
+        video = Video.objects.get(id=video_id)
+    except Video.DoesNotExist:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+    if video.creator != request.user and request.user.role != 'admin':
+        return Response({'error': 'Yetkisiz'}, status=403)
+    video.is_published = True
+    video.scheduled_publish_at = None
+    video.save(update_fields=['is_published', 'scheduled_publish_at'])
+    return Response(enrich_video(video, request.user))
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_video(request, video_id):
