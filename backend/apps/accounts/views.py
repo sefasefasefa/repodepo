@@ -84,7 +84,7 @@ def login_view(request):
         return Response({'error': 'Kullanıcı adı/e-posta ve şifre gerekli'}, status=400)
 
     try:
-        user = User.objects.get(Q(email=identifier) | Q(username=identifier))
+        user = User.objects.get(Q(email__iexact=identifier) | Q(username__iexact=identifier))
     except User.DoesNotExist:
         return Response({'error': 'Kullanıcı adı/e-posta veya şifre hatalı.'}, status=401)
 
