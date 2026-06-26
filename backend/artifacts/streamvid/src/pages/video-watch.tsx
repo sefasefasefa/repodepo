@@ -416,26 +416,103 @@ export default function VideoWatch() {
             {video.isPremium && <span className="shrink-0 flex items-center gap-1 bg-primary/15 border border-primary/30 text-primary text-xs font-bold px-2.5 py-1 rounded-full mt-1"><Crown className="h-3 w-3" /> Premium</span>}
             {video.isPPV && <span className="shrink-0 flex items-center gap-1 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 text-xs font-bold px-2.5 py-1 rounded-full mt-1">PPV ${Number(video.ppvPrice || 0).toFixed(2)}</span>}
           </div>
-          <div className="flex flex-col sm:flex-row justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
+          {/* Creator row */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
                 <AvatarImage src={video.creator?.avatarUrl || ""} />
                 <AvatarFallback>{video.creator?.username?.substring(0, 2) ?? "CR"}</AvatarFallback>
               </Avatar>
-              <div>
-                <h3 className="font-bold flex items-center gap-1">{video.creator?.displayName || video.creator?.username}{video.creator?.isVerified && <span className="text-primary text-xs">✓</span>}</h3>
-                <p className="text-xs text-muted-foreground">{video.creator?.followerCount?.toLocaleString()} takipçi</p>
+              <div className="min-w-0">
+                <h3 className="font-bold text-sm flex items-center gap-1 truncate">
+                  {video.creator?.displayName || video.creator?.username}
+                  {video.creator?.isVerified && <span className="text-primary text-xs shrink-0">✓</span>}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {video.creator?.followerCount?.toLocaleString()} takipçi
+                </p>
               </div>
-              <Button className="ml-2 rounded-full" variant="secondary" size="sm">Takip Et</Button>
+              <Button className="rounded-full shrink-0" variant="secondary" size="sm">Takip Et</Button>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="secondary" size="sm" className="rounded-full" onClick={handleLike}><Heart className={cn("h-4 w-4 mr-1.5", video.isLiked ? "fill-red-500 text-red-500" : "")} />{video.likeCount?.toLocaleString()}</Button>
-              <Button variant="secondary" size="sm" className="rounded-full"><Bookmark className="h-4 w-4 mr-1.5" /> Kaydet</Button>
-              <Button variant="secondary" size="sm" className="rounded-full"><Share2 className="h-4 w-4 mr-1.5" /> Paylaş</Button>
-              {user && isPremiumUser && <Button variant="secondary" size="sm" onClick={handleDownload} disabled={downloading} className={cn("rounded-full transition-all", isDownloaded ? "bg-green-900/30 border border-green-500/40 text-green-400 hover:bg-green-900/40" : "hover:bg-primary/15 hover:border-primary/40 hover:text-primary")}>{downloading ? <><Download className="h-4 w-4 mr-1.5 animate-bounce" /> İndiriliyor…</> : isDownloaded ? <><Check className="h-4 w-4 mr-1.5" /> İndirildi</> : <><Download className="h-4 w-4 mr-1.5" /> İndir</>}</Button>}
-              {user && !isPremiumUser && <Button variant="ghost" size="sm" onClick={() => setLocation("/pricing")} className="rounded-full text-[#555] hover:text-amber-400 hover:bg-amber-900/15 border border-transparent hover:border-amber-500/30 transition-all" title="Premium üyelik ile indirin"><Download className="h-4 w-4 mr-1.5" /><Crown className="h-3 w-3" /></Button>}
-              {user && video.creator && (user as any).id !== video.creator.id && <><Button onClick={() => setShowTip(true)} size="sm" className="rounded-full bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/25 hover:border-yellow-500/50"><Coins className="h-4 w-4 mr-1.5" /> Bahşiş</Button><Button onClick={() => setShowRequest(true)} size="sm" className="rounded-full bg-primary/15 border border-primary/30 text-primary hover:bg-primary/25 hover:border-primary/50"><FileText className="h-4 w-4 mr-1.5" /> Özel İstek</Button></>}
-              {user && <Button variant="ghost" size="sm" className="rounded-full text-[#666] hover:text-red-400" onClick={() => { setReportTarget({ type: "video" }); setShowReport(true); }} title="Şikayet et"><Flag className="h-4 w-4" /></Button>}
+            {/* Action buttons — icon-only on mobile, icon+label on sm+ */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <Button
+                variant="secondary" size="sm"
+                className="rounded-full px-2.5 sm:px-3 touch-manipulation"
+                onClick={handleLike}
+              >
+                <Heart className={cn("h-4 w-4 sm:mr-1.5", video.isLiked ? "fill-red-500 text-red-500" : "")} />
+                <span className="text-xs">{video.likeCount?.toLocaleString()}</span>
+              </Button>
+              <Button variant="secondary" size="sm" className="rounded-full px-2.5 sm:px-3 touch-manipulation">
+                <Bookmark className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline text-xs">Kaydet</span>
+              </Button>
+              <Button variant="secondary" size="sm" className="rounded-full px-2.5 sm:px-3 touch-manipulation">
+                <Share2 className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline text-xs">Paylaş</span>
+              </Button>
+              {user && isPremiumUser && (
+                <Button
+                  variant="secondary" size="sm"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className={cn(
+                    "rounded-full px-2.5 sm:px-3 transition-all touch-manipulation",
+                    isDownloaded
+                      ? "bg-green-900/30 border border-green-500/40 text-green-400 hover:bg-green-900/40"
+                      : "hover:bg-primary/15 hover:border-primary/40 hover:text-primary"
+                  )}
+                >
+                  {downloading
+                    ? <><Download className="h-4 w-4 sm:mr-1.5 animate-bounce" /><span className="hidden sm:inline text-xs">İndiriliyor…</span></>
+                    : isDownloaded
+                      ? <><Check className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline text-xs">İndirildi</span></>
+                      : <><Download className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline text-xs">İndir</span></>
+                  }
+                </Button>
+              )}
+              {user && !isPremiumUser && (
+                <Button
+                  variant="ghost" size="sm"
+                  onClick={() => setLocation("/pricing")}
+                  className="rounded-full px-2.5 text-[#555] hover:text-amber-400 hover:bg-amber-900/15 border border-transparent hover:border-amber-500/30 transition-all touch-manipulation"
+                  title="Premium üyelik ile indirin"
+                >
+                  <Download className="h-4 w-4 sm:mr-1" />
+                  <Crown className="h-3 w-3" />
+                </Button>
+              )}
+              {user && video.creator && (user as any).id !== video.creator.id && (
+                <>
+                  <Button
+                    onClick={() => setShowTip(true)}
+                    size="sm"
+                    className="rounded-full px-2.5 sm:px-3 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/25 hover:border-yellow-500/50 touch-manipulation"
+                  >
+                    <Coins className="h-4 w-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline text-xs">Bahşiş</span>
+                  </Button>
+                  <Button
+                    onClick={() => setShowRequest(true)}
+                    size="sm"
+                    className="rounded-full px-2.5 sm:px-3 bg-primary/15 border border-primary/30 text-primary hover:bg-primary/25 hover:border-primary/50 touch-manipulation"
+                  >
+                    <FileText className="h-4 w-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline text-xs">Özel İstek</span>
+                  </Button>
+                </>
+              )}
+              {user && (
+                <Button
+                  variant="ghost" size="sm"
+                  className="rounded-full px-2.5 text-[#666] hover:text-red-400 touch-manipulation"
+                  onClick={() => { setReportTarget({ type: "video" }); setShowReport(true); }}
+                  title="Şikayet et"
+                >
+                  <Flag className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] p-4 rounded-xl text-sm">
@@ -444,18 +521,49 @@ export default function VideoWatch() {
             {video.description && video.description.length > 150 && <button onClick={() => setDescExpanded(p => !p)} className="flex items-center gap-1 text-xs text-primary mt-2 hover:text-primary/80">{descExpanded ? <><ChevronUp className="h-3 w-3" />Daha az</> : <><ChevronDown className="h-3 w-3" />Daha fazla</>}</button>}
           </div>
           {isLocked && <div className="flex items-center justify-between gap-4 bg-primary/10 border border-primary/20 rounded-xl px-5 py-4"><div className="flex items-center gap-3"><Crown className="h-5 w-5 text-primary shrink-0" /><p className="text-sm text-white">{user ? "Bu içeriği izlemek için Premium üyelik gerekiyor." : "Giriş yap veya abone ol."}</p></div><Button size="sm" onClick={() => setLocation("/pricing")} className="shrink-0 bg-primary hover:bg-primary/90">{user ? "Premium'a Geç" : "Abone Ol"}</Button></div>}
-          <div className="flex items-center gap-2 flex-wrap">
-            {isCreatorOrAdmin && <button onClick={() => setShowSubManager(p => !p)} className="flex items-center gap-2 text-sm font-medium text-[#888] hover:text-white transition-colors"><Languages className="h-4 w-4" />Altyazı Yönetimi<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showSubManager && "rotate-180")} /></button>}
-            {isCreatorOrAdmin && <button onClick={() => setShowCrosspost(true)} className="flex items-center gap-2 text-sm font-medium text-[#888] hover:text-primary transition-colors"><Share2 className="h-4 w-4" />Crosspost Gönder</button>}
-            {user && <button onClick={() => setShowTranscript(p => !p)} className="flex items-center gap-2 text-sm font-medium text-[#888] hover:text-white transition-colors"><FileText className="h-4 w-4" />Transcript<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showTranscript && "rotate-180")} /></button>}
+          <div className="flex items-center gap-3 flex-wrap">
+            {isCreatorOrAdmin && (
+              <button
+                onClick={() => setShowSubManager(p => !p)}
+                className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[#888] hover:text-white transition-colors touch-manipulation py-1"
+              >
+                <Languages className="h-4 w-4 shrink-0" />
+                <span>Altyazı</span>
+                <ChevronDown className={cn("h-3 w-3 transition-transform", showSubManager && "rotate-180")} />
+              </button>
+            )}
+            {isCreatorOrAdmin && (
+              <button
+                onClick={() => setShowCrosspost(true)}
+                className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[#888] hover:text-primary transition-colors touch-manipulation py-1"
+              >
+                <Share2 className="h-4 w-4 shrink-0" />
+                <span>Crosspost</span>
+              </button>
+            )}
+            {user && (
+              <button
+                onClick={() => setShowTranscript(p => !p)}
+                className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[#888] hover:text-white transition-colors touch-manipulation py-1"
+              >
+                <FileText className="h-4 w-4 shrink-0" />
+                <span>Transcript</span>
+                <ChevronDown className={cn("h-3 w-3 transition-transform", showTranscript && "rotate-180")} />
+              </button>
+            )}
           </div>
           {showTranscript && user && <SubtitleManager videoId={videoId} token={token} />}
           {isCreatorOrAdmin && showSubManager && <SubtitleManager videoId={videoId} token={token} />}
           <div className="pt-2"><h3 className="text-base font-bold mb-4">{video.commentCount ?? 0} Yorum</h3>{user ? (<form onSubmit={handleComment} className="flex gap-3 mb-6"><Avatar className="h-8 w-8 shrink-0"><AvatarFallback>{(user as any).username?.substring(0,2).toUpperCase()}</AvatarFallback></Avatar><div className="flex-1 flex gap-2"><Input value={commentText} onChange={e => setCommentText(e.target.value)} placeholder="Yorum yaz..." className="bg-[#1e1e1e] border-[#2a2a2a] rounded-lg focus-visible:ring-primary" /><Button type="submit" size="sm" disabled={!commentText.trim() || commentMutation.isPending} className="shrink-0">Gönder</Button></div></form>) : (<p className="text-sm text-[#666] mb-4">Yorum yapmak için <a href="/login" className="text-primary hover:underline">giriş yap</a></p>)}<div className="space-y-5">{comments?.comments?.map(comment => (<div key={comment.id} className="flex gap-3"><Avatar className="h-8 w-8 shrink-0"><AvatarImage src={comment.author?.avatarUrl || ""} /><AvatarFallback>{comment.author?.username?.substring(0,2).toUpperCase()}</AvatarFallback></Avatar><div className="flex-1"><p className="text-xs font-bold mb-1">@{comment.author?.username}<span className="text-muted-foreground font-normal ml-2">{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</span></p><p className="text-sm text-[#ccc]">{comment.content}</p><div className="flex items-center gap-3 mt-1.5"><button className="text-xs text-[#666] hover:text-red-400 flex items-center gap-1 transition-colors"><Heart className="h-3 w-3" />{comment.likeCount}</button><button className="text-xs text-[#666] hover:text-white transition-colors">Yanıtla</button>{user && (user as any).id !== comment.author?.id && (<button onClick={() => { setReportTarget({ type: "comment", commentId: comment.id }); setShowReport(true); }} className="text-xs text-[#444] hover:text-red-400 flex items-center gap-1 transition-colors" title="Yorumu şikayet et"><Flag className="h-2.5 w-2.5" /> Şikayet</button>)}</div></div></div>))}</div></div>
         </div>
-        <div className="lg:w-[360px] flex flex-col gap-3 shrink-0">
-          <h3 className="font-bold text-base">İlgili Videolar</h3>
-          {relatedVideos?.videos?.map(relVideo => <VideoCard key={relVideo.id} video={relVideo} />)}
+        <div className="lg:w-[360px] shrink-0">
+          <h3 className="font-bold text-base mb-3">İlgili Videolar</h3>
+          {/* Mobile: 2-column grid; desktop: vertical list */}
+          <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+            {relatedVideos?.videos?.map(relVideo => (
+              <VideoCard key={relVideo.id} video={relVideo} />
+            ))}
+          </div>
         </div>
       </div>
       {showTip && video.creator && <TokenTipModal creator={{ id: video.creator.id, username: video.creator.username, displayName: video.creator.displayName ?? undefined, avatarUrl: video.creator.avatarUrl ?? undefined }} videoId={videoId} onClose={() => setShowTip(false)} />}
