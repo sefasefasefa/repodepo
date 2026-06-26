@@ -14,7 +14,8 @@ const PLAN_ICONS: Record<string, typeof Crown> = {
 };
 
 export default function Pricing() {
-  const { data: plans, isLoading } = useListSubscriptionPlans();
+  const { data, isLoading } = useListSubscriptionPlans();
+  const plans = (data as any)?.plans ?? data;
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
   return (
