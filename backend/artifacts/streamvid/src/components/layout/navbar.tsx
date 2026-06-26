@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { useSidebar } from "@/lib/sidebar-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { useFeatureState } from "@/lib/feature-flags";
+import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Menu, Bell, Plus, X, CheckCheck, Coins, MessageCircle } from "lucide-react";
@@ -25,6 +26,8 @@ import { getPresence } from "@/lib/presence";
 import { toast } from "sonner";
 
 export function Navbar() {
+  const { settings: siteSettings } = usePublicSiteSettings();
+  const siteName = siteSettings.siteName || "Prnhbbbb";
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
@@ -94,12 +97,23 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-1 cursor-pointer">
-              <div className="bg-primary text-primary-foreground px-2 py-0.5 rounded font-black text-lg leading-none">
-                P
-              </div>
-              <span className="font-black text-lg tracking-tight text-white hidden sm:block">
-                rnhbbbb
-              </span>
+              {siteSettings.logoUrl ? (
+                <img
+                  src={siteSettings.logoUrl}
+                  alt={siteName}
+                  className="h-7 object-contain"
+                  onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : (
+                <>
+                  <div className="bg-primary text-primary-foreground px-2 py-0.5 rounded font-black text-lg leading-none">
+                    {siteName[0]}
+                  </div>
+                  <span className="font-black text-lg tracking-tight text-white hidden sm:block">
+                    {siteName.slice(1)}
+                  </span>
+                </>
+              )}
             </div>
           </Link>
 
