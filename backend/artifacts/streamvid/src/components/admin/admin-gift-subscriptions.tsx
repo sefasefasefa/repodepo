@@ -1,46 +1,68 @@
 import { useState } from "react";
-import { Gift, Search, Send, Check, Users, TrendingUp, DollarSign, Clock } from "lucide-react";
+import { Gift, Search, Send, Check, Users, TrendingUp, DollarSign, Clock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const MOCK_GIFTS = [
-  { id: 1, senderUsername: "ali_44", recipientUsername: "zeynep_k", plan: "Premium", duration: 1, sentAt: "2026-05-01", status: "active" },
-  { id: 2, senderUsername: "mert_92", recipientUsername: "ayse_m", plan: "Basic", duration: 3, sentAt: "2026-04-20", status: "active" },
-  { id: 3, senderUsername: "selin_d", recipientUsername: "hasan_y", plan: "Premium", duration: 12, sentAt: "2026-04-15", status: "expired" },
-];
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const PLANS = [
-  { id: "basic", label: "Basic", price: 4.99, color: "text-blue-400" },
-  { id: "premium", label: "Premium", price: 9.99, color: "text-purple-400" },
-  { id: "vip", label: "VIP", price: 19.99, color: "text-amber-400" },
+  { id: 1, label: "Basic",   price: 4.99,  color: "text-blue-400" },
+  { id: 2, label: "Premium", price: 9.99,  color: "text-purple-400" },
+  { id: 3, label: "VIP",     price: 19.99, color: "text-amber-400" },
 ];
 
+const getHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+});
+
 export default function AdminGiftSubscriptions() {
-  const [gifts] = useState(MOCK_GIFTS);
-  const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"list" | "send">("list");
-  const [form, setForm] = useState({ recipient: "", plan: "premium", duration: 1, note: "" });
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const qc = useQueryClient();
+  const [search, setSearch]   = useState("");
+  const [tab, setTab]         = useState<"list" | "send">("list");
+  const [form, setForm]       = useState({ recipient: "", planId: PLANS[1].id, duration: 1, note: "" });
+  const [sent, setSent]       = useState(false);
 
-  const filtered = gifts.filter(g =>
-    g.senderUsername.includes(search) ||
-    g.recipientUsername.includes(search)
-  );
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-gift-subs", search],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      const r = await fetch(`/api/admin/gift-subscriptions?${params}`, { headers: getHeaders() });
+      if (!r.ok) throw new Error("Veriler alınamadı");
+      return r.json();
+    },
+  });
 
-  const sendGift = async () => {
-    if (!form.recipient.trim()) return;
-    setSending(true);
-    await new Promise(r => setTimeout(r, 800));
-    setSending(false);
-    setSent(true);
-    setTimeout(() => { setSent(false); setTab("list"); setForm({ recipient: "", plan: "premium", duration: 1, note: "" }); }, 1800);
-  };
+  const gifts: any[]  = data?.gifts  ?? [];
+  const apiStats      = data?.stats  ?? { total: 0, active: 0, revenue: 0 };
 
-  const totalActive = gifts.filter(g => g.status === "active").length;
-  const totalRevenue = gifts.reduce((acc, g) => {
-    const plan = PLANS.find(p => p.label.toLowerCase() === g.plan.toLowerCase());
-    return acc + (plan?.price ?? 0) * g.duration;
-  }, 0);
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/admin/gift-subscriptions", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({
+          recipient: form.recipient,
+          planId: form.planId,
+          duration: form.duration,
+          note: form.note,
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error ?? "Gönderme başarısız");
+      }
+      return r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-gift-subs"] });
+      setSent(true);
+      setTimeout(() => {
+        setSent(false);
+        setTab("list");
+        setForm({ recipient: "", planId: PLANS[1].id, duration: 1, note: "" });
+      }, 1800);
+    },
+  });
 
   return (
     <div className="space-y-5 max-w-5xl">
@@ -53,9 +75,9 @@ export default function AdminGiftSubscriptions() {
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Toplam Hediye", value: gifts.length, icon: Gift, color: "text-pink-400" },
-          { label: "Aktif Abonelik", value: totalActive, icon: Users, color: "text-green-400" },
-          { label: "Toplam Gelir", value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, color: "text-primary" },
+          { label: "Toplam Hediye",   value: apiStats.total,                    icon: Gift,        color: "text-pink-400" },
+          { label: "Aktif Abonelik",  value: apiStats.active,                   icon: Users,       color: "text-green-400" },
+          { label: "Toplam Gelir",    value: `$${Number(apiStats.revenue).toFixed(2)}`, icon: DollarSign, color: "text-primary" },
         ].map(s => (
           <div key={s.label} className="bg-[#1a1a1a] border border-[#222] rounded-xl p-4 flex items-center gap-3">
             <s.icon className={cn("h-5 w-5", s.color)} />
@@ -83,46 +105,51 @@ export default function AdminGiftSubscriptions() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Kullanıcı ara..."
               className="w-full pl-9 bg-[#1a1a1a] border border-[#222] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
           </div>
-          <div className="bg-[#1a1a1a] border border-[#222] rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#222]">
-                  {["Gönderen", "Alan", "Plan", "Süre", "Tarih", "Durum"].map(h => (
-                    <th key={h} className="text-left text-[11px] text-[#555] font-medium px-4 py-3">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#1a1a1a]">
-                {filtered.map(g => (
-                  <tr key={g.id} className="hover:bg-[#1e1e1e] transition-colors">
-                    <td className="px-4 py-3 text-[#ccc] font-mono text-xs">@{g.senderUsername}</td>
-                    <td className="px-4 py-3 text-[#ccc] font-mono text-xs">@{g.recipientUsername}</td>
-                    <td className="px-4 py-3">
-                      <span className={cn("text-xs font-semibold", PLANS.find(p => p.label.toLowerCase() === g.plan.toLowerCase())?.color ?? "text-[#aaa]")}>
-                        {g.plan}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-[#aaa]">{g.duration} ay</td>
-                    <td className="px-4 py-3 text-xs text-[#666] flex items-center gap-1"><Clock className="h-3 w-3" />{g.sentAt}</td>
-                    <td className="px-4 py-3">
-                      <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
-                        g.status === "active" ? "bg-green-900/20 text-green-400" : "bg-[#222] text-[#555]")}>
-                        {g.status === "active" ? "Aktif" : "Sona Erdi"}
-                      </span>
-                    </td>
+          {isLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          ) : (
+            <div className="bg-[#1a1a1a] border border-[#222] rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#222]">
+                    {["Gönderen", "Alan", "Plan", "Süre", "Tarih", "Durum"].map(h => (
+                      <th key={h} className="text-left text-[11px] text-[#555] font-medium px-4 py-3">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {filtered.length === 0 && (
-              <div className="text-center py-10 text-[#555] text-sm">Sonuç bulunamadı.</div>
-            )}
-          </div>
+                </thead>
+                <tbody className="divide-y divide-[#1a1a1a]">
+                  {gifts.map(g => (
+                    <tr key={g.id} className="hover:bg-[#1e1e1e] transition-colors">
+                      <td className="px-4 py-3 text-[#ccc] font-mono text-xs">@{g.senderUsername}</td>
+                      <td className="px-4 py-3 text-[#ccc] font-mono text-xs">@{g.recipientUsername}</td>
+                      <td className="px-4 py-3 text-xs font-semibold text-purple-400">{g.plan}</td>
+                      <td className="px-4 py-3 text-xs text-[#aaa]">{g.duration} ay</td>
+                      <td className="px-4 py-3 text-xs text-[#666] flex items-center gap-1"><Clock className="h-3 w-3" />{g.sentAt}</td>
+                      <td className="px-4 py-3">
+                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
+                          g.status === "active" ? "bg-green-900/20 text-green-400" : "bg-[#222] text-[#555]")}>
+                          {g.status === "active" ? "Aktif" : "Sona Erdi"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {gifts.length === 0 && (
+                <div className="text-center py-10 text-[#555] text-sm">Henüz hediye abonelik yok.</div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {tab === "send" && (
         <div className="max-w-md space-y-4">
+          {sendMutation.isError && (
+            <div className="bg-red-900/20 border border-red-800/30 text-red-400 text-xs px-4 py-3 rounded-xl">
+              {(sendMutation.error as any)?.message ?? "Bir hata oluştu"}
+            </div>
+          )}
           <div className="bg-[#111] border border-pink-500/20 rounded-xl px-4 py-3 text-xs text-pink-300/70">
             Admin olarak herhangi bir kullanıcıya ücretsiz hediye abonelik tanımlayabilirsin.
           </div>
@@ -136,9 +163,9 @@ export default function AdminGiftSubscriptions() {
             <label className="text-xs text-[#666] mb-1.5 block font-medium uppercase tracking-wide">Plan</label>
             <div className="grid grid-cols-3 gap-2">
               {PLANS.map(p => (
-                <button key={p.id} onClick={() => setForm(f => ({ ...f, plan: p.id }))}
+                <button key={p.id} onClick={() => setForm(f => ({ ...f, planId: p.id }))}
                   className={cn("py-3 rounded-xl border text-sm font-semibold transition-all",
-                    form.plan === p.id ? "border-primary/40 bg-primary/10 text-white" : "border-[#222] bg-[#111] text-[#666] hover:border-[#333]")}>
+                    form.planId === p.id ? "border-primary/40 bg-primary/10 text-white" : "border-[#222] bg-[#111] text-[#666] hover:border-[#333]")}>
                   <span className={p.color}>{p.label}</span>
                   <p className="text-[11px] text-[#555] font-normal mt-0.5">${p.price}/ay</p>
                 </button>
@@ -163,9 +190,11 @@ export default function AdminGiftSubscriptions() {
               placeholder="Tebrikler! Sana hediye..."
               className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
           </div>
-          <button onClick={sendGift} disabled={sending || !form.recipient.trim() || sent}
+          <button onClick={() => sendMutation.mutate()} disabled={sendMutation.isPending || !form.recipient.trim() || sent}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-semibold text-sm disabled:opacity-50 transition-all">
-            {sent ? <><Check className="h-4 w-4" /> Gönderildi!</> : sending ? "Gönderiliyor..." : <><Gift className="h-4 w-4" /> Hediye Gönder</>}
+            {sent ? <><Check className="h-4 w-4" /> Gönderildi!</> :
+             sendMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Gönderiliyor...</> :
+             <><Gift className="h-4 w-4" /> Hediye Gönder</>}
           </button>
         </div>
       )}

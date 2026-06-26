@@ -163,3 +163,59 @@ def page_detail(request, page_id):
         p.is_published = bool(d['isPublished'])
     p.save()
     return Response(_fmt_page(p, full=True))
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def email_campaigns(request):
+    from .models import EmailCampaign
+    if request.user.role != 'admin':
+        return Response({'error': 'Forbidden'}, status=403)
+    if request.method == 'GET':
+        qs = EmailCampaign.objects.all()
+        return Response({
+            'campaigns': [{
+                'id': c.id,
+                'name': c.name,
+                'template': c.template_id,
+                'audience': c.audience,
+                'status': c.status,
+                'sentAt': c.sent_at.strftime('%Y-%m-%d') if c.sent_at else (c.scheduled_at.strftime('%Y-%m-%d') if c.scheduled_at else None),
+                'opens': c.opens,
+                'clicks': c.clicks,
+                'subject': c.subject,
+            } for c in qs]
+        })
+    else:
+        data = request.data
+        from django.utils.dateparse import parse_datetime
+        scheduled_at = None
+        if data.get('scheduledAt'):
+            try:
+                scheduled_at = parse_datetime(data['scheduledAt'].replace('T', ' ').split('.')[0])
+            except Exception:
+                pass
+        c = EmailCampaign.objects.create(
+            name=data.get('name', ''),
+            template_id=data.get('template', 'custom'),
+            subject=data.get('subject', ''),
+            body=data.get('body', ''),
+            audience=data.get('audience', 'all'),
+            status='scheduled' if scheduled_at else 'draft',
+            scheduled_at=scheduled_at,
+        )
+        return Response({'id': c.id, 'status': c.status}, status=201)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def email_campaign_detail(request, campaign_id):
+    from .models import EmailCampaign
+    if request.user.role != 'admin':
+        return Response({'error': 'Forbidden'}, status=403)
+    try:
+        c = EmailCampaign.objects.get(id=campaign_id)
+        c.delete()
+        return Response({'message': 'Silindi'})
+    except EmailCampaign.DoesNotExist:
+        return Response({'error': 'Bulunamadı'}, status=404)

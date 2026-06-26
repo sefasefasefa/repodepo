@@ -40,6 +40,22 @@ class UserSubscription(models.Model):
         db_table = 'user_subscriptions'
 
 
+class GiftSubscription(models.Model):
+    STATUS_CHOICES = [('active', 'Active'), ('expired', 'Expired'), ('cancelled', 'Cancelled')]
+
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_gifts')
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_gifts')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE)
+    duration_months = models.IntegerField(default=1)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    note = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'gift_subscriptions'
+        ordering = ['-created_at']
+
+
 class Payment(models.Model):
     PAYMENT_TYPES = [
         ('subscription', 'Subscription'), ('tip', 'Tip'), ('ppv', 'PPV'),

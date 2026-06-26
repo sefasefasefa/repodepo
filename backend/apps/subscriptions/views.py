@@ -226,3 +226,111 @@ def payment_history(request):
         } for p in items],
         'total': total,
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_list_subscriptions(request):
+    if request.user.role != 'admin':
+        return Response({'error': 'Forbidden'}, status=403)
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    status_filter = request.query_params.get('status', '')
+    search = request.query_params.get('search', '')
+    page = int(request.query_params.get('page', 1))
+    limit = 50
+    offset = (page - 1) * limit
+
+    qs = UserSubscription.objects.select_related('user', 'plan').order_by('-created_at')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    if search:
+        qs = qs.filter(user__username__icontains=search)
+
+    total = qs.count()
+    items = list(qs[offset:offset + limit])
+    stats = {
+        'active': UserSubscription.objects.filter(status='active').count(),
+        'cancelled': UserSubscription.objects.filter(status='cancelled').count(),
+        'expired': UserSubscription.objects.filter(status='expired').count(),
+        'revenue': float(
+            sum(s.plan.price for s in UserSubscription.objects.filter(status='active').select_related('plan'))
+        ),
+    }
+    return Response({
+        'subscriptions': [{
+            'id': s.id,
+            'user': s.user.username,
+            'plan': s.plan.name,
+            'price': float(s.plan.price),
+            'status': s.status,
+            'start': s.current_period_start.strftime('%Y-%m-%d'),
+            'end': s.current_period_end.strftime('%Y-%m-%d'),
+            'method': 'Kart',
+        } for s in items],
+        'total': total,
+        'stats': stats,
+    })
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def admin_gift_subscriptions(request):
+    from .models import GiftSubscription
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    if request.method == 'GET':
+        if request.user.role != 'admin':
+            return Response({'error': 'Forbidden'}, status=403)
+        qs = GiftSubscription.objects.select_related('sender', 'recipient', 'plan').order_by('-created_at')
+        search = request.query_params.get('search', '')
+        if search:
+            qs = qs.filter(sender__username__icontains=search) | qs.filter(recipient__username__icontains=search)
+        items = list(qs[:100])
+        active_count = GiftSubscription.objects.filter(status='active').count()
+        revenue = float(sum(
+            g.plan.price * g.duration_months
+            for g in GiftSubscription.objects.filter(status='active').select_related('plan')
+        ))
+        return Response({
+            'gifts': [{
+                'id': g.id,
+                'senderUsername': g.sender.username,
+                'recipientUsername': g.recipient.username,
+                'plan': g.plan.name,
+                'duration': g.duration_months,
+                'sentAt': g.created_at.strftime('%Y-%m-%d'),
+                'status': g.status,
+            } for g in items],
+            'stats': {
+                'total': GiftSubscription.objects.count(),
+                'active': active_count,
+                'revenue': revenue,
+            }
+        })
+    else:
+        if request.user.role != 'admin':
+            return Response({'error': 'Forbidden'}, status=403)
+        data = request.data
+        recipient_username = data.get('recipient', '').lstrip('@')
+        plan_id = data.get('planId')
+        duration = int(data.get('duration', 1))
+        note = data.get('note', '')
+        try:
+            recipient = User.objects.get(username=recipient_username)
+        except User.DoesNotExist:
+            return Response({'error': 'Kullanıcı bulunamadı'}, status=404)
+        try:
+            plan = SubscriptionPlan.objects.get(id=plan_id)
+        except SubscriptionPlan.DoesNotExist:
+            return Response({'error': 'Plan bulunamadı'}, status=404)
+        gift = GiftSubscription.objects.create(
+            sender=request.user,
+            recipient=recipient,
+            plan=plan,
+            duration_months=duration,
+            note=note,
+            status='active',
+        )
+        return Response({'id': gift.id, 'message': 'Hediye abonelik gönderildi'}, status=201)

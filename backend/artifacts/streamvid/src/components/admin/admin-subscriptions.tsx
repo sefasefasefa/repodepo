@@ -8,9 +8,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 const STATUS_OPTIONS = ["Tümü", "Aktif", "İptal Edildi", "Süresi Doldu", "Deneme"];
 const PLAN_FILTERS   = ["Tümü", "Ücretsiz", "Premium", "Creator", "VIP"];
 
-const MOCK_SUBS = [
-  { id: 1, user: "ahmet_k", plan: "Premium", price: 9.99, status: "Aktif", start: "2025-01-15", end: "2026-01-15", method: "Kart" },
-];
 
 const STATUS_STYLE: Record<string, string> = {
   "Aktif":         "bg-green-900/30 text-green-400 border-green-800/40",
@@ -252,18 +249,31 @@ export function AdminSubscriptions() {
       },
     });
 
-  const filtered = MOCK_SUBS.filter(s => {
-    if (statusFilter !== "Tümü" && s.status !== statusFilter) return false;
-    if (planFilter !== "Tümü" && s.plan !== planFilter) return false;
-    if (search && !s.user.toLowerCase().includes(search.toLowerCase())) return false;
+  const { data: subsData, isLoading: subsLoading } = useQuery({
+    queryKey: ["admin-subscriptions", statusFilter, planFilter, search],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (statusFilter !== "Tümü") params.set("status", statusFilter);
+      if (search) params.set("search", search);
+      const r = await fetch(`/api/admin/subscriptions?${params}`, { headers: getHeaders() });
+      if (!r.ok) throw new Error("Aboneler alınamadı");
+      return r.json();
+    },
+  });
+
+  const allSubs: any[] = subsData?.subscriptions ?? [];
+  const apiStats = subsData?.stats;
+
+  const filtered = allSubs.filter(s => {
+    if (planFilter !== "Tümü" && !s.plan.includes(planFilter)) return false;
     return true;
   });
 
   const stats = {
-    active:    MOCK_SUBS.filter(s => s.status === "Aktif").length,
-    revenue:   MOCK_SUBS.filter(s => s.status === "Aktif").reduce((a, s) => a + s.price, 0).toFixed(2),
-    cancelled: MOCK_SUBS.filter(s => s.status === "İptal Edildi").length,
-    trial:     MOCK_SUBS.filter(s => s.status === "Deneme").length,
+    active:    apiStats?.active    ?? 0,
+    revenue:   (apiStats?.revenue  ?? 0).toFixed(2),
+    cancelled: apiStats?.cancelled ?? 0,
+    trial:     apiStats?.expired   ?? 0,
   };
 
   const cycleLabel: Record<string, string> = { monthly: "ay", yearly: "yıl", lifetime: "ömür boyu" };
@@ -398,10 +408,6 @@ export function AdminSubscriptions() {
       <div>
         <div className="flex items-center gap-3 mb-3">
           <h2 className="text-sm font-bold text-[#666] uppercase tracking-widest">Aboneler</h2>
-          <div className="flex items-center gap-1.5 text-xs text-yellow-500/80 bg-yellow-900/20 border border-yellow-800/30 rounded-full px-2.5 py-0.5">
-            <Info className="h-3 w-3 shrink-0" />
-            Aşağıdaki satır örnek veridir — gerçek abone listesi ödeme sistemi entegrasyonu sonrası buraya yansır
-          </div>
         </div>
         <div className="bg-[#0d0d0d] border border-[#1e1e1e] rounded-xl p-4 space-y-3 mb-4">
           <div className="flex flex-wrap gap-2 items-center">

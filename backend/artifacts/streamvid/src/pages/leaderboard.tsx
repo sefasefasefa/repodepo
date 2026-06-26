@@ -1,18 +1,8 @@
 import { AppLayout } from "@/components/layout/app-layout";
 import { useState } from "react";
-import { Trophy, Star, Zap, Clock, Crown, Heart, Medal } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Trophy, Star, Zap, Heart, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const MOCK_USERS = [
-  { rank: 1, username: "ali_fan_01", displayName: "Ali Yılmaz", points: 12_840, streak: 14, badges: ["🔥", "👑"], level: "Efsane" },
-  { rank: 2, username: "zeynep_k", displayName: "Zeynep K.", points: 9_450, streak: 7, badges: ["💎", "⭐"], level: "Platinum" },
-  { rank: 3, username: "mert_92", displayName: "Mert Aydın", points: 7_210, streak: 3, badges: ["🔥"], level: "Gold" },
-  { rank: 4, username: "selin_d", displayName: "Selin D.", points: 5_880, streak: 12, badges: ["⭐"], level: "Gold" },
-  { rank: 5, username: "hasan_y", displayName: "Hasan Y.", points: 4_430, streak: 1, badges: [], level: "Silver" },
-  { rank: 6, username: "ayse_m", displayName: "Ayşe M.", points: 3_940, streak: 5, badges: ["💜"], level: "Silver" },
-  { rank: 7, username: "burak_g", displayName: "Burak G.", points: 2_700, streak: 0, badges: [], level: "Bronze" },
-  { rank: 8, username: "fatma_c", displayName: "Fatma C.", points: 1_950, streak: 2, badges: [], level: "Bronze" },
-];
 
 const PERIODS = [
   { id: "weekly", label: "Bu Hafta" },
@@ -21,31 +11,39 @@ const PERIODS = [
 ];
 
 const LEVEL_STYLES: Record<string, string> = {
-  "Efsane": "text-fuchsia-400 bg-fuchsia-900/20 border-fuchsia-500/30",
+  "Efsane":   "text-fuchsia-400 bg-fuchsia-900/20 border-fuchsia-500/30",
   "Platinum": "text-cyan-400 bg-cyan-900/20 border-cyan-500/30",
-  "Gold": "text-amber-400 bg-amber-900/20 border-amber-500/30",
-  "Silver": "text-slate-300 bg-slate-700/20 border-slate-500/30",
-  "Bronze": "text-orange-600 bg-orange-900/10 border-orange-700/20",
+  "Gold":     "text-amber-400 bg-amber-900/20 border-amber-500/30",
+  "Silver":   "text-slate-300 bg-slate-700/20 border-slate-500/30",
+  "Bronze":   "text-orange-600 bg-orange-900/10 border-orange-700/20",
 };
 
 const POINT_SOURCES = [
-  { icon: "👁️", label: "Video izleme", points: "+2 puan / video" },
-  { icon: "❤️", label: "Beğeni", points: "+1 puan / beğeni" },
-  { icon: "💬", label: "Yorum", points: "+3 puan / yorum" },
-  { icon: "🎁", label: "Hediye gönderme", points: "+10 puan / hediye" },
+  { icon: "👁️", label: "Video izleme",      points: "+2 puan / video" },
+  { icon: "❤️", label: "Beğeni",            points: "+1 puan / beğeni" },
+  { icon: "💬", label: "Yorum",             points: "+3 puan / yorum" },
+  { icon: "🎁", label: "Hediye gönderme",   points: "+10 puan / hediye" },
   { icon: "🔥", label: "Günlük giriş serisi", points: "+5 puan / gün" },
-  { icon: "⭐", label: "Premium üyelik", points: "+50 puan / ay" },
+  { icon: "⭐", label: "Premium üyelik",    points: "+50 puan / ay" },
 ];
 
 export default function LeaderboardPage() {
   const [period, setPeriod] = useState("weekly");
-  const [tab, setTab] = useState<"general" | "gifts" | "streak">("general");
+  const [tab, setTab]       = useState<"general" | "gifts" | "streak">("general");
 
-  const sorted = [...MOCK_USERS].sort((a, b) => {
-    if (tab === "streak") return b.streak - a.streak;
-    return b.points - a.points;
+  const { data, isLoading } = useQuery({
+    queryKey: ["leaderboard", period, tab],
+    queryFn: async () => {
+      const r = await fetch(`/api/leaderboard?period=${period}&tab=${tab}`);
+      if (!r.ok) throw new Error("Sıralama alınamadı");
+      return r.json();
+    },
   });
 
+  const users: any[] = data?.users ?? [];
+  const sorted = tab === "streak"
+    ? [...users].sort((a, b) => b.streak - a.streak)
+    : [...users].sort((a, b) => b.points - a.points);
   const top3 = sorted.slice(0, 3);
   const rest = sorted.slice(3);
 
@@ -71,9 +69,9 @@ export default function LeaderboardPage() {
           </div>
           <div className="flex gap-1 p-1 bg-[#161616] border border-[#222] rounded-xl">
             {[
-              { id: "general", label: "Genel", icon: Trophy },
-              { id: "gifts", label: "Hediyeler", icon: Heart },
-              { id: "streak", label: "Seri", icon: Zap },
+              { id: "general", label: "Genel",    icon: Trophy },
+              { id: "gifts",   label: "Hediyeler", icon: Heart },
+              { id: "streak",  label: "Seri",      icon: Zap },
             ].map(t => {
               const Icon = t.icon;
               return (
@@ -87,71 +85,81 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        {/* Top 3 Podiyum */}
-        <div className="flex items-end justify-center gap-3 pt-4">
-          {[top3[1], top3[0], top3[2]].map((u, i) => {
-            if (!u) return <div key={i} className="w-24" />;
-            const isFirst = i === 1;
-            const podiumColors = ["bg-slate-400/20 border-slate-400/30", "bg-amber-400/20 border-amber-400/40", "bg-orange-600/20 border-orange-600/30"];
-            const podiumH = ["h-24", "h-32", "h-20"];
-            const medals = ["🥈", "🥇", "🥉"];
-            return (
-              <div key={u.username} className={cn("flex flex-col items-center gap-2", isFirst ? "scale-110" : "")}>
-                <div className="text-xl">{u.badges[0] ?? "👤"}</div>
-                <div className="text-center">
-                  <p className={cn("font-bold text-sm", isFirst ? "text-amber-400" : "text-[#ccc]")}>{u.displayName}</p>
-                  <p className="text-[11px] text-[#555]">{u.points.toLocaleString()} puan</p>
-                </div>
-                <div className={cn("w-24 rounded-t-xl border flex items-center justify-center text-2xl", podiumColors[i], podiumH[i])}>
-                  {medals[i]}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Liste */}
-        <div className="bg-[#1a1a1a] border border-[#222] rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#1e1e1e] flex items-center justify-between">
-            <p className="text-sm font-semibold text-white">Tam Sıralama</p>
-            <p className="text-xs text-[#555]">{MOCK_USERS.length} kullanıcı</p>
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-          <div className="divide-y divide-[#1a1a1a]">
-            {sorted.map((u) => (
-              <div key={u.username} className="flex items-center gap-3 px-4 py-3 hover:bg-[#1e1e1e] transition-colors">
-                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-                  u.rank === 1 ? "bg-amber-400/20 text-amber-400" :
-                  u.rank === 2 ? "bg-slate-400/20 text-slate-300" :
-                  u.rank === 3 ? "bg-orange-600/20 text-orange-500" :
-                  "bg-[#222] text-[#666]")}>
-                  {u.rank <= 3 ? ["🥇","🥈","🥉"][u.rank-1] : u.rank}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold text-white truncate">{u.displayName}</p>
-                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", LEVEL_STYLES[u.level])}>
-                      {u.level}
-                    </span>
-                    {u.badges.map((b, i) => <span key={i} className="text-sm">{b}</span>)}
-                  </div>
-                  <p className="text-[11px] text-[#555]">@{u.username}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-primary">{u.points.toLocaleString()}</p>
-                  <div className="flex items-center gap-1 justify-end">
-                    {u.streak > 0 && (
-                      <span className="text-[10px] text-orange-400 flex items-center gap-0.5">
-                        <Zap className="h-3 w-3" />{u.streak} gün
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+        ) : users.length === 0 ? (
+          <div className="text-center py-16 text-[#555] text-sm">
+            <Trophy className="h-12 w-12 mx-auto mb-3 opacity-20" />
+            <p>Henüz sıralama verisi yok.</p>
+            <p className="text-xs mt-1">İçerik izle ve etkileşime geç — ilk sıraya sen gir!</p>
           </div>
-        </div>
+        ) : (
+          <>
+            {top3.length > 0 && (
+              <div className="flex items-end justify-center gap-3 pt-4">
+                {[top3[1], top3[0], top3[2]].map((u, i) => {
+                  if (!u) return <div key={i} className="w-24" />;
+                  const isFirst = i === 1;
+                  const podiumColors = ["bg-slate-400/20 border-slate-400/30", "bg-amber-400/20 border-amber-400/40", "bg-orange-600/20 border-orange-600/30"];
+                  const podiumH     = ["h-24", "h-32", "h-20"];
+                  const medals      = ["🥈", "🥇", "🥉"];
+                  return (
+                    <div key={u.username} className={cn("flex flex-col items-center gap-2", isFirst ? "scale-110" : "")}>
+                      <div className="text-xl">👤</div>
+                      <div className="text-center">
+                        <p className={cn("font-bold text-sm", isFirst ? "text-amber-400" : "text-[#ccc]")}>{u.displayName}</p>
+                        <p className="text-[11px] text-[#555]">{u.points.toLocaleString()} puan</p>
+                      </div>
+                      <div className={cn("w-24 rounded-t-xl border flex items-center justify-center text-2xl", podiumColors[i], podiumH[i])}>
+                        {medals[i]}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-        {/* Puan Kaynakları */}
+            <div className="bg-[#1a1a1a] border border-[#222] rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-[#1e1e1e] flex items-center justify-between">
+                <p className="text-sm font-semibold text-white">Tam Sıralama</p>
+                <p className="text-xs text-[#555]">{users.length} kullanıcı</p>
+              </div>
+              <div className="divide-y divide-[#1a1a1a]">
+                {sorted.map((u) => (
+                  <div key={u.username} className="flex items-center gap-3 px-4 py-3 hover:bg-[#1e1e1e] transition-colors">
+                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+                      u.rank === 1 ? "bg-amber-400/20 text-amber-400" :
+                      u.rank === 2 ? "bg-slate-400/20 text-slate-300" :
+                      u.rank === 3 ? "bg-orange-600/20 text-orange-500" :
+                      "bg-[#222] text-[#666]")}>
+                      {u.rank <= 3 ? ["🥇","🥈","🥉"][u.rank-1] : u.rank}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-white truncate">{u.displayName}</p>
+                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", LEVEL_STYLES[u.level] ?? LEVEL_STYLES["Bronze"])}>
+                          {u.level}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#555]">@{u.username}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-primary">{u.points.toLocaleString()}</p>
+                      {u.streak > 0 && (
+                        <span className="text-[10px] text-orange-400 flex items-center gap-0.5 justify-end">
+                          <Zap className="h-3 w-3" />{u.streak} gün
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="bg-[#1a1a1a] border border-[#222] rounded-2xl p-5">
           <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
             <Star className="h-4 w-4 text-amber-400" /> Nasıl Puan Kazanılır?

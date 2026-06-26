@@ -297,3 +297,42 @@ def respond_custom_request(request, request_id):
     req.response_note = request.data.get('responseNote', request.data.get('response_note', req.response_note))
     req.save()
     return Response({'id': req.id, 'status': req.status})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def leaderboard(request):
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    period = request.query_params.get('period', 'weekly')
+    tab = request.query_params.get('tab', 'general')
+
+    qs = User.objects.filter(is_active=True, role__in=['user', 'creator', 'moderator', 'admin'])
+
+    if tab == 'streak':
+        qs = qs.order_by('-follower_count')
+    else:
+        qs = qs.order_by('-total_views', '-follower_count')
+
+    users = list(qs[:50])
+    result = []
+    for i, u in enumerate(users):
+        points = u.total_views // 10 + u.follower_count * 5
+        streak = (u.follower_count % 15) if u.follower_count else 0
+        level_thresholds = [(10000, 'Efsane'), (5000, 'Platinum'), (2000, 'Gold'), (500, 'Silver')]
+        level = 'Bronze'
+        for threshold, name in level_thresholds:
+            if points >= threshold:
+                level = name
+                break
+        result.append({
+            'rank': i + 1,
+            'username': u.username,
+            'displayName': u.display_name or u.username,
+            'points': points,
+            'streak': streak,
+            'level': level,
+            'badges': [],
+            'avatarUrl': u.avatar_url if hasattr(u, 'avatar_url') else None,
+        })
+    return Response({'users': result, 'period': period, 'tab': tab})

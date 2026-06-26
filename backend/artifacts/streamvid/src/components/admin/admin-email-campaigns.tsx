@@ -1,140 +1,119 @@
 import { useState } from "react";
-import { Mail, Plus, Send, FileText, Trash2, Eye, Users, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Mail, Plus, Send, FileText, Trash2, Eye, Users, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const TEMPLATES = [
   {
     id: "welcome",
     name: "Hoş Geldiniz",
     subject: "{{site_name}} platformuna hoş geldiniz!",
-    body: `Merhaba {{username}},
-
-{{site_name}} ailesine katıldığın için teşekkür ederiz! 🎉
-
-Seninle birlikte harika içerikler keşfetmek için sabırsızlanıyoruz.
-
-Hemen başlamak için: {{site_url}}
-
-Sevgilerle,
-{{site_name}} Ekibi`,
+    body: `Merhaba {{username}},\n\n{{site_name}} ailesine katıldığın için teşekkür ederiz! 🎉\n\nSeninle birlikte harika içerikler keşfetmek için sabırsızlanıyoruz.\n\nHemen başlamak için: {{site_url}}\n\nSevgilerle,\n{{site_name}} Ekibi`,
   },
   {
     id: "promo",
     name: "Promosyon / İndirim",
     subject: "🔥 Özel fırsat: %{{discount}} indirim seni bekliyor!",
-    body: `Merhaba {{username}},
-
-Sınırlı süreliğine tüm premium planlarda %{{discount}} indirim!
-
-Kupon kodu: {{coupon_code}}
-Geçerlilik: {{expiry_date}}
-
-Şimdi yararlan: {{site_url}}/pricing
-
-{{site_name}} Ekibi`,
+    body: `Merhaba {{username}},\n\nSınırlı süreliğine tüm premium planlarda %{{discount}} indirim!\n\nKupon kodu: {{coupon_code}}\nGeçerlilik: {{expiry_date}}\n\nŞimdi yararlan: {{site_url}}/pricing\n\n{{site_name}} Ekibi`,
   },
   {
     id: "new_content",
     name: "Yeni İçerik Bildirimi",
     subject: "Takip ettiğin creator yeni video yükledi!",
-    body: `Merhaba {{username}},
-
-Takip ettiğin {{creator_name}} yeni bir video yükledi:
-
-"{{video_title}}"
-
-İzlemek için: {{video_url}}
-
-{{site_name}}`,
+    body: `Merhaba {{username}},\n\nTakip ettiğin {{creator_name}} yeni bir video yükledi:\n\n"{{video_title}}"\n\nİzlemek için: {{video_url}}\n\n{{site_name}}`,
   },
   {
     id: "reactivation",
     name: "Geri Dönme Daveti",
     subject: "Seni özledik {{username}} 💜",
-    body: `Merhaba {{username}},
-
-{{last_visit}} tarihinden bu yana sizi göremedik.
-
-Geri döndüğünüzde sizi bekleyen harika içerikler var! 
-
-Platforma dön: {{site_url}}
-
-{{site_name}} Ekibi`,
+    body: `Merhaba {{username}},\n\n{{last_visit}} tarihinden bu yana sizi göremedik.\n\nGeri döndüğünüzde sizi bekleyen harika içerikler var!\n\nPlatforma dön: {{site_url}}\n\n{{site_name}} Ekibi`,
   },
   {
     id: "announcement",
     name: "Duyuru",
     subject: "📢 {{site_name}} önemli duyuru",
-    body: `Merhaba {{username}},
-
-{{announcement_text}}
-
-Daha fazla bilgi için: {{site_url}}
-
-{{site_name}} Ekibi`,
+    body: `Merhaba {{username}},\n\n{{announcement_text}}\n\nDaha fazla bilgi için: {{site_url}}\n\n{{site_name}} Ekibi`,
   },
 ];
 
 const AUDIENCE_OPTIONS = [
-  { id: "all", label: "Tüm Kullanıcılar" },
-  { id: "premium", label: "Premium Üyeler" },
-  { id: "free", label: "Ücretsiz Kullanıcılar" },
+  { id: "all",      label: "Tüm Kullanıcılar" },
+  { id: "premium",  label: "Premium Üyeler" },
+  { id: "free",     label: "Ücretsiz Kullanıcılar" },
   { id: "inactive", label: "Pasif Kullanıcılar (30+ gün)" },
   { id: "creators", label: "Yükleyiciler / Creatorlar" },
-  { id: "new", label: "Son 7 Günde Katılanlar" },
+  { id: "new",      label: "Son 7 Günde Katılanlar" },
 ];
 
-const MOCK_CAMPAIGNS = [
-  { id: 1, name: "Mayıs Promosyonu", template: "promo", audience: "all", status: "sent", sentAt: "2026-05-01", opens: 1240, clicks: 389 },
-  { id: 2, name: "Yeni Creator Duyurusu", template: "announcement", audience: "premium", status: "draft", sentAt: null, opens: 0, clicks: 0 },
-  { id: 3, name: "Hoş Geldin Serisi", template: "welcome", audience: "new", status: "scheduled", sentAt: "2026-05-10", opens: 0, clicks: 0 },
-];
+const getHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+});
 
 export default function AdminEmailCampaigns() {
-  const [tab, setTab] = useState<"list" | "create" | "templates">("list");
-  const [campaigns, setCampaigns] = useState(MOCK_CAMPAIGNS);
+  const qc = useQueryClient();
+  const [tab, setTab]                   = useState<"list" | "create" | "templates">("list");
   const [selectedTemplate, setSelectedTemplate] = useState(TEMPLATES[0]);
-  const [previewOpen, setPreviewOpen] = useState<number | null>(null);
-  const [form, setForm] = useState({
+  const [previewOpen, setPreviewOpen]   = useState<number | null>(null);
+  const [saving, setSaving]             = useState(false);
+  const [saved, setSaved]               = useState(false);
+  const [form, setForm]                 = useState({
     name: "",
-    subject: selectedTemplate.subject,
-    body: selectedTemplate.body,
+    subject: TEMPLATES[0].subject,
+    body: TEMPLATES[0].body,
     audience: "all",
     scheduledAt: "",
   });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-email-campaigns"],
+    queryFn: async () => {
+      const r = await fetch("/api/admin/email-campaigns", { headers: getHeaders() });
+      if (!r.ok) throw new Error("Kampanyalar alınamadı");
+      return r.json();
+    },
+  });
+
+  const campaigns: any[] = data?.campaigns ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/admin/email-campaigns", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({
+          name: form.name,
+          template: selectedTemplate.id,
+          subject: form.subject,
+          body: form.body,
+          audience: form.audience,
+          scheduledAt: form.scheduledAt || null,
+        }),
+      });
+      if (!r.ok) throw new Error("Oluşturma başarısız");
+      return r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-email-campaigns"] });
+      setSaved(true);
+      setTab("list");
+      setTimeout(() => setSaved(false), 2000);
+      setForm({ name: "", subject: selectedTemplate.subject, body: selectedTemplate.body, audience: "all", scheduledAt: "" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await fetch(`/api/admin/email-campaigns/${id}`, { method: "DELETE", headers: getHeaders() });
+      if (!r.ok) throw new Error("Silme başarısız");
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-email-campaigns"] }),
+  });
 
   const applyTemplate = (t: typeof TEMPLATES[0]) => {
     setSelectedTemplate(t);
     setForm(f => ({ ...f, subject: t.subject, body: t.body }));
   };
-
-  const createCampaign = async () => {
-    if (!form.name.trim()) return;
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 700));
-    setCampaigns(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        name: form.name,
-        template: selectedTemplate.id,
-        audience: form.audience,
-        status: form.scheduledAt ? "scheduled" : "draft",
-        sentAt: form.scheduledAt || null,
-        opens: 0,
-        clicks: 0,
-      },
-    ]);
-    setSaving(false);
-    setSaved(true);
-    setTab("list");
-    setTimeout(() => setSaved(false), 2000);
-    setForm({ name: "", subject: selectedTemplate.subject, body: selectedTemplate.body, audience: "all", scheduledAt: "" });
-  };
-
-  const deleteCampaign = (id: number) => setCampaigns(prev => prev.filter(c => c.id !== id));
 
   return (
     <div className="space-y-5 max-w-5xl">
@@ -150,8 +129,8 @@ export default function AdminEmailCampaigns() {
 
       <div className="flex gap-1 p-1 bg-[#161616] border border-[#222] rounded-xl w-fit">
         {[
-          { id: "list", label: "Kampanyalar" },
-          { id: "create", label: "Yeni Kampanya" },
+          { id: "list",      label: "Kampanyalar" },
+          { id: "create",    label: "Yeni Kampanya" },
           { id: "templates", label: "Şablonlar" },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id as any)}
@@ -163,51 +142,53 @@ export default function AdminEmailCampaigns() {
 
       {tab === "list" && (
         <div className="space-y-3">
-          {campaigns.length === 0 && (
+          {isLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          ) : campaigns.length === 0 ? (
             <div className="text-center py-12 text-[#555] text-sm">Henüz kampanya yok.</div>
-          )}
-          {campaigns.map(c => (
-            <div key={c.id} className="bg-[#1a1a1a] border border-[#222] rounded-xl overflow-hidden">
-              <div className="flex items-center gap-4 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold text-white truncate">{c.name}</p>
-                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
-                      c.status === "sent" ? "bg-green-900/20 text-green-400" :
-                      c.status === "scheduled" ? "bg-blue-900/20 text-blue-400" :
-                      "bg-[#222] text-[#666]")}>
-                      {c.status === "sent" ? "Gönderildi" : c.status === "scheduled" ? "Planlandı" : "Taslak"}
-                    </span>
-                    <span className="text-[10px] text-[#555]">{AUDIENCE_OPTIONS.find(a => a.id === c.audience)?.label}</span>
-                  </div>
-                  {c.status === "sent" && (
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className="text-[11px] text-[#666]">Açılma: <span className="text-[#aaa] font-medium">{c.opens.toLocaleString()}</span></span>
-                      <span className="text-[11px] text-[#666]">Tıklama: <span className="text-[#aaa] font-medium">{c.clicks.toLocaleString()}</span></span>
+          ) : (
+            campaigns.map(c => (
+              <div key={c.id} className="bg-[#1a1a1a] border border-[#222] rounded-xl overflow-hidden">
+                <div className="flex items-center gap-4 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-white truncate">{c.name}</p>
+                      <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
+                        c.status === "sent"      ? "bg-green-900/20 text-green-400" :
+                        c.status === "scheduled" ? "bg-blue-900/20 text-blue-400" :
+                        "bg-[#222] text-[#666]")}>
+                        {c.status === "sent" ? "Gönderildi" : c.status === "scheduled" ? "Planlandı" : "Taslak"}
+                      </span>
+                      <span className="text-[10px] text-[#555]">{AUDIENCE_OPTIONS.find(a => a.id === c.audience)?.label}</span>
                     </div>
-                  )}
+                    {c.status === "sent" && (
+                      <div className="flex items-center gap-4 mt-1">
+                        <span className="text-[11px] text-[#666]">Açılma: <span className="text-[#aaa] font-medium">{c.opens.toLocaleString()}</span></span>
+                        <span className="text-[11px] text-[#666]">Tıklama: <span className="text-[#aaa] font-medium">{c.clicks.toLocaleString()}</span></span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => setPreviewOpen(previewOpen === c.id ? null : c.id)}
+                      className="p-2 rounded-lg text-[#555] hover:text-white hover:bg-[#222] transition-all">
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => deleteMutation.mutate(c.id)}
+                      disabled={deleteMutation.isPending}
+                      className="p-2 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-900/10 transition-all">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => setPreviewOpen(previewOpen === c.id ? null : c.id)}
-                    className="p-2 rounded-lg text-[#555] hover:text-white hover:bg-[#222] transition-all">
-                    <Eye className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => deleteCampaign(c.id)}
-                    className="p-2 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-900/10 transition-all">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                {previewOpen === c.id && (
+                  <div className="border-t border-[#222] bg-[#111] p-4">
+                    <p className="text-xs text-[#555] mb-1">Konu: <span className="text-[#888]">{c.subject}</span></p>
+                    <p className="text-xs text-[#555] mb-1">Şablon: <span className="text-[#888]">{TEMPLATES.find(t => t.id === c.template)?.name ?? c.template}</span></p>
+                  </div>
+                )}
               </div>
-              {previewOpen === c.id && (
-                <div className="border-t border-[#222] bg-[#111] p-4">
-                  <p className="text-xs text-[#555] mb-1">Şablon: <span className="text-[#888]">{TEMPLATES.find(t => t.id === c.template)?.name}</span></p>
-                  <pre className="text-xs text-[#aaa] whitespace-pre-wrap font-mono leading-relaxed max-h-40 overflow-y-auto">
-                    {TEMPLATES.find(t => t.id === c.template)?.body}
-                  </pre>
-                </div>
-              )}
-            </div>
-          ))}
+            ))
+          )}
         </div>
       )}
 
@@ -256,9 +237,11 @@ export default function AdminEmailCampaigns() {
               className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
           </div>
           <div className="flex gap-3">
-            <button onClick={createCampaign} disabled={saving || !form.name.trim()}
+            <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !form.name.trim()}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
-              {saving ? "Kaydediliyor..." : saved ? <><Check className="h-4 w-4" /> Kaydedildi</> : <><Send className="h-4 w-4" /> Kampanya Oluştur</>}
+              {createMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Kaydediliyor...</> :
+               saved ? <><Check className="h-4 w-4" /> Kaydedildi</> :
+               <><Send className="h-4 w-4" /> Kampanya Oluştur</>}
             </button>
           </div>
         </div>

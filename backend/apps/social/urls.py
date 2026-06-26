@@ -56,4 +56,5 @@ urlpatterns = [
     path('custom-requests/<int:req_id>/reject', cr.reject),
     path('custom-requests/<int:req_id>/complete', cr.complete),
     path('custom-requests/<int:req_id>/cancel', cr.cancel),
+    path('leaderboard', views.leaderboard),
 ]

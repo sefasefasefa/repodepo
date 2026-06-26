@@ -235,3 +235,26 @@ class WebhookDelivery(models.Model):
 
     def __str__(self):
         return f'{self.event} → {self.endpoint.name} [{self.status}]'
+
+
+class EmailCampaign(models.Model):
+    STATUS_CHOICES = [('draft', 'Draft'), ('scheduled', 'Scheduled'), ('sent', 'Sent')]
+
+    name = models.CharField(max_length=200)
+    template_id = models.CharField(max_length=50, default='custom')
+    subject = models.CharField(max_length=300, default='')
+    body = models.TextField(default='')
+    audience = models.CharField(max_length=50, default='all')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    scheduled_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    opens = models.IntegerField(default=0)
+    clicks = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'email_campaigns'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.name} [{self.status}]'

@@ -103,4 +103,6 @@ urlpatterns = [
     path('admin/ab-tests/<int:test_id>/variants', abt.admin_add_variant),
     path('admin/ab-tests/<int:test_id>/variants/<int:variant_id>', abt.admin_delete_variant),
     path('admin/ab-tests/<int:test_id>/reset', abt.admin_reset),
+    path('admin/email-campaigns', ex.email_campaigns),
+    path('admin/email-campaigns/<int:campaign_id>', ex.email_campaign_detail),
 ]
