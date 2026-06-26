@@ -348,13 +348,16 @@ export function AdminVideos() {
 
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
+  const refetchAll = () => queryClient.invalidateQueries();
+
   const handleDelete = (id: number) => {
-    deleteMutation.mutate({ id }, { onSuccess: () => { setDeleteConfirm(null); queryClient.invalidateQueries({ queryKey: ["videos"] }); } });
+    if (deleteMutation.isPending) return;
+    deleteMutation.mutate({ id }, { onSuccess: () => { setDeleteConfirm(null); refetchAll(); } });
   };
 
   const handleTogglePublish = (video: any) => {
     updateMutation.mutate({ id: video.id, data: { isPublished: !video.isPublished } }, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["videos"] }),
+      onSuccess: () => refetchAll(),
     });
   };
 
@@ -366,7 +369,7 @@ export function AdminVideos() {
   const handleSave = () => {
     if (!editId) return;
     updateMutation.mutate({ id: editId, data: editData }, {
-      onSuccess: () => { setEditId(null); queryClient.invalidateQueries({ queryKey: ["videos"] }); },
+      onSuccess: () => { setEditId(null); refetchAll(); },
     });
   };
 
@@ -408,119 +411,153 @@ export function AdminVideos() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">{Array.from({length: 5}).map((_, i) => <div key={i} className="h-14 bg-[#1e1e1e] rounded-lg animate-pulse" />)}</div>
+        <div className="space-y-2">{Array.from({length: 5}).map((_, i) => <div key={i} className="h-16 bg-[#1e1e1e] rounded-lg animate-pulse" />)}</div>
+      ) : videos.filter(v => !search || v.title.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+        <div className="py-14 text-center text-[#555] text-sm bg-[#1a1a1a] rounded-xl border border-[#2a2a2a]">
+          {search ? `"${search}" için sonuç yok.` : 'Henüz video yok. "Video Ekle" butonuyla ilk videoyu ekleyebilirsiniz.'}
+        </div>
       ) : (
-        <div className="bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[#222] text-[#888] text-xs uppercase tracking-wide">
-              <tr>
-                <th className="text-left px-4 py-3">Video</th>
-                <th className="text-left px-4 py-3 hidden md:table-cell">Kategori</th>
-                <th className="text-left px-4 py-3 hidden md:table-cell">İzlenme</th>
-                <th className="text-left px-4 py-3">Durum</th>
-                <th className="text-right px-4 py-3">İşlem</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#222]">
-              {videos.filter(v => !search || v.title.toLowerCase().includes(search.toLowerCase())).map(video => (
-                <tr key={video.id} className="hover:bg-[#1e1e1e] transition-colors">
-                  {editId === video.id ? (
-                    <td colSpan={5} className="px-4 py-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <input value={editData.title} onChange={e => setEditData((p: any) => ({...p, title: e.target.value}))} className="col-span-2 bg-[#252525] border border-[#333] rounded px-3 py-1.5 text-sm text-white" placeholder="Başlık" />
-                        <textarea value={editData.description || ""} onChange={e => setEditData((p: any) => ({...p, description: e.target.value}))} className="col-span-2 bg-[#252525] border border-[#333] rounded px-3 py-1.5 text-sm text-white h-16 resize-none" placeholder="Açıklama" />
-                        <select value={editData.categoryId || ""} onChange={e => setEditData((p: any) => ({...p, categoryId: e.target.value ? Number(e.target.value) : null}))} className="bg-[#252525] border border-[#333] rounded px-3 py-1.5 text-sm text-white">
-                          <option value="">Kategori Seç</option>
-                          {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                        <div className="flex items-center gap-4">
-                          <label className="flex items-center gap-2 text-sm text-[#aaa]">
-                            <input type="checkbox" checked={editData.isPremium || false} onChange={e => setEditData((p: any) => ({...p, isPremium: e.target.checked}))} />
-                            Premium
-                          </label>
-                          <label className="flex items-center gap-2 text-sm text-[#aaa]">
-                            <input type="checkbox" checked={editData.isPPV || false} onChange={e => setEditData((p: any) => ({...p, isPPV: e.target.checked}))} />
-                            PPV
-                          </label>
-                        </div>
-                        <div className="col-span-2 flex gap-2 justify-end">
-                          <button onClick={() => setEditId(null)} className="px-4 py-1.5 rounded text-sm bg-[#333] text-[#aaa] hover:bg-[#444]">İptal</button>
-                          <button onClick={handleSave} className="px-4 py-1.5 rounded text-sm bg-primary text-white hover:bg-primary/90">Kaydet</button>
-                        </div>
-                      </div>
-                    </td>
-                  ) : (
-                    <>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {video.thumbnailUrl ? (
-                            <img src={video.thumbnailUrl} className="w-12 h-8 object-cover rounded shrink-0" />
-                          ) : (
-                            <div className="w-12 h-8 bg-[#333] rounded shrink-0" />
-                          )}
-                          <div className="min-w-0">
-                            <p className="font-medium text-[#ddd] truncate max-w-[160px]">{video.title}</p>
-                            <p className="text-xs text-[#555]">#{video.id}</p>
+        <>
+          {/* ── Desktop table (md+) ── */}
+          <div className="hidden md:block bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-[#222] text-[#888] text-xs uppercase tracking-wide">
+                <tr>
+                  <th className="text-left px-4 py-3">Video</th>
+                  <th className="text-left px-4 py-3">Kategori</th>
+                  <th className="text-left px-4 py-3">İzlenme</th>
+                  <th className="text-left px-4 py-3">Durum</th>
+                  <th className="text-right px-4 py-3">İşlem</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#222]">
+                {videos.filter(v => !search || v.title.toLowerCase().includes(search.toLowerCase())).map(video => (
+                  <tr key={video.id} className="hover:bg-[#1e1e1e] transition-colors">
+                    {editId === video.id ? (
+                      <td colSpan={5} className="px-4 py-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <input value={editData.title} onChange={e => setEditData((p: any) => ({...p, title: e.target.value}))} className="col-span-2 bg-[#252525] border border-[#333] rounded px-3 py-1.5 text-sm text-white" placeholder="Başlık" />
+                          <textarea value={editData.description || ""} onChange={e => setEditData((p: any) => ({...p, description: e.target.value}))} className="col-span-2 bg-[#252525] border border-[#333] rounded px-3 py-1.5 text-sm text-white h-16 resize-none" placeholder="Açıklama" />
+                          <select value={editData.categoryId || ""} onChange={e => setEditData((p: any) => ({...p, categoryId: e.target.value ? Number(e.target.value) : null}))} className="bg-[#252525] border border-[#333] rounded px-3 py-1.5 text-sm text-white">
+                            <option value="">Kategori Seç</option>
+                            {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 text-sm text-[#aaa]"><input type="checkbox" checked={editData.isPremium || false} onChange={e => setEditData((p: any) => ({...p, isPremium: e.target.checked}))} /> Premium</label>
+                            <label className="flex items-center gap-2 text-sm text-[#aaa]"><input type="checkbox" checked={editData.isPPV || false} onChange={e => setEditData((p: any) => ({...p, isPPV: e.target.checked}))} /> PPV</label>
+                          </div>
+                          <div className="col-span-2 flex gap-2 justify-end">
+                            <button onClick={() => setEditId(null)} className="px-4 py-1.5 rounded text-sm bg-[#333] text-[#aaa] hover:bg-[#444]">İptal</button>
+                            <button onClick={handleSave} disabled={updateMutation.isPending} className="px-4 py-1.5 rounded text-sm bg-primary text-white hover:bg-primary/90 disabled:opacity-60">Kaydet</button>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-[#888]">{video.category?.name || "—"}</td>
-                      <td className="px-4 py-3 hidden md:table-cell text-[#888]">{video.viewCount?.toLocaleString()}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-1">
-                          <span className={cn("text-xs px-2 py-0.5 rounded-full w-fit", video.isPublished ? "bg-green-900/40 text-green-400" : "bg-[#333] text-[#666]")}>
-                            {video.isPublished ? "Yayında" : "Gizli"}
-                          </span>
-                          {video.isPremium && (
-                            <span className="text-xs px-2 py-0.5 rounded-full w-fit bg-yellow-900/30 text-yellow-400">Premium</span>
-                          )}
+                    ) : (
+                      <>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {video.thumbnailUrl ? <img src={video.thumbnailUrl} className="w-12 h-8 object-cover rounded shrink-0" /> : <div className="w-12 h-8 bg-[#333] rounded shrink-0 flex items-center justify-center"><Video className="h-3.5 w-3.5 text-[#555]" /></div>}
+                            <div className="min-w-0">
+                              <p className="font-medium text-[#ddd] truncate max-w-[220px]">{video.title}</p>
+                              <p className="text-xs text-[#555]">#{video.id}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-[#888] text-sm">{video.category?.name || "—"}</td>
+                        <td className="px-4 py-3 text-[#888] text-sm">{video.viewCount?.toLocaleString()}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <span className={cn("text-xs px-2 py-0.5 rounded-full w-fit", video.isPublished ? "bg-green-900/40 text-green-400" : "bg-[#333] text-[#666]")}>{video.isPublished ? "Yayında" : "Gizli"}</span>
+                            {video.isPremium && <span className="text-xs px-2 py-0.5 rounded-full w-fit bg-yellow-900/30 text-yellow-400">Premium</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1 justify-end">
+                            <button onClick={() => setPlayersVideoId(video.id)} title="Oynatıcılar" className="p-1.5 rounded hover:bg-[#333] text-[#666] hover:text-primary transition-colors"><Video className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => updateMutation.mutate({ id: video.id, data: { isPremium: !video.isPremium } }, { onSuccess: refetchAll })} title={video.isPremium ? "Premium Kaldır" : "Premium Yap"} className={cn("p-1.5 rounded hover:bg-[#333] transition-colors", video.isPremium ? "text-yellow-400" : "text-[#666] hover:text-yellow-400")}><Crown className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => handleTogglePublish(video)} title={video.isPublished ? "Gizle" : "Yayınla"} className="p-1.5 rounded hover:bg-[#333] text-[#666] hover:text-yellow-400 transition-colors">{video.isPublished ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button>
+                            <button onClick={() => handleEdit(video)} title="Düzenle" className="p-1.5 rounded hover:bg-[#333] text-[#666] hover:text-white transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
+                            {deleteConfirm === video.id ? (
+                              <span className="flex items-center gap-1">
+                                <span className="text-[10px] text-red-400">Sil?</span>
+                                <button onClick={() => handleDelete(video.id)} disabled={deleteMutation.isPending} className="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50">{deleteMutation.isPending ? "…" : "Evet"}</button>
+                                <button onClick={() => setDeleteConfirm(null)} disabled={deleteMutation.isPending} className="px-2 py-0.5 rounded text-[10px] bg-[#2a2a2a] text-[#666] hover:bg-[#333]">Hayır</button>
+                              </span>
+                            ) : (
+                              <button onClick={() => setDeleteConfirm(video.id)} title="Sil" className="p-1.5 rounded hover:bg-red-900/30 text-[#666] hover:text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                            )}
+                          </div>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ── Mobile card list (< md) ── */}
+          <div className="md:hidden space-y-2">
+            {videos.filter(v => !search || v.title.toLowerCase().includes(search.toLowerCase())).map(video => (
+              <div key={video.id} className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3">
+                {editId === video.id ? (
+                  <div className="space-y-2">
+                    <input value={editData.title} onChange={e => setEditData((p: any) => ({...p, title: e.target.value}))} className="w-full bg-[#252525] border border-[#333] rounded px-3 py-2 text-sm text-white" placeholder="Başlık" />
+                    <textarea value={editData.description || ""} onChange={e => setEditData((p: any) => ({...p, description: e.target.value}))} className="w-full bg-[#252525] border border-[#333] rounded px-3 py-2 text-sm text-white h-16 resize-none" placeholder="Açıklama" />
+                    <select value={editData.categoryId || ""} onChange={e => setEditData((p: any) => ({...p, categoryId: e.target.value ? Number(e.target.value) : null}))} className="w-full bg-[#252525] border border-[#333] rounded px-3 py-2 text-sm text-white">
+                      <option value="">Kategori Seç</option>
+                      {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm text-[#aaa]"><input type="checkbox" checked={editData.isPremium || false} onChange={e => setEditData((p: any) => ({...p, isPremium: e.target.checked}))} className="accent-primary" /> Premium</label>
+                      <label className="flex items-center gap-2 text-sm text-[#aaa]"><input type="checkbox" checked={editData.isPPV || false} onChange={e => setEditData((p: any) => ({...p, isPPV: e.target.checked}))} className="accent-primary" /> PPV</label>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditId(null)} className="flex-1 py-2 rounded-lg text-sm bg-[#333] text-[#aaa]">İptal</button>
+                      <button onClick={handleSave} disabled={updateMutation.isPending} className="flex-1 py-2 rounded-lg text-sm bg-primary text-white disabled:opacity-60">{updateMutation.isPending ? "Kaydediliyor…" : "Kaydet"}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Card header */}
+                    <div className="flex gap-3 items-start">
+                      {video.thumbnailUrl
+                        ? <img src={video.thumbnailUrl} className="w-16 h-10 object-cover rounded shrink-0" />
+                        : <div className="w-16 h-10 bg-[#2a2a2a] rounded shrink-0 flex items-center justify-center"><Video className="h-4 w-4 text-[#555]" /></div>
+                      }
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-[#ddd] text-sm leading-snug line-clamp-2">{video.title}</p>
+                        <p className="text-xs text-[#555] mt-0.5">#{video.id} · {video.category?.name || "Kategorisiz"} · {video.viewCount?.toLocaleString() || 0} izlenme</p>
+                      </div>
+                    </div>
+
+                    {/* Badges */}
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      <span className={cn("text-[11px] px-2 py-0.5 rounded-full", video.isPublished ? "bg-green-900/40 text-green-400" : "bg-[#333] text-[#666]")}>{video.isPublished ? "Yayında" : "Gizli"}</span>
+                      {video.isPremium && <span className="text-[11px] px-2 py-0.5 rounded-full bg-yellow-900/30 text-yellow-400">Premium</span>}
+                      {video.isPPV && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400">PPV</span>}
+                    </div>
+
+                    {/* Action row */}
+                    <div className="flex items-center gap-1 mt-2.5 pt-2.5 border-t border-[#2a2a2a]">
+                      <button onClick={() => setPlayersVideoId(video.id)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#222] text-[#888] hover:text-primary text-xs transition-colors"><Video className="h-3.5 w-3.5" /> Oynatıcı</button>
+                      <button onClick={() => handleTogglePublish(video)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#222] text-[#888] hover:text-yellow-400 text-xs transition-colors">{video.isPublished ? <><EyeOff className="h-3.5 w-3.5" /> Gizle</> : <><Eye className="h-3.5 w-3.5" /> Yayınla</>}</button>
+                      <button onClick={() => handleEdit(video)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#222] text-[#888] hover:text-white text-xs transition-colors"><Edit2 className="h-3.5 w-3.5" /> Düzenle</button>
+                      {deleteConfirm === video.id ? (
+                        <div className="flex-1 flex items-center gap-1">
+                          <button onClick={() => handleDelete(video.id)} disabled={deleteMutation.isPending} className="flex-1 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-medium disabled:opacity-50 touch-manipulation">{deleteMutation.isPending ? "…" : "Evet, Sil"}</button>
+                          <button onClick={() => setDeleteConfirm(null)} disabled={deleteMutation.isPending} className="flex-1 py-1.5 rounded-lg bg-[#2a2a2a] text-[#666] text-xs touch-manipulation">İptal</button>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 justify-end">
-                          <button onClick={() => setPlayersVideoId(video.id)} title="Oynatıcılar" className="p-1.5 rounded hover:bg-[#333] text-[#666] hover:text-primary transition-colors">
-                            <Video className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => updateMutation.mutate({ id: video.id, data: { isPremium: !video.isPremium } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["videos"] }) })}
-                            title={video.isPremium ? "Premium Kaldır" : "Premium Yap"}
-                            className={cn("p-1.5 rounded hover:bg-[#333] transition-colors", video.isPremium ? "text-yellow-400" : "text-[#666] hover:text-yellow-400")}
-                          >
-                            <Crown className="h-3.5 w-3.5" />
-                          </button>
-                          <button onClick={() => handleTogglePublish(video)} title={video.isPublished ? "Gizle" : "Yayınla"} className="p-1.5 rounded hover:bg-[#333] text-[#666] hover:text-yellow-400 transition-colors">
-                            {video.isPublished ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                          </button>
-                          <button onClick={() => handleEdit(video)} title="Düzenle" className="p-1.5 rounded hover:bg-[#333] text-[#666] hover:text-white transition-colors">
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          {deleteConfirm === video.id ? (
-                            <span className="flex items-center gap-1">
-                              <span className="text-[10px] text-red-400">Sil?</span>
-                              <button onClick={() => handleDelete(video.id)} className="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30">Evet</button>
-                              <button onClick={() => setDeleteConfirm(null)} className="px-2 py-0.5 rounded text-[10px] bg-[#2a2a2a] text-[#666] hover:bg-[#333]">Hayır</button>
-                            </span>
-                          ) : (
-                            <button onClick={() => setDeleteConfirm(video.id)} title="Sil" className="p-1.5 rounded hover:bg-red-900/30 text-[#666] hover:text-red-400 transition-colors">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-              {videos.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-[#555] text-sm">
-                    Henüz video yok. "Video Ekle" butonuyla ilk videoyu ekleyebilirsiniz.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                      ) : (
+                        <button onClick={() => setDeleteConfirm(video.id)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#222] text-[#666] hover:text-red-400 hover:bg-red-900/20 text-xs transition-colors touch-manipulation"><Trash2 className="h-3.5 w-3.5" /> Sil</button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {totalPages > 1 && (
