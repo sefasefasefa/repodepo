@@ -9,7 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from apps.videos.models import Video
 
 from .dispatcher import dispatch_for_video, test_login
-from .models import CrossPostJob, CrossPostSite
+from .models import CrossPostJob, CrossPostSite, PROVIDER_CATALOG
 
 
 def _site_or_404(user, site_id):
@@ -17,6 +17,32 @@ def _site_or_404(user, site_id):
         return CrossPostSite.objects.get(id=site_id, user=user)
     except CrossPostSite.DoesNotExist:
         return None
+
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def provider_catalog(request):
+    """Tam sağlayıcı kataloğunu döner. Kullanıcının yapılandırdığı sitelerle eşleştirir."""
+    user_sites = CrossPostSite.objects.filter(user=request.user).values(
+        'id', 'provider_key', 'enabled', 'name'
+    )
+    configured = {s['provider_key']: s for s in user_sites}
+
+    result = []
+    for p in PROVIDER_CATALOG:
+        entry = dict(p)
+        site = configured.get(p['key'])
+        if site:
+            entry['siteId'] = site['id']
+            entry['configured'] = True
+            entry['enabled'] = site['enabled']
+        else:
+            entry['siteId'] = None
+            entry['configured'] = False
+            entry['enabled'] = False
+        result.append(entry)
+    return Response({'providers': result})
 
 
 @api_view(['GET', 'POST'])
@@ -30,10 +56,18 @@ def sites_list_create(request):
     d = request.data or {}
     if not d.get('name'):
         return Response({'error': 'name zorunlu'}, status=400)
+
+    provider_key = d.get('providerKey', '') or ''
+    catalog_entry = next((p for p in PROVIDER_CATALOG if p['key'] == provider_key), None)
+
     site = CrossPostSite.objects.create(
         user=request.user,
         name=d.get('name'),
-        base_url=d.get('baseUrl', '') or '',
+        provider_key=provider_key,
+        accepts_adult=catalog_entry['acceptsAdult'] if catalog_entry else bool(d.get('acceptsAdult', False)),
+        provider_color=catalog_entry['color'] if catalog_entry else (d.get('providerColor', '') or ''),
+        provider_letter=catalog_entry['letter'] if catalog_entry else (d.get('providerLetter', '') or ''),
+        base_url=catalog_entry['baseUrl'] if catalog_entry else (d.get('baseUrl', '') or ''),
         upload_endpoint=d.get('uploadEndpoint', '') or '',
         login_endpoint=d.get('loginEndpoint', '') or '',
         adapter=d.get('adapter', 'generic_webhook'),

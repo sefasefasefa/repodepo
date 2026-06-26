@@ -33,8 +33,10 @@ export interface UploadMeta {
   description?: string;
   categoryId?: number;
   isPremium?: boolean;
+  isAdult?: boolean;
   type?: "video" | "short";
   scheduledPublishAt?: string | null;
+  crosspostSiteIds?: number[];
 }
 
 const INITIAL: ChunkUploadState = {
@@ -232,8 +234,10 @@ export function useChunkedUpload() {
             description: meta.description ?? "",
             categoryId: meta.categoryId,
             isPremium: meta.isPremium ?? false,
+            isAdult: meta.isAdult ?? false,
             type: meta.type ?? "video",
             scheduledPublishAt: meta.scheduledPublishAt ?? null,
+            crosspostSiteIds: meta.crosspostSiteIds ?? [],
           }),
         });
         if (!res.ok) {

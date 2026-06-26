@@ -9,9 +9,10 @@ import { cn } from "@/lib/utils";
 import {
   Upload, FileVideo, X, Pause, Play, CheckCircle2,
   AlertTriangle, Loader2, Zap, Clock, BarChart2, Layers,
-  Camera, RefreshCw, ImageIcon, CalendarClock
+  Camera, RefreshCw, ImageIcon, CalendarClock, Share2
 } from "lucide-react";
 import { Link } from "wouter";
+import { ProviderSelector } from "./provider-selector";
 
 const ACCEPTED = ".mp4,.m4v,.mkv,.avi,.mov,.wmv,.flv,.webm,.ts";
 
@@ -73,13 +74,16 @@ export function ChunkedUploadZone({ onDone }: Props) {
     title: "",
     description: "",
     isPremium: false,
+    isAdult: false,
     type: "video",
     categoryId: undefined,
     scheduledPublishAt: null,
+    crosspostSiteIds: [],
   });
 
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleValue, setScheduleValue] = useState("");
+  const [showProviders, setShowProviders] = useState(false);
 
   // ── Thumbnail state ──────────────────────────────────────────────────────
   const [thumbBlob, setThumbBlob] = useState<Blob | null>(null);
@@ -479,16 +483,29 @@ export function ChunkedUploadZone({ onDone }: Props) {
               </div>
             </div>
 
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <button
-                type="button"
-                onClick={() => setMeta((m) => ({ ...m, isPremium: !m.isPremium }))}
-                className={cn("relative w-10 h-5 rounded-full transition-all shrink-0", meta.isPremium ? "bg-primary" : "bg-[#333]")}
-              >
-                <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", meta.isPremium ? "left-5" : "left-0.5")} />
-              </button>
-              <span className="text-sm text-[#aaa]">Premium içerik</span>
-            </label>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-2.5 cursor-pointer flex-1">
+                <button
+                  type="button"
+                  onClick={() => setMeta((m) => ({ ...m, isPremium: !m.isPremium }))}
+                  className={cn("relative w-10 h-5 rounded-full transition-all shrink-0", meta.isPremium ? "bg-primary" : "bg-[#333]")}
+                >
+                  <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", meta.isPremium ? "left-5" : "left-0.5")} />
+                </button>
+                <span className="text-sm text-[#aaa]">Premium içerik</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 cursor-pointer flex-1">
+                <button
+                  type="button"
+                  onClick={() => setMeta((m) => ({ ...m, isAdult: !m.isAdult }))}
+                  className={cn("relative w-10 h-5 rounded-full transition-all shrink-0", meta.isAdult ? "bg-red-500" : "bg-[#333]")}
+                >
+                  <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", meta.isAdult ? "left-5" : "left-0.5")} />
+                </button>
+                <span className="text-sm text-[#aaa]">+18 İçerik</span>
+              </label>
+            </div>
 
             {/* Zamanlanmış yayın */}
             <div className="space-y-2.5">
@@ -514,6 +531,42 @@ export function ChunkedUploadZone({ onDone }: Props) {
                       Video {new Date(scheduleValue).toLocaleString("tr-TR")} tarihinde yayınlanacak
                     </p>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* Sağlayıcı seçimi */}
+            <div className="border border-[#1e1e1e] rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowProviders((v) => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#161616] transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Share2 className="h-4 w-4 text-[#666]" />
+                  <div>
+                    <span className="text-sm text-[#aaa] font-medium">
+                      Sağlayıcılara Paylaş
+                    </span>
+                    {(meta.crosspostSiteIds?.length ?? 0) > 0 && (
+                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full bg-primary/20 text-primary text-[10px] font-bold">
+                        {meta.crosspostSiteIds!.length} seçili
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className={cn("text-[#444] text-xs transition-transform", showProviders && "rotate-180")}>
+                  ▼
+                </span>
+              </button>
+
+              {showProviders && (
+                <div className="p-4 border-t border-[#1e1e1e] bg-[#0d0d0d]">
+                  <ProviderSelector
+                    isAdult={meta.isAdult ?? false}
+                    selectedIds={meta.crosspostSiteIds ?? []}
+                    onChange={(ids) => setMeta((m) => ({ ...m, crosspostSiteIds: ids }))}
+                  />
                 </div>
               )}
             </div>
