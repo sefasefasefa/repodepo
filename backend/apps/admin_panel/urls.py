@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import seo_webhook_views as sw
+from . import webhook_views as wh
 from . import moderation_views as mod
 from . import developer_views as dev
 from . import abtests_views as abt
@@ -41,12 +42,24 @@ urlpatterns = [
     path('admin/ads/<int:ad_id>', views.delete_ad),
     path('admin/badges', views.manage_badges),
     path('admin/badges/award/<int:user_id>', views.award_badge),
-    # SEO / Webhook / Watermark admin settings (FE-expected paths)
+    # SEO / Watermark admin settings
     path('seo/admin/settings', sw.seo_settings),
     path('seo/public/settings', sw.public_seo_settings),
-    path('webhooks/admin/settings', sw.webhook_settings),
     path('watermark/admin/settings', sw.watermark_admin_settings),
     path('watermark/admin/upload', sw.watermark_upload),
+    # Legacy webhook settings (kept for compat)
+    path('webhooks/admin/settings', sw.webhook_settings),
+    # Modern webhook management
+    path('webhooks/admin/global', wh.global_toggle),
+    path('webhooks/admin/stats', wh.webhook_stats),
+    path('webhooks/admin/fire', wh.manual_fire),
+    path('webhooks/admin/endpoints', wh.endpoint_list),
+    path('webhooks/admin/endpoints/<int:ep_id>', wh.endpoint_detail),
+    path('webhooks/admin/endpoints/<int:ep_id>/toggle', wh.endpoint_toggle),
+    path('webhooks/admin/endpoints/<int:ep_id>/test', wh.endpoint_test),
+    path('webhooks/admin/deliveries', wh.delivery_list),
+    path('webhooks/admin/deliveries/<int:delivery_id>', wh.delivery_detail),
+    path('webhooks/admin/deliveries/<int:delivery_id>/retry', wh.delivery_retry),
     path('admin/pages', views.list_custom_pages),
     path('admin/pages/create', views.create_custom_page),
     # Public pages + admin CRUD (Express /api/pages parity)

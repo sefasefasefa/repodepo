@@ -18,9 +18,7 @@ class SiteSettings(models.Model):
         db_table = 'site_settings'
 
 
-# ─── Developer API config (Express api_endpoints + api_clients) ────────────────
 class ApiEndpointConfig(models.Model):
-    """Configurable public API endpoint shown on the developer page."""
     name = models.CharField(max_length=200)
     description = models.TextField(default='')
     url = models.TextField()
@@ -50,7 +48,6 @@ class ApiClient(models.Model):
         ordering = ['-created_at']
 
 
-# ─── CDN configurations (admin) ───────────────────────────────────────────────
 class CdnConfig(models.Model):
     provider = models.CharField(max_length=50)
     name = models.CharField(max_length=200)
@@ -69,7 +66,6 @@ class CdnConfig(models.Model):
         ordering = ['-created_at']
 
 
-# ─── Third-party integrations (Streamtape/Doodstream/Mixdrop) ─────────────────
 class IntegrationConfig(models.Model):
     platform = models.CharField(max_length=50)
     name = models.CharField(max_length=200)
@@ -87,16 +83,11 @@ class IntegrationConfig(models.Model):
         ordering = ['-created_at']
 
 
-# A/B test models live in apps.core (AbTest, AbTestVariant, AbTestAssignment).
-
-
-# ─── Payment gateway configs (admin) ──────────────────────────────────────────
 class PaymentGateway(models.Model):
     TYPE_CHOICES = [
         ('stripe', 'Stripe'), ('paypal', 'PayPal'),
         ('crypto', 'Crypto'), ('papara', 'Papara'),
     ]
-
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     name = models.CharField(max_length=200)
     public_key = models.TextField(null=True, blank=True)
@@ -119,21 +110,6 @@ class PaymentGateway(models.Model):
 
 
 class SeoSettings(models.Model):
-    ROBOTS_CHOICES = [
-        ('index,follow', 'index,follow'),
-        ('noindex,follow', 'noindex,follow'),
-        ('index,nofollow', 'index,nofollow'),
-        ('noindex,nofollow', 'noindex,nofollow'),
-    ]
-    OG_TYPE_CHOICES = [
-        ('website', 'website'), ('article', 'article'),
-        ('video.other', 'video.other'), ('profile', 'profile'),
-    ]
-    TWITTER_CARD_CHOICES = [
-        ('summary', 'summary'),
-        ('summary_large_image', 'summary_large_image'),
-        ('player', 'player'),
-    ]
     site_title = models.CharField(max_length=200, default='Prnhbbbb')
     site_description = models.TextField(default='Video streaming ve sosyal platform')
     keywords = models.TextField(default='video, streaming, creator, sosyal')
@@ -158,6 +134,7 @@ class SeoSettings(models.Model):
         db_table = 'seo_settings'
 
 
+# ─── Legacy single-row webhook settings (kept for migration compat) ────────────
 class WebhookSettings(models.Model):
     is_enabled = models.BooleanField(default=False)
     endpoint_url = models.TextField(default='')
@@ -168,3 +145,93 @@ class WebhookSettings(models.Model):
 
     class Meta:
         db_table = 'webhook_settings'
+
+
+# ─── Modern webhook system ──────────────────────────────────────────────────────
+class WebhookEndpoint(models.Model):
+    PLATFORM_CHOICES = [
+        ('discord',   'Discord'),
+        ('slack',     'Slack'),
+        ('zapier',    'Zapier'),
+        ('make',      'Make (Integromat)'),
+        ('n8n',       'n8n'),
+        ('ifttt',     'IFTTT'),
+        ('pipedream', 'Pipedream'),
+        ('teams',     'Microsoft Teams'),
+        ('telegram',  'Telegram Bot'),
+        ('custom',    'Custom HTTP'),
+    ]
+    STATUS_CHOICES = [
+        ('active',    'Active'),
+        ('paused',    'Paused'),
+        ('failing',   'Failing'),
+        ('unknown',   'Unknown'),
+    ]
+
+    name          = models.CharField(max_length=200)
+    platform      = models.CharField(max_length=30, choices=PLATFORM_CHOICES, default='custom')
+    url           = models.TextField()
+    secret        = models.CharField(max_length=500, blank=True, default='')
+    events        = models.JSONField(default=list)   # list of event strings
+    is_enabled    = models.BooleanField(default=True)
+    status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unknown')
+    # Stats (denormalized for speed)
+    total_deliveries    = models.IntegerField(default=0)
+    success_deliveries  = models.IntegerField(default=0)
+    last_triggered_at   = models.DateTimeField(null=True, blank=True)
+    last_status_code    = models.IntegerField(null=True, blank=True)
+    # Retry config
+    max_retries   = models.IntegerField(default=3)
+    timeout_secs  = models.IntegerField(default=10)
+    # Metadata
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table    = 'webhook_endpoints'
+        ordering    = ['-created_at']
+
+    def __str__(self):
+        return f'{self.name} ({self.platform})'
+
+    @property
+    def success_rate(self):
+        if self.total_deliveries == 0:
+            return None
+        return round(self.success_deliveries / self.total_deliveries * 100, 1)
+
+
+class WebhookDelivery(models.Model):
+    STATUS_CHOICES = [
+        ('pending',   'Pending'),
+        ('success',   'Success'),
+        ('failed',    'Failed'),
+        ('retrying',  'Retrying'),
+    ]
+
+    endpoint        = models.ForeignKey(WebhookEndpoint, on_delete=models.CASCADE, related_name='deliveries')
+    event           = models.CharField(max_length=100)
+    payload         = models.JSONField(default=dict)      # original event payload
+    request_body    = models.TextField(blank=True)        # actual body sent (formatted for platform)
+    request_headers = models.JSONField(default=dict)
+    response_status = models.IntegerField(null=True, blank=True)
+    response_body   = models.TextField(blank=True)
+    response_time_ms= models.IntegerField(null=True, blank=True)
+    status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    attempt         = models.IntegerField(default=1)
+    max_attempts    = models.IntegerField(default=3)
+    error           = models.TextField(blank=True)
+    triggered_at    = models.DateTimeField(auto_now_add=True)
+    delivered_at    = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'webhook_deliveries'
+        ordering = ['-triggered_at']
+        indexes  = [
+            models.Index(fields=['endpoint', '-triggered_at']),
+            models.Index(fields=['event', '-triggered_at']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f'{self.event} → {self.endpoint.name} [{self.status}]'
