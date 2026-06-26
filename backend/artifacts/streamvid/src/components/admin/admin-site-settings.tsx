@@ -18,7 +18,7 @@ const API_BASE = "/api";
 function GeneralTab() {
   const { reload } = usePublicSiteSettings();
   const { token } = useAuth() as any;
-  const [form, setForm] = useState<any>(null);
+  const [form, setForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -66,7 +66,6 @@ function GeneralTab() {
     }
   };
 
-  if (!form) return <div className="py-10 text-center text-[#555] text-sm">Yükleniyor...</div>;
 
   return (
     <div className="space-y-4">
@@ -150,9 +149,9 @@ function AutoCategoryTab() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) { setLoaded(true); return; }
     fetch(`${API_BASE}/auto-category/rules`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(d => {
         if (d.rules) {
           const map: Record<number, { keywords: string[]; isEnabled: boolean }> = {};
@@ -281,7 +280,7 @@ function InlineEdit({ value, onChange }: { value: string; onChange: (v: string) 
 // ── WatermarkTab ─────────────────────────────────────────────────────────────
 function WatermarkTab() {
   const { token } = useAuth() as any;
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
   const [uploading, setUploading] = useState(false);
@@ -289,11 +288,14 @@ function WatermarkTab() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/watermark/admin/settings", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    const d = await r.json();
-    setSettings(d.settings ?? null); setForm(d.settings || {});
+    try {
+      const r = await fetch("/api/watermark/admin/settings", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) { setSettings({}); return; }
+      const d = await r.json();
+      setSettings(d.settings ?? {}); setForm(d.settings || {});
+    } catch { setSettings({}); }
   }, [token]);
 
   useEffect(() => { load(); }, [load]);
@@ -324,7 +326,6 @@ function WatermarkTab() {
     finally { setUploading(false); }
   };
 
-  if (!settings) return <div className="flex items-center justify-center h-32 text-[#555] text-sm">Yükleniyor...</div>;
 
   const positions = [
     { value: "top-left", label: "Sol Üst" }, { value: "top-right", label: "Sağ Üst" },
@@ -460,7 +461,7 @@ function WatermarkTab() {
 // ── SeoTab ───────────────────────────────────────────────────────────────────
 function SeoTab() {
   const { token } = useAuth() as any;
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [activeSection, setActiveSection] = useState<"basic" | "og" | "twitter" | "advanced" | "analytics">("basic");
@@ -469,9 +470,9 @@ function SeoTab() {
   useEffect(() => {
     if (!token) return;
     fetch("/api/seo/admin/settings", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(d => setSettings(d.settings || {}))
-      .catch(() => setSettings({}));
+      .catch(() => {});
   }, [token]);
 
   const save = async () => {
@@ -499,8 +500,6 @@ function SeoTab() {
     navigator.clipboard.writeText(meta);
     setCopied(true); setTimeout(() => setCopied(false), 2000);
   };
-
-  if (!settings) return <div className="py-10 text-center text-[#555] text-sm">Yükleniyor...</div>;
 
   const sectionTabs = [
     { id: "basic", label: "Temel", icon: Globe },
