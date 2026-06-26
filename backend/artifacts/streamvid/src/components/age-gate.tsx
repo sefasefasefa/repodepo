@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Shield, AlertTriangle, X } from "lucide-react";
+import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 
 const AGE_KEY = "prnhbbbb_age_verified";
 const DENIED_KEY = "prnhbbbb_age_denied";
@@ -8,6 +9,8 @@ const BYPASS_PATHS = ["/login", "/register"];
 
 export function AgeGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"loading" | "pending" | "verified" | "denied">("loading");
+  const { settings } = usePublicSiteSettings();
+  const siteName = settings.siteName || "Prnhbbbb";
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -62,7 +65,7 @@ export function AgeGate({ children }: { children: React.ReactNode }) {
             <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Shield className="h-7 w-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight mb-1">Prnhbbbb</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight mb-1">{siteName}</h1>
             <p className="text-[#666] text-xs uppercase tracking-widest font-medium">18+ Platform</p>
           </div>
 
@@ -97,7 +100,7 @@ export function AgeGate({ children }: { children: React.ReactNode }) {
               Bu platformda yazılı mesajlar, sesli mesajlar, arama kayıtları ve yüklenen medya içerikleri sunucuda saklanabilir; kalite ve depolama amacıyla otomatik sıkıştırma/optimizasyon uygulanabilir. Bu kayıtlar daha sonra güvenlik, hizmet geliştirme ve yapay zeka modeli eğitimi için kullanılabilir.
             </p>
             <p className="text-[#444] text-[10px]">
-              © 2025 Prnhbbbb. Tüm hakları saklıdır. 18+ Platform.
+              © 2025 {siteName}. Tüm hakları saklıdır. 18+ Platform.
             </p>
           </div>
         </div>

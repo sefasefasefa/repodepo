@@ -34,6 +34,7 @@ urlpatterns = [
     path('admin/withdrawals/<int:wr_id>/process', views.process_withdrawal),
     path('admin/creator-applications', views.list_creator_applications),
     path('admin/creator-applications/<int:app_id>/process', views.process_creator_application),
+    path('site-config', views.public_site_config),
     path('admin/settings', views.get_site_settings),
     path('admin/settings/update', views.update_site_settings),
     path('admin/ads', views.manage_ads),

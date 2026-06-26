@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { useSidebar } from "@/lib/sidebar-context";
 import { useNotifications } from "@/lib/use-notifications";
 import { useSiteConfig } from "@/lib/use-site-config";
+import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 import {
   X, PlayCircle, FastForward, ThumbsUp, Flame, Star,
   ChevronDown, ChevronUp, ChevronRight, ListVideo, Image, Users, Shield,
@@ -75,6 +76,8 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const { config } = useSiteConfig();
+  const { settings: siteSettings } = usePublicSiteSettings();
+  const siteName = siteSettings.siteName || "Prnhbbbb";
   const [modelsExpanded, setModelsExpanded] = useState(false);
   const [topCatsExpanded, setTopCatsExpanded] = useState(false);
   const [communityExpanded, setCommunityExpanded] = useState(false);
@@ -129,8 +132,14 @@ export function Sidebar() {
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#2c2c2c] shrink-0">
           <Link href="/" onClick={onClose}>
             <div className="flex items-center gap-1 cursor-pointer">
-              <div className="bg-primary text-white px-1.5 py-0.5 rounded text-[17px] font-black leading-none">P</div>
-              <span className="text-[17px] font-black text-white tracking-tight">rnhbbbb</span>
+              {siteSettings.logoUrl ? (
+                <img src={siteSettings.logoUrl} alt={siteName} className="h-7 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              ) : (
+                <>
+                  <div className="bg-primary text-white px-1.5 py-0.5 rounded text-[17px] font-black leading-none">{siteName[0]}</div>
+                  <span className="text-[17px] font-black text-white tracking-tight">{siteName.slice(1)}</span>
+                </>
+              )}
             </div>
           </Link>
           <button className="text-white w-8 h-8 flex items-center justify-center rounded hover:bg-white/10 transition-colors" onClick={onClose}>

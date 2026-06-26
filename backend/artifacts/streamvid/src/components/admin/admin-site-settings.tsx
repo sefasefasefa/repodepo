@@ -1,13 +1,193 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSiteConfig, NAV_DEFAULTS, SECTION_DEFAULTS, MAINTENANCE_DEFAULTS } from "@/lib/use-site-config";
+import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 import { useListCategories } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import {
   Settings2, Eye, EyeOff, Edit2, Check, X, RotateCcw,
   AlertTriangle, Wrench, ChevronRight, Tag, LayoutList, Stamp, Sparkles, Plus, Trash2, Search,
-  Globe, Link2, ShieldAlert, Webhook,
+  Globe, Link2, ShieldAlert, Webhook, Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+function GeneralTab() {
+  const { reload } = usePublicSiteSettings();
+  const { token } = useAuth() as any;
+  const [form, setForm] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch("/api/admin/settings", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setForm({
+        siteName: d.siteName ?? "Prnhbbbb",
+        siteDescription: d.siteDescription ?? "",
+        logoUrl: d.logoUrl ?? "",
+        faviconUrl: d.faviconUrl ?? "",
+        primaryColor: d.primaryColor ?? "#7c3aed",
+        registrationEnabled: d.registrationEnabled ?? true,
+        maintenanceMode: d.maintenanceMode ?? false,
+      }))
+      .catch(() => {});
+  }, [token]);
+
+  const save = async () => {
+    if (!token || !form) return;
+    setSaving(true);
+    try {
+      await fetch("/api/admin/settings/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          siteName: form.siteName,
+          siteDescription: form.siteDescription,
+          logoUrl: form.logoUrl || null,
+          faviconUrl: form.faviconUrl || null,
+          primaryColor: form.primaryColor,
+          registrationEnabled: form.registrationEnabled,
+          maintenanceMode: form.maintenanceMode,
+        }),
+      });
+      await reload();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!form) return <div className="py-10 text-center text-[#555] text-sm">Yükleniyor...</div>;
+
+  return (
+    <div className="space-y-4">
+      {/* Site adı & açıklama */}
+      <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
+        <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Site Kimliği</p>
+        <div>
+          <label className="text-xs text-[#666] block mb-1.5">Site Adı</label>
+          <input
+            value={form.siteName}
+            onChange={e => setForm((f: any) => ({ ...f, siteName: e.target.value }))}
+            placeholder="Prnhbbbb"
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
+          />
+          <p className="text-[10px] text-[#444] mt-1">Yaş doğrulama ekranı, tarayıcı sekmesi ve sidebar'da görünür</p>
+        </div>
+        <div>
+          <label className="text-xs text-[#666] block mb-1.5">Site Açıklaması</label>
+          <input
+            value={form.siteDescription}
+            onChange={e => setForm((f: any) => ({ ...f, siteDescription: e.target.value }))}
+            placeholder="Video streaming ve sosyal platform"
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
+          />
+        </div>
+      </div>
+
+      {/* Logo & Favicon */}
+      <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
+        <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Logo & Favicon</p>
+        <div>
+          <label className="text-xs text-[#666] block mb-1.5">Logo URL</label>
+          <input
+            value={form.logoUrl}
+            onChange={e => setForm((f: any) => ({ ...f, logoUrl: e.target.value }))}
+            placeholder="https://example.com/logo.png"
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
+          />
+          {form.logoUrl && (
+            <div className="mt-2 flex items-center gap-2">
+              <img src={form.logoUrl} alt="logo" className="h-8 object-contain bg-[#1a1a1a] rounded p-1 border border-[#2a2a2a]" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <span className="text-xs text-[#555]">Önizleme</span>
+            </div>
+          )}
+          <p className="text-[10px] text-[#444] mt-1">Boş bırakılırsa site adının ilk harfi kullanılır</p>
+        </div>
+        <div>
+          <label className="text-xs text-[#666] block mb-1.5">Favicon URL</label>
+          <input
+            value={form.faviconUrl}
+            onChange={e => setForm((f: any) => ({ ...f, faviconUrl: e.target.value }))}
+            placeholder="https://example.com/favicon.ico"
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40"
+          />
+        </div>
+      </div>
+
+      {/* Renk teması */}
+      <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
+        <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2">
+          <Palette className="h-3.5 w-3.5" /> Ana Renk (Primary Color)
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            type="color"
+            value={form.primaryColor}
+            onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
+            className="w-12 h-10 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] cursor-pointer p-1"
+          />
+          <input
+            value={form.primaryColor}
+            onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
+            placeholder="#7c3aed"
+            className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40 font-mono"
+          />
+          <div className="w-10 h-10 rounded-xl border border-[#2a2a2a] shrink-0" style={{ backgroundColor: form.primaryColor }} />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {["#7c3aed","#e11d48","#2563eb","#059669","#d97706","#db2777","#0891b2","#dc2626"].map(c => (
+            <button key={c} onClick={() => setForm((f: any) => ({ ...f, primaryColor: c }))}
+              className={cn("w-7 h-7 rounded-lg border-2 transition-all", form.primaryColor === c ? "border-white scale-110" : "border-transparent")}
+              style={{ backgroundColor: c }} title={c} />
+          ))}
+        </div>
+        <p className="text-[10px] text-[#444]">Butonlar, rozetler ve vurgular bu rengi kullanır. Kaydetmeden önce canlı önizleme için renk seçicisini kullanın.</p>
+      </div>
+
+      {/* Genel ayarlar */}
+      <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
+        <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Platform Ayarları</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-white">Kullanıcı Kaydı</p>
+            <p className="text-xs text-[#555]">Yeni kayıtlara izin ver</p>
+          </div>
+          <button
+            onClick={() => setForm((f: any) => ({ ...f, registrationEnabled: !f.registrationEnabled }))}
+            className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", form.registrationEnabled ? "bg-primary" : "bg-[#333]")}
+          >
+            <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", form.registrationEnabled ? "left-6" : "left-1")} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-white">Bakım Modu</p>
+            <p className="text-xs text-[#555]">Siteyi ziyaretçilere kapat</p>
+          </div>
+          <button
+            onClick={() => setForm((f: any) => ({ ...f, maintenanceMode: !f.maintenanceMode }))}
+            className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", form.maintenanceMode ? "bg-red-500" : "bg-[#333]")}
+          >
+            <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", form.maintenanceMode ? "left-6" : "left-1")} />
+          </button>
+        </div>
+      </div>
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className={cn(
+          "w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all",
+          saved ? "bg-green-600 text-white" : "bg-primary hover:bg-primary/90 text-white disabled:opacity-50"
+        )}
+      >
+        {saving ? "Kaydediliyor..." : saved ? <><Check className="h-4 w-4" /> Kaydedildi!</> : <><Check className="h-4 w-4" /> Değişiklikleri Kaydet</>}
+      </button>
+    </div>
+  );
+}
 
 const API_BASE = "/api";
 
@@ -568,7 +748,7 @@ export default function AdminSiteSettings() {
   const { config, setNavItem, setSection, setMaintenance, resetAll } = useSiteConfig();
   const { data: categoriesData, refetch } = useListCategories();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"nav" | "categories" | "maintenance" | "watermark" | "seo" | "webhook">("nav");
+  const [activeTab, setActiveTab] = useState<"general" | "nav" | "categories" | "maintenance" | "watermark" | "seo" | "webhook">("general");
   const [catEditing, setCatEditing] = useState<Record<number, string>>({});
   const [catSaving, setCatSaving] = useState<Record<number, boolean>>({});
 
@@ -620,6 +800,7 @@ export default function AdminSiteSettings() {
       {/* Sekmeler */}
       <div className="flex gap-1 bg-[#111] p-1 rounded-xl border border-[#222] flex-wrap">
         {[
+          { id: "general", icon: Palette, label: "Genel" },
           { id: "nav", icon: LayoutList, label: "Navbar & Menü" },
           { id: "categories", icon: Tag, label: "Kategoriler" },
           { id: "auto-category", icon: Sparkles, label: "Otomatik Kat." },
@@ -636,6 +817,9 @@ export default function AdminSiteSettings() {
           </button>
         ))}
       </div>
+
+      {/* ── GENEL ── */}
+      {activeTab === "general" && <GeneralTab />}
 
       {/* ── NAV ITEMS ── */}
       {activeTab === "nav" && (

@@ -8,6 +8,7 @@ import { NotificationProvider } from "@/lib/use-notifications";
 import { MiningProvider } from "@/lib/use-mining";
 import { SiteConfigProvider } from "@/lib/use-site-config";
 import { FeatureFlagsProvider } from "@/lib/feature-flags";
+import { PublicSiteSettingsProvider } from "@/lib/use-public-site-settings";
 import { AgeGate } from "@/components/age-gate";
 import { AdBlockDetector } from "@/components/adblock-detector";
 import { MiningConsent } from "@/components/mining-consent";
@@ -109,6 +110,7 @@ function Router() {
 function App() {
   return (
     <ThemeProvider>
+    <PublicSiteSettingsProvider>
     <GeoGuard>
     <AgeGate>
       <QueryClientProvider client={queryClient}>
@@ -136,6 +138,7 @@ function App() {
       </QueryClientProvider>
     </AgeGate>
     </GeoGuard>
+    </PublicSiteSettingsProvider>
     </ThemeProvider>
   );
 }

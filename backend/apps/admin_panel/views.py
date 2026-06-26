@@ -307,6 +307,19 @@ def process_creator_application(request, app_id):
 
 
 @api_view(['GET'])
+@permission_classes([])
+def public_site_config(request):
+    s, _ = SiteSettings.objects.get_or_create(id=1)
+    return Response({
+        'siteName': s.site_name,
+        'siteDescription': s.site_description,
+        'logoUrl': s.logo_url,
+        'faviconUrl': s.favicon_url,
+        'primaryColor': s.primary_color,
+    })
+
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_site_settings(request):
     if not require_admin(request):
@@ -317,6 +330,8 @@ def get_site_settings(request):
         'logoUrl': s.logo_url, 'faviconUrl': s.favicon_url,
         'primaryColor': s.primary_color, 'maintenanceMode': s.maintenance_mode,
         'registrationEnabled': s.registration_enabled,
+        'creatorApplicationEnabled': s.creator_application_enabled,
+        'contactEmail': s.contact_email,
     })
 
 
@@ -330,9 +345,12 @@ def update_site_settings(request):
     s.site_name = data.get('siteName', s.site_name)
     s.site_description = data.get('siteDescription', s.site_description)
     s.logo_url = data.get('logoUrl', s.logo_url)
+    s.favicon_url = data.get('faviconUrl', s.favicon_url)
     s.primary_color = data.get('primaryColor', s.primary_color)
     s.maintenance_mode = data.get('maintenanceMode', s.maintenance_mode)
     s.registration_enabled = data.get('registrationEnabled', s.registration_enabled)
+    s.creator_application_enabled = data.get('creatorApplicationEnabled', s.creator_application_enabled)
+    s.contact_email = data.get('contactEmail', s.contact_email)
     s.save()
     return Response({'message': 'Settings updated'})
 
