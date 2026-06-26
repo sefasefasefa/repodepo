@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "oYh5RWTtyP8OYvzbDE8tj"
+uri = "file://AKTARIM_PROMPT.md"
+type = "text"
+title = "Tam Aktarım Promptu"
