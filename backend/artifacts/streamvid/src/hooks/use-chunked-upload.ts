@@ -116,6 +116,19 @@ export function useChunkedUpload() {
         totalBytes: file.size,
       });
 
+      // ── 0. Verify file is readable ────────────────────────────────
+      try {
+        const testSlice = file.slice(0, Math.min(file.size, 1024));
+        await testSlice.arrayBuffer();
+      } catch {
+        setState((s) => ({
+          ...s,
+          status: "error",
+          error: "Dosya okunamadı. iCloud veya Google Drive'da bulunan dosyayı önce cihaza indirin.",
+        }));
+        return;
+      }
+
       // ── 1. Init session ──────────────────────────────────────────
       let uploadId: string;
       let totalChunks: number;
@@ -127,7 +140,8 @@ export function useChunkedUpload() {
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          setState((s) => ({ ...s, status: "error", error: err.error ?? "Başlatma başarısız" }));
+          const msg = err.error ?? err.detail ?? (res.status === 401 || res.status === 403 ? "Giriş yapman gerekiyor" : "Başlatma başarısız");
+          setState((s) => ({ ...s, status: "error", error: msg }));
           return;
         }
         const data = await res.json();
@@ -179,7 +193,7 @@ export function useChunkedUpload() {
               await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
             } else {
               const err = await res.json().catch(() => ({}));
-              setState((s) => ({ ...s, status: "error", error: err.error ?? "Chunk hatası" }));
+              setState((s) => ({ ...s, status: "error", error: err.error ?? err.detail ?? "Parça yükleme hatası" }));
               return;
             }
           } catch {
@@ -242,7 +256,7 @@ export function useChunkedUpload() {
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          setState((s) => ({ ...s, status: "error", error: err.error ?? "Tamamlama başarısız" }));
+          setState((s) => ({ ...s, status: "error", error: err.error ?? err.detail ?? "Tamamlama başarısız" }));
           return;
         }
         const data = await res.json();
