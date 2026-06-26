@@ -217,8 +217,8 @@ export function AdminCreatorApplications() {
   const filtered = apps.filter(a => {
     const matchStatus = filter === "all" || a.status === filter;
     const matchSearch = !search ||
-      a.user.username.toLowerCase().includes(search.toLowerCase()) ||
-      a.user.email.toLowerCase().includes(search.toLowerCase()) ||
+      a.applicant.username.toLowerCase().includes(search.toLowerCase()) ||
+      a.applicant.email.toLowerCase().includes(search.toLowerCase()) ||
       a.reason.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });

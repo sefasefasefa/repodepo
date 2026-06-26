@@ -37,10 +37,13 @@ export function VideoPlayerManager({ videoId, onBack }: { videoId: number; onBac
 
   const load = async () => {
     setLoading(true);
-    const r = await fetch(`/api/videos/${videoId}/players`);
-    const d = await r.json();
-    setPlayers(d.players || []);
-    setLoading(false);
+    try {
+      const r = await fetch(`/api/videos/${videoId}/players`, { headers });
+      if (!r.ok) { setPlayers([]); return; }
+      const d = await r.json();
+      setPlayers(d.players || []);
+    } catch { setPlayers([]); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, [videoId]);

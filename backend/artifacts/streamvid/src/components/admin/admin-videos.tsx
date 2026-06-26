@@ -346,9 +346,10 @@ export function AdminVideos() {
   const totalPages = Math.ceil(total / 20);
   const categories = catsData?.categories ?? [];
 
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+
   const handleDelete = (id: number) => {
-    if (!confirm("Bu videoyu silmek istediğine emin misin?")) return;
-    deleteMutation.mutate({ id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["videos"] }) });
+    deleteMutation.mutate({ id }, { onSuccess: () => { setDeleteConfirm(null); queryClient.invalidateQueries({ queryKey: ["videos"] }); } });
   };
 
   const handleTogglePublish = (video: any) => {
@@ -493,9 +494,17 @@ export function AdminVideos() {
                           <button onClick={() => handleEdit(video)} title="Düzenle" className="p-1.5 rounded hover:bg-[#333] text-[#666] hover:text-white transition-colors">
                             <Edit2 className="h-3.5 w-3.5" />
                           </button>
-                          <button onClick={() => handleDelete(video.id)} title="Sil" className="p-1.5 rounded hover:bg-red-900/30 text-[#666] hover:text-red-400 transition-colors">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          {deleteConfirm === video.id ? (
+                            <span className="flex items-center gap-1">
+                              <span className="text-[10px] text-red-400">Sil?</span>
+                              <button onClick={() => handleDelete(video.id)} className="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30">Evet</button>
+                              <button onClick={() => setDeleteConfirm(null)} className="px-2 py-0.5 rounded text-[10px] bg-[#2a2a2a] text-[#666] hover:bg-[#333]">Hayır</button>
+                            </span>
+                          ) : (
+                            <button onClick={() => setDeleteConfirm(video.id)} title="Sil" className="p-1.5 rounded hover:bg-red-900/30 text-[#666] hover:text-red-400 transition-colors">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </>

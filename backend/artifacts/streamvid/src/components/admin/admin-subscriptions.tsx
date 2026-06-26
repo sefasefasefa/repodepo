@@ -381,10 +381,7 @@ export function AdminSubscriptions() {
                       <Edit3 className="h-3 w-3" /> Düzenle
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm(`"${plan.name}" planını silmek istediğine emin misin?`))
-                          deleteMutation.mutate(plan.id);
-                      }}
+                      onClick={() => deleteMutation.mutate(plan.id)}
                       className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] text-red-500 hover:border-red-800/50 hover:bg-red-900/20 transition-colors"
                     >
                       <Trash2 className="h-3 w-3" />

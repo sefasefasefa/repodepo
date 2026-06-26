@@ -59,29 +59,35 @@ export default function AdminABTests() {
     { name: "Kontrol", description: "", weight: 50 },
     { name: "Varyant A", description: "", weight: 50 },
   ]);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [resetConfirm, setResetConfirm] = useState<number | null>(null);
 
   useEffect(() => { loadTests(); }, []);
 
   const loadTests = async () => {
     setLoading(true);
-    const res = await fetch("/api/admin/ab-tests", { headers: headers() });
-    const data = await res.json();
-    setTests(data.tests ?? []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/ab-tests", { headers: headers() });
+      if (!res.ok) { setTests([]); return; }
+      const data = await res.json();
+      setTests(data.tests ?? []);
+    } catch { setTests([]); }
+    finally { setLoading(false); }
   };
 
   const createTest = async () => {
     if (!newTest.name.trim()) return;
     setSaving(true);
-    await fetch("/api/admin/ab-tests", {
-      method: "POST", headers: headers(),
-      body: JSON.stringify({ ...newTest, variants: newVariants.filter(v => v.name.trim()) }),
-    });
-    await loadTests();
-    setShowCreate(false);
-    setNewTest({ name: "", description: "" });
-    setNewVariants([{ name: "Kontrol", description: "", weight: 50 }, { name: "Varyant A", description: "", weight: 50 }]);
-    setSaving(false);
+    try {
+      await fetch("/api/admin/ab-tests", {
+        method: "POST", headers: headers(),
+        body: JSON.stringify({ ...newTest, variants: newVariants.filter(v => v.name.trim()) }),
+      });
+      await loadTests();
+      setShowCreate(false);
+      setNewTest({ name: "", description: "" });
+      setNewVariants([{ name: "Kontrol", description: "", weight: 50 }, { name: "Varyant A", description: "", weight: 50 }]);
+    } finally { setSaving(false); }
   };
 
   const setStatus = async (id: number, status: string) => {
@@ -90,15 +96,15 @@ export default function AdminABTests() {
   };
 
   const deleteTest = async (id: number) => {
-    if (!confirm("Bu testi silmek istediğinizden emin misiniz?")) return;
     await fetch(`/api/admin/ab-tests/${id}`, { method: "DELETE", headers: headers() });
     setTests(prev => prev.filter(t => t.id !== id));
+    setDeleteConfirm(null);
   };
 
   const resetStats = async (id: number) => {
-    if (!confirm("İstatistikler ve atamalar sıfırlansın mı?")) return;
     await fetch(`/api/admin/ab-tests/${id}/reset`, { method: "POST", headers: headers() });
     await loadTests();
+    setResetConfirm(null);
   };
 
   const addVariantRow = () =>
@@ -268,14 +274,30 @@ export default function AdminABTests() {
                         <StopCircle className="h-4 w-4" />
                       </button>
                     )}
-                    <button onClick={() => resetStats(test.id)}
-                      title="İstatistikleri Sıfırla" className="p-2 rounded-lg text-[#555] hover:text-blue-400 hover:bg-blue-900/15 transition-colors">
-                      <RotateCcw className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => deleteTest(test.id)}
-                      title="Sil" className="p-2 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-900/15 transition-colors">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {resetConfirm === test.id ? (
+                      <span className="flex items-center gap-1">
+                        <span className="text-[10px] text-amber-400">Sıfırla?</span>
+                        <button onClick={() => resetStats(test.id)} className="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 hover:bg-amber-500/30">Evet</button>
+                        <button onClick={() => setResetConfirm(null)} className="px-2 py-0.5 rounded text-[10px] bg-[#2a2a2a] text-[#666] hover:bg-[#333]">Hayır</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => setResetConfirm(test.id)}
+                        title="İstatistikleri Sıfırla" className="p-2 rounded-lg text-[#555] hover:text-blue-400 hover:bg-blue-900/15 transition-colors">
+                        <RotateCcw className="h-4 w-4" />
+                      </button>
+                    )}
+                    {deleteConfirm === test.id ? (
+                      <span className="flex items-center gap-1">
+                        <span className="text-[10px] text-red-400">Sil?</span>
+                        <button onClick={() => deleteTest(test.id)} className="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30">Evet</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="px-2 py-0.5 rounded text-[10px] bg-[#2a2a2a] text-[#666] hover:bg-[#333]">Hayır</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => setDeleteConfirm(test.id)}
+                        title="Sil" className="p-2 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-900/15 transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                     <div className="text-[#444]">{isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</div>
                   </div>
                 </div>

@@ -38,6 +38,10 @@ export function AdminBadges() {
   });
 
   const [awardForm, setAwardForm] = useState({ userId: "", badgeId: "", note: "" });
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [revokeConfirm, setRevokeConfirm] = useState<number | null>(null);
+  const [awardMsg, setAwardMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [autoMsg, setAutoMsg] = useState<string | null>(null);
 
   const authHeader = useCallback(() =>
     token ? { Authorization: `Bearer ${token}` } : {} as Record<string, string>,
@@ -97,8 +101,8 @@ export function AdminBadges() {
   };
 
   const deleteBadge = async (id: number) => {
-    if (!confirm("Bu rozeti silmek istediğinizden emin misiniz? Kullanıcılardan da kaldırılacak.")) return;
     await fetch(`/api/badges/admin/definitions/${id}`, { method: "DELETE", headers: authHeader() });
+    setDeleteConfirm(null);
     load();
   };
 
@@ -118,27 +122,31 @@ export function AdminBadges() {
     });
     if (res.ok) {
       setAwardForm({ userId: "", badgeId: "", note: "" });
+      setAwardMsg({ ok: true, text: "Rozet başarıyla verildi!" });
+      setTimeout(() => setAwardMsg(null), 3000);
       load();
-      alert("Rozet başarıyla verildi!");
     } else {
       const e = await res.json();
-      alert(e.error || "Hata");
+      setAwardMsg({ ok: false, text: e.error || "Hata oluştu" });
+      setTimeout(() => setAwardMsg(null), 3000);
     }
   };
 
   const revokeAward = async (id: number) => {
-    if (!confirm("Bu rozeti kullanıcıdan geri almak istediğinizden emin misiniz?")) return;
     await fetch(`/api/badges/admin/award/${id}`, { method: "DELETE", headers: authHeader() });
+    setRevokeConfirm(null);
     load();
   };
 
   const autoAward = async () => {
     setAutoAwarding(true);
-    const res = await fetch("/api/badges/admin/auto-award", { method: "POST", headers: authHeader() });
-    const d = await res.json();
-    setAutoAwarding(false);
-    alert(`Otomatik dağıtım tamamlandı. ${d.awarded} yeni rozet verildi.`);
-    load();
+    try {
+      const res = await fetch("/api/badges/admin/auto-award", { method: "POST", headers: authHeader() });
+      const d = await res.json();
+      setAutoMsg(`Otomatik dağıtım tamamlandı. ${d.awarded} yeni rozet verildi.`);
+      setTimeout(() => setAutoMsg(null), 4000);
+      load();
+    } finally { setAutoAwarding(false); }
   };
 
   if (loading) return (
@@ -363,9 +371,17 @@ export function AdminBadges() {
                       <button onClick={() => toggleBadgeEnabled(def)} className={cn("p-1.5 rounded-lg transition-colors", def.isEnabled ? "hover:bg-[#1e1e1e] text-[#555] hover:text-yellow-400" : "text-yellow-400 hover:bg-yellow-500/10")}>
                         {def.isEnabled ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
                       </button>
-                      <button onClick={() => deleteBadge(def.id)} className="p-1.5 rounded-lg hover:bg-[#1e1e1e] text-[#555] hover:text-red-400 transition-colors">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {deleteConfirm === def.id ? (
+                        <span className="flex items-center gap-1">
+                          <span className="text-[10px] text-red-400">Sil?</span>
+                          <button onClick={() => deleteBadge(def.id)} className="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30">Evet</button>
+                          <button onClick={() => setDeleteConfirm(null)} className="px-2 py-0.5 rounded text-[10px] bg-[#2a2a2a] text-[#666] hover:bg-[#333]">Hayır</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setDeleteConfirm(def.id)} className="p-1.5 rounded-lg hover:bg-[#1e1e1e] text-[#555] hover:text-red-400 transition-colors">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -400,9 +416,17 @@ export function AdminBadges() {
                     <p className="text-xs text-[#555]">@{ub.user?.username} — {new Date(ub.earnedAt).toLocaleString("tr")}</p>
                     {ub.note && <p className="text-xs text-[#666] italic mt-0.5">"{ub.note}"</p>}
                   </div>
-                  <button onClick={() => revokeAward(ub.id)} className="p-1.5 rounded-lg text-[#444] hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {revokeConfirm === ub.id ? (
+                    <span className="flex items-center gap-1">
+                      <span className="text-[10px] text-red-400">Geri al?</span>
+                      <button onClick={() => revokeAward(ub.id)} className="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30">Evet</button>
+                      <button onClick={() => setRevokeConfirm(null)} className="px-2 py-0.5 rounded text-[10px] bg-[#2a2a2a] text-[#666] hover:bg-[#333]">Hayır</button>
+                    </span>
+                  ) : (
+                    <button onClick={() => setRevokeConfirm(ub.id)} className="p-1.5 rounded-lg text-[#444] hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -437,12 +461,25 @@ export function AdminBadges() {
               <input value={awardForm.note} onChange={e => setAwardForm({ ...awardForm, note: e.target.value })}
                 placeholder="Neden bu rozet verildi?" className="w-full bg-[#111] border border-[#222] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50" />
             </div>
-            <button onClick={awardBadge}
-              disabled={!awardForm.userId || !awardForm.badgeId}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-              <Award className="h-4 w-4" /> Rozet Ver
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={awardBadge}
+                disabled={!awardForm.userId || !awardForm.badgeId}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                <Award className="h-4 w-4" /> Rozet Ver
+              </button>
+              {awardMsg && (
+                <span className={cn("text-xs px-3 py-1.5 rounded-lg border", awardMsg.ok ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20")}>
+                  {awardMsg.text}
+                </span>
+              )}
+            </div>
           </div>
+        </div>
+      )}
+
+      {autoMsg && (
+        <div className="fixed bottom-6 right-6 z-50 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm px-4 py-3 rounded-xl shadow-xl">
+          {autoMsg}
         </div>
       )}
     </div>

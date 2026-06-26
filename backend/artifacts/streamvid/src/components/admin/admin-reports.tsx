@@ -190,8 +190,11 @@ function ReportRow({ report: r, onUpdate }: { report: any; onUpdate: (id: number
 
   const act = async (status: string) => {
     setActing(true);
-    await onUpdate(r.id, status, note);
-    setActing(false);
+    try {
+      await onUpdate(r.id, status, note);
+    } finally {
+      setActing(false);
+    }
   };
 
   return (

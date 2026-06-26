@@ -13,6 +13,8 @@ export function AdminUsers() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [banAction, setBanAction] = useState<{ userId: number; isBanned: boolean } | null>(null);
+  const [banReason, setBanReason] = useState("");
 
   const { data, isLoading } = useListUsers({ page, limit: 20, role: roleFilter || undefined } as any);
   const users = data?.users ?? [];
@@ -21,15 +23,15 @@ export function AdminUsers() {
 
   const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
-  const handleBan = async (userId: number, isBanned: boolean) => {
-    const msg = isBanned ? "Bu kullanıcının yasağını kaldırmak istediğine emin misin?" : "Bu kullanıcıyı yasaklamak istediğine emin misin?";
-    if (!confirm(msg)) return;
+  const handleBan = async () => {
+    if (!banAction) return;
+    const { userId, isBanned } = banAction;
     if (isBanned) {
       await fetch(`/api/admin/users/${userId}/unban`, { method: "POST", headers });
     } else {
-      const reason = prompt("Yasaklama nedeni:") || "Kural ihlali";
-      await fetch(`/api/admin/users/${userId}/ban`, { method: "POST", headers, body: JSON.stringify({ reason }) });
+      await fetch(`/api/admin/users/${userId}/ban`, { method: "POST", headers, body: JSON.stringify({ reason: banReason.trim() || "Kural ihlali" }) });
     }
+    setBanAction(null); setBanReason("");
     queryClient.invalidateQueries({ queryKey: ["users"] });
   };
 
@@ -97,7 +99,7 @@ export function AdminUsers() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
-                      <button onClick={() => handleBan(u.id, !!(u as any).isBanned)} className={cn("p-1.5 rounded transition-colors", (u as any).isBanned ? "hover:bg-green-900/30 text-[#666] hover:text-green-400" : "hover:bg-red-900/30 text-[#666] hover:text-red-400")}>
+                      <button onClick={() => setBanAction({ userId: u.id, isBanned: !!(u as any).isBanned })} className={cn("p-1.5 rounded transition-colors", (u as any).isBanned ? "hover:bg-green-900/30 text-[#666] hover:text-green-400" : "hover:bg-red-900/30 text-[#666] hover:text-red-400")}>
                         {(u as any).isBanned ? <CheckCircle className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
                       </button>
                     </div>
@@ -114,6 +116,34 @@ export function AdminUsers() {
           <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1} className="p-1.5 rounded hover:bg-[#222] disabled:opacity-30 text-[#888]"><ChevronLeft className="h-4 w-4" /></button>
           <span className="text-sm text-[#888]">{page} / {totalPages}</span>
           <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page === totalPages} className="p-1.5 rounded hover:bg-[#222] disabled:opacity-30 text-[#888]"><ChevronRight className="h-4 w-4" /></button>
+        </div>
+      )}
+      {banAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
+            <h3 className="font-bold text-white text-base">
+              {banAction.isBanned ? "Yasağı Kaldır" : "Kullanıcıyı Yasakla"}
+            </h3>
+            {!banAction.isBanned && (
+              <div>
+                <label className="text-xs text-[#666] block mb-1.5">Yasaklama Nedeni</label>
+                <input value={banReason} onChange={e => setBanReason(e.target.value)}
+                  placeholder="Kural ihlali"
+                  className="w-full bg-[#111] border border-[#333] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50" />
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setBanAction(null); setBanReason(""); }}
+                className="px-4 py-2 rounded-xl text-sm bg-[#2a2a2a] text-[#aaa] hover:bg-[#333] transition-colors">
+                İptal
+              </button>
+              <button onClick={handleBan}
+                className={cn("px-4 py-2 rounded-xl text-sm font-medium transition-colors",
+                  banAction.isBanned ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : "bg-red-500/20 text-red-400 hover:bg-red-500/30")}>
+                {banAction.isBanned ? "Yasağı Kaldır" : "Yasakla"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

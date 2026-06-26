@@ -26,6 +26,8 @@ export function AdminAds() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState<any>({ ...EMPTY_AD });
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [formError, setFormError] = useState<string>("");
 
   const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
@@ -45,7 +47,12 @@ export function AdminAds() {
   useEffect(() => { load(); }, []);
 
   const handleSubmit = async () => {
-    if (!form.name || !form.targetUrl) { alert("Ad adı ve hedef URL zorunlu"); return; }
+    if (!form.name || !form.targetUrl) {
+      setFormError("Reklam adı ve hedef URL zorunludur.");
+      setTimeout(() => setFormError(""), 3000);
+      return;
+    }
+    setFormError("");
     if (editId) {
       await fetch(`/api/ads/${editId}`, { method: "PATCH", headers, body: JSON.stringify(form) });
     } else {
@@ -55,8 +62,8 @@ export function AdminAds() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Bu reklamı silmek istediğine emin misin?")) return;
     await fetch(`/api/ads/${id}`, { method: "DELETE", headers });
+    setDeleteConfirm(null);
     load();
   };
 
@@ -149,8 +156,11 @@ export function AdminAds() {
               <input type="datetime-local" value={form.endsAt} onChange={e => setForm((p: any) => ({...p, endsAt: e.target.value}))} className="w-full bg-[#252525] border border-[#333] rounded px-3 py-2 text-sm text-white" />
             </div>
           </div>
+          {formError && (
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">{formError}</div>
+          )}
           <div className="flex gap-2 justify-end">
-            <button onClick={() => { setShowForm(false); setEditId(null); }} className="px-4 py-1.5 rounded text-sm bg-[#333] text-[#aaa] hover:bg-[#444]">İptal</button>
+            <button onClick={() => { setShowForm(false); setEditId(null); setFormError(""); }} className="px-4 py-1.5 rounded text-sm bg-[#333] text-[#aaa] hover:bg-[#444]">İptal</button>
             <button onClick={handleSubmit} className="px-4 py-1.5 rounded text-sm bg-primary text-white hover:bg-primary/90">{editId ? "Güncelle" : "Ekle"}</button>
           </div>
         </div>
@@ -208,9 +218,17 @@ export function AdminAds() {
                       <button onClick={() => handleEdit(ad)} className="p-1.5 rounded hover:bg-[#333] text-[#666] hover:text-white transition-colors">
                         <Edit2 className="h-3.5 w-3.5" />
                       </button>
-                      <button onClick={() => handleDelete(ad.id)} className="p-1.5 rounded hover:bg-red-900/30 text-[#666] hover:text-red-400 transition-colors">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {deleteConfirm === ad.id ? (
+                        <span className="flex items-center gap-1">
+                          <span className="text-[10px] text-red-400">Sil?</span>
+                          <button onClick={() => handleDelete(ad.id)} className="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30">Evet</button>
+                          <button onClick={() => setDeleteConfirm(null)} className="px-2 py-0.5 rounded text-[10px] bg-[#2a2a2a] text-[#666] hover:bg-[#333]">Hayır</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setDeleteConfirm(ad.id)} className="p-1.5 rounded hover:bg-red-900/30 text-[#666] hover:text-red-400 transition-colors">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
