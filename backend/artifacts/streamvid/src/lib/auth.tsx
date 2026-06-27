@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { useGetMe, useLogin, useLogout, useRegister } from "@workspace/api-client-react";
 import type { LoginBody, RegisterBody, User } from "@workspace/api-client-react/src/generated/api.schemas";
 import { useLocation } from "wouter";
@@ -18,13 +18,35 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
   const [, setLocation] = useLocation();
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
 
-  const { data: user, isLoading: isUserLoading, refetch } = useGetMe({
+  const {
+    data: user,
+    isLoading: isUserLoading,
+    refetch,
+    error: userError,
+  } = useGetMe({
     query: {
       enabled: !!token,
-      retry: false,
-    }
+      retry: 2,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+      staleTime: 3 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+    },
   });
+
+  useEffect(() => {
+    if (!userError) return;
+    const anyError = userError as any;
+    const status =
+      anyError?.response?.status ??
+      anyError?.status ??
+      anyError?.statusCode;
+    if (status === 401) {
+      setToken(null);
+    }
+  }, [userError]);
 
   const loginMutation = useLogin();
   const registerMutation = useRegister();
@@ -69,6 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const isAuthenticated = !!token && (isUserLoading || !!user);
+
   return (
     <AuthContext.Provider
       value={{
@@ -78,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login: handleLogin,
         register: handleRegister,
         logout: handleLogout,
-        isAuthenticated: !!user,
+        isAuthenticated,
       }}
     >
       {children}
