@@ -17,6 +17,7 @@ urlpatterns = [
     path('admin/users/<int:user_id>/ban', views.ban_user),
     path('admin/users/<int:user_id>/unban', ex.unban_user),
     path('admin/users/<int:user_id>/role', views.update_user_role),
+    path('admin/users/<int:user_id>/edit', views.edit_user),
     path('admin/dashboard', ex.admin_dashboard),
     path('admin/reports/<int:report_id>', ex.update_report),
     path('admin/videos', views.list_admin_videos),

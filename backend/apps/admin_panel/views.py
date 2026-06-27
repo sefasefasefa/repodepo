@@ -131,6 +131,53 @@ def update_user_role(request, user_id):
     return Response({'message': 'Role updated', 'role': user.role})
 
 
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def edit_user(request, user_id):
+    if not require_superadmin(request):
+        return Response({'error': 'Forbidden'}, status=403)
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'Kullanıcı bulunamadı'}, status=404)
+
+    data = request.data
+    update_fields = []
+
+    username = data.get('username', '').strip()
+    if username:
+        if username != user.username:
+            if User.objects.filter(username__iexact=username).exclude(id=user_id).exists():
+                return Response({'error': 'Bu kullanıcı adı zaten kullanılıyor'}, status=400)
+        user.username = username
+        update_fields.append('username')
+
+    display_name = data.get('displayName', '').strip()
+    if display_name:
+        user.display_name = display_name
+        update_fields.append('display_name')
+
+    email = data.get('email', '').strip()
+    if email:
+        if email != user.email:
+            if User.objects.filter(email__iexact=email).exclude(id=user_id).exists():
+                return Response({'error': 'Bu e-posta adresi zaten kullanılıyor'}, status=400)
+        user.email = email
+        update_fields.append('email')
+
+    password = data.get('password', '')
+    if password:
+        if len(password) < 6:
+            return Response({'error': 'Şifre en az 6 karakter olmalı'}, status=400)
+        user.set_password(password)
+        update_fields.append('password')
+
+    if update_fields:
+        user.save(update_fields=update_fields)
+
+    return Response({'message': 'Kullanıcı güncellendi', 'user': format_user(user)})
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_admin_videos(request):
