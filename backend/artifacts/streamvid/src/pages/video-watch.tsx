@@ -280,6 +280,9 @@ export default function VideoWatch() {
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const token = typeof window !== "undefined" ? (localStorage.getItem("token") ?? "") : "";
 
@@ -294,6 +297,46 @@ export default function VideoWatch() {
 
   const likeMutation = useLikeVideo();
   const commentMutation = useCreateComment();
+
+  useEffect(() => {
+    if (video) setIsBookmarked(!!(video as any).isBookmarked);
+  }, [video]);
+
+  const handleBookmark = async () => {
+    if (!user) { setLocation("/login"); return; }
+    if (bookmarkBusy) return;
+    setBookmarkBusy(true);
+    const method = isBookmarked ? "DELETE" : "POST";
+    const endpoint = isBookmarked
+      ? `/api/videos/${videoId}/unbookmark`
+      : `/api/videos/${videoId}/bookmark`;
+    try {
+      const res = await fetch(endpoint, {
+        method,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setIsBookmarked(b => !b);
+    } finally {
+      setBookmarkBusy(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: video?.title || "Video", url });
+        return;
+      } catch {}
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      prompt("Linki kopyala:", url);
+    }
+  };
 
   useEffect(() => {
     if (!videoId) return;
@@ -464,13 +507,30 @@ export default function VideoWatch() {
                 <Heart className={cn("h-4 w-4 sm:mr-1.5", video.isLiked ? "fill-red-500 text-red-500" : "")} />
                 <span className="text-xs">{video.likeCount?.toLocaleString()}</span>
               </Button>
-              <Button variant="secondary" size="sm" className="rounded-full px-2.5 sm:px-3 touch-manipulation">
-                <Bookmark className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline text-xs">Kaydet</span>
+              <Button
+                variant="secondary" size="sm"
+                className={cn(
+                  "rounded-full px-2.5 sm:px-3 touch-manipulation transition-all",
+                  isBookmarked
+                    ? "bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30"
+                    : ""
+                )}
+                onClick={handleBookmark}
+                disabled={bookmarkBusy}
+              >
+                <Bookmark className={cn("h-4 w-4 sm:mr-1.5", isBookmarked ? "fill-current" : "")} />
+                <span className="hidden sm:inline text-xs">{isBookmarked ? "Kaydedildi" : "Kaydet"}</span>
               </Button>
-              <Button variant="secondary" size="sm" className="rounded-full px-2.5 sm:px-3 touch-manipulation">
+              <Button
+                variant="secondary" size="sm"
+                className={cn(
+                  "rounded-full px-2.5 sm:px-3 touch-manipulation transition-all",
+                  shareCopied ? "bg-green-900/30 border border-green-500/40 text-green-400" : ""
+                )}
+                onClick={handleShare}
+              >
                 <Share2 className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline text-xs">Paylaş</span>
+                <span className="hidden sm:inline text-xs">{shareCopied ? "Kopyalandı!" : "Paylaş"}</span>
               </Button>
               {user && isPremiumUser && (
                 <Button

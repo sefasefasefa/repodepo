@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   isLoading: boolean;
   login: (data: LoginBody) => Promise<void>;
   register: (data: RegisterBody) => Promise<void>;
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user: user || null,
+        token,
         isLoading: isUserLoading,
         login: handleLogin,
         register: handleRegister,

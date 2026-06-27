@@ -456,8 +456,16 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    /* Force dark mode */
     color-scheme: dark;
+  }
+  [data-theme="light"] body,
+  html[data-theme="light"] {
+    color-scheme: light;
+  }
+  html {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
