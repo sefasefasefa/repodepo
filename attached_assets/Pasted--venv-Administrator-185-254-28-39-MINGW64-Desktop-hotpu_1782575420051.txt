@@ -1,0 +1,48 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse/backend (main)
+$ git pull
+remote: Enumerating objects: 74, done.
+remote: Counting objects: 100% (74/74), done.
+remote: Compressing objects: 100% (13/13), done.
+remote: Total 45 (delta 32), reused 45 (delta 32), pack-reused 0 (from 0)
+Unpacking objects: 100% (45/45), 13.08 KiB | 5.00 KiB/s, done.
+From https://github.com/sefasefasefa/repodepo
+   4873967..dde156b  main       -> origin/main
+Updating 4873967..dde156b
+Fast-forward
+ .replit                                            | 12 ++++--- backend/apps/accounts/extra_views.py               |  3 --
+ backend/apps/admin_panel/extra_views.py            |  8 +----
+ backend/apps/admin_panel/payments_views.py         |  9 +----
+ backend/apps/admin_panel/seo_webhook_views.py      |  7 +---
+ backend/apps/admin_panel/webhook_views.py          | 14 +-------
+ backend/apps/affiliate/extra_views.py              |  8 -----
+ ...d_idx_ai_training_status_38cabe_idx_and_more.py | 38 ++++++++++++++++++++++
+ .../0003_alter_crosspostsite_adapter_and_more.py   | 23 +++++++++++++
+ backend/apps/crosspost/views.py                    |  8 -----
+ ..._idx_device_inte_device__bef120_idx_and_more.py | 33 +++++++++++++++++++
+ backend/apps/live/extra_views.py                   |  7 ----
+ backend/apps/messaging/extra_views.py              |  2 --
+ backend/apps/notifications/extra_views.py          |  2 --
+ backend/apps/social/badges_views.py                | 10 ------
+ backend/apps/subscriptions/extra_views.py          |  4 ---
+ backend/apps/subscriptions/views.py                |  4 ---
+ backend/apps/tokens/extra_views.py                 |  4 ---
+ backend/apps/videos/extras2_views.py               |  7 ----
+ backend/apps/videos/subtitles_views.py             | 11 ------- 20 files changed, 105 insertions(+), 109 deletions(-)
+ create mode 100644 backend/apps/ai/migrations/0002_rename_ai_te_status_created_idx_ai_training_status_38cabe_idx_and_more.py
+ create mode 100644 backend/apps/crosspost/migrations/0003_alter_crosspostsite_adapter_and_more.py
+ create mode 100644 backend/apps/devices/migrations/0002_rename_dev_int_dev_created_idx_device_inte_device__bef120_idx_and_more.py
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse/backend (main)
+$ python -m waitress --port=8000 --threads=4 config.wsgi:application
+INFO 2026-06-27 18:49:22,446 wasyncore Serving on http://0.0.0.0:8000
+WARNING 2026-06-27 18:49:32,732 task Task queue depth is 1
+WARNING 2026-06-27 18:49:32,732 task Task queue depth is 2
+WARNING 2026-06-27 18:49:32,762 task Task queue depth is 3
+WARNING 2026-06-27 18:49:38,389 task Task queue depth is 1
+WARNING 2026-06-27 18:49:38,389 task Task queue depth is 2
+WARNING 2026-06-27 18:49:38,389 task Task queue depth is 2
+WARNING 2026-06-27 18:49:38,405 task Task queue depth is 3
+WARNING 2026-06-27 18:49:38,416 task Task queue depth is 4
+WARNING 2026-06-27 18:49:38,431 task Task queue depth is 4
+WARNING 2026-06-27 18:50:04,575 log Unauthorized: /api/auth/login
