@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Plus, Trash2, RefreshCw, Link2, Upload,
-  ToggleLeft, ToggleRight, Search,
+  ToggleLeft, ToggleRight, Search, Pencil, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -67,11 +67,14 @@ export function AdminIntegrations() {
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [loading, setLoading]           = useState(false);
   const [showAdd, setShowAdd]           = useState(false);
+  const [editId, setEditId]             = useState<string | null>(null);
   const [testing, setTesting]           = useState<string | null>(null);
   const [saving, setSaving]             = useState(false);
   const [form, setForm]                 = useState({ ...EMPTY_FORM });
   const [search, setSearch]             = useState("");
   const [catFilter, setCatFilter]       = useState<CatFilter>("all");
+  const [showKey, setShowKey]           = useState(false);
+  const [showApiKey, setShowApiKey]     = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -87,15 +90,56 @@ export function AdminIntegrations() {
 
   useEffect(() => { load(); }, []);
 
+  const openAdd = (platformId?: string, platformName?: string) => {
+    setEditId(null);
+    setForm({ ...EMPTY_FORM, platform: platformId ?? "streamtape", name: platformName ?? "" });
+    setShowKey(false);
+    setShowApiKey(false);
+    setShowAdd(true);
+  };
+
+  const openEdit = (int: any) => {
+    setEditId(int.id);
+    setForm({
+      platform: int.platform,
+      name: int.name,
+      login: int.login ?? "",
+      key: "",
+      apiKey: "",
+      email: int.email ?? "",
+      autoUpload: int.autoUpload ?? true,
+    });
+    setShowKey(false);
+    setShowApiKey(false);
+    setShowAdd(true);
+  };
+
   const save = async () => {
     if (!form.name || !form.platform) return;
     setSaving(true);
     try {
-      const d = await apiFetch("/admin/integrations", { method: "POST", body: JSON.stringify(form) });
-      setIntegrations((p) => [...p, d.integration]);
+      if (editId) {
+        const d = await apiFetch(`/admin/integrations/${editId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            name: form.name,
+            login: form.login || undefined,
+            key: form.key || undefined,
+            apiKey: form.apiKey || undefined,
+            email: form.email || undefined,
+            autoUpload: form.autoUpload,
+          }),
+        });
+        setIntegrations((p) => p.map((i) => (i.id === editId ? d.integration : i)));
+        toast({ title: "Güncellendi", description: `${form.name} entegrasyonu güncellendi.` });
+      } else {
+        const d = await apiFetch("/admin/integrations", { method: "POST", body: JSON.stringify(form) });
+        setIntegrations((p) => [...p, d.integration]);
+        toast({ title: "Eklendi", description: `${form.name} entegrasyonu eklendi.` });
+      }
       setShowAdd(false);
+      setEditId(null);
       setForm({ ...EMPTY_FORM });
-      toast({ title: "Eklendi", description: `${form.name} entegrasyonu eklendi.` });
     } catch (e: any) {
       toast({ title: "Hata", description: e.message, variant: "destructive" });
     } finally {
@@ -158,7 +202,7 @@ export function AdminIntegrations() {
             className="p-2 rounded-lg bg-[#2a2a2a] text-[#888] hover:bg-[#333] transition-colors">
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </button>
-          <button onClick={() => setShowAdd(true)}
+          <button onClick={() => openAdd()}
             className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
             <Plus className="h-4 w-4" /> Platform Ekle
           </button>
@@ -204,9 +248,13 @@ export function AdminIntegrations() {
               </div>
               {added ? (
                 <div className="flex gap-1 mt-1">
+                  <button onClick={() => openEdit(added)}
+                    className="flex-1 text-[9px] py-1 rounded bg-[#222] hover:bg-primary/20 text-[#aaa] hover:text-primary transition-colors flex items-center justify-center gap-1">
+                    <Pencil className="h-2.5 w-2.5" /> Düzenle
+                  </button>
                   <button onClick={() => test(added.id)} disabled={testing === added.id}
-                    className="flex-1 text-[9px] py-1 rounded bg-[#222] hover:bg-[#333] text-[#aaa] transition-colors flex items-center justify-center gap-1">
-                    {testing === added.id ? <RefreshCw className="h-2.5 w-2.5 animate-spin" /> : "Test"}
+                    className="p-1 rounded bg-[#222] hover:bg-[#333] text-[#888] transition-colors">
+                    {testing === added.id ? <RefreshCw className="h-2.5 w-2.5 animate-spin" /> : <Link2 className="h-2.5 w-2.5" />}
                   </button>
                   <button onClick={() => remove(added.id)}
                     className="p-1 rounded bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">
@@ -215,7 +263,7 @@ export function AdminIntegrations() {
                 </div>
               ) : (
                 <button
-                  onClick={() => { setForm((f) => ({ ...f, platform: p.id, name: p.name })); setShowAdd(true); }}
+                  onClick={() => openAdd(p.id, p.name)}
                   className="w-full text-[9px] py-1 rounded bg-[#222] hover:bg-[#2a2a2a] text-[#666] hover:text-white transition-colors mt-1">
                   + Ekle
                 </button>
@@ -253,6 +301,10 @@ export function AdminIntegrations() {
                           : <ToggleLeft className="h-4 w-4 text-[#444]" />}
                       </button>
                     </div>
+                    <button onClick={() => openEdit(int)}
+                      className="text-[11px] px-2 py-1 rounded bg-[#222] hover:bg-primary/20 hover:text-primary text-[#888] transition-colors flex items-center gap-1">
+                      <Pencil className="h-3 w-3" /> Düzenle
+                    </button>
                     <button onClick={() => test(int.id)} disabled={testing === int.id}
                       className="text-[11px] px-2 py-1 rounded bg-[#222] hover:bg-[#2a2a2a] text-[#888] transition-colors flex items-center gap-1">
                       {testing === int.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <><Link2 className="h-3 w-3" /> Test</>}
@@ -291,18 +343,19 @@ export function AdminIntegrations() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal — Ekle / Düzenle */}
       {showAdd && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           onClick={(e) => e.target === e.currentTarget && setShowAdd(false)}>
           <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl p-6 w-full max-w-md">
-            <h3 className="font-bold text-lg mb-4">Platform Ekle</h3>
+            <h3 className="font-bold text-lg mb-4">{editId ? "Entegrasyonu Düzenle" : "Platform Ekle"}</h3>
             <div className="space-y-3">
               <div>
                 <label className="text-xs text-[#888] mb-1 block">Platform</label>
                 <select value={form.platform}
                   onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
-                  className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white">
+                  disabled={!!editId}
+                  className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">
                   <optgroup label="+18 Platformlar">
                     {PLATFORMS.filter(p => p.cat === "adult").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </optgroup>
@@ -318,38 +371,65 @@ export function AdminIntegrations() {
                   placeholder={`Örn: ${selectedPlatform?.name} Ana`}
                   className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555]" />
               </div>
+
+              {/* Login (Streamtape) */}
               {selectedPlatform?.fields.includes("login") && (
                 <div>
                   <label className="text-xs text-[#888] mb-1 block">Login (Kullanıcı Adı)</label>
                   <input value={form.login}
                     onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
+                    autoComplete="off"
                     className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white" />
                 </div>
               )}
+
+              {/* Key (Streamtape) */}
               {selectedPlatform?.fields.includes("key") && (
                 <div>
-                  <label className="text-xs text-[#888] mb-1 block">API Key</label>
-                  <input type="password" value={form.key}
+                  <label className="text-xs text-[#888] mb-1 flex items-center justify-between">
+                    <span>API Key {editId && <span className="text-[#555]">(boş bırakırsan değişmez)</span>}</span>
+                    <button type="button" onClick={() => setShowKey(v => !v)}
+                      className="text-[#555] hover:text-[#aaa] transition-colors">
+                      {showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </label>
+                  <input type={showKey ? "text" : "password"} value={form.key}
                     onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
-                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white" />
+                    autoComplete="new-password"
+                    placeholder={editId ? "••••••••" : ""}
+                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444]" />
                 </div>
               )}
-              {selectedPlatform?.fields.includes("apiKey") && (
-                <div>
-                  <label className="text-xs text-[#888] mb-1 block">API Key</label>
-                  <input type="password" value={form.apiKey}
-                    onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
-                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white" />
-                </div>
-              )}
+
+              {/* Email (Mixdrop, Uqload) */}
               {selectedPlatform?.fields.includes("email") && (
                 <div>
                   <label className="text-xs text-[#888] mb-1 block">E-posta</label>
                   <input type="email" value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    autoComplete="off"
                     className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white" />
                 </div>
               )}
+
+              {/* API Key (çoğu platform) */}
+              {selectedPlatform?.fields.includes("apiKey") && (
+                <div>
+                  <label className="text-xs text-[#888] mb-1 flex items-center justify-between">
+                    <span>API Key {editId && <span className="text-[#555]">(boş bırakırsan değişmez)</span>}</span>
+                    <button type="button" onClick={() => setShowApiKey(v => !v)}
+                      className="text-[#555] hover:text-[#aaa] transition-colors">
+                      {showApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </label>
+                  <input type={showApiKey ? "text" : "password"} value={form.apiKey}
+                    onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
+                    autoComplete="new-password"
+                    placeholder={editId ? "••••••••" : ""}
+                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444]" />
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="autoUpload" checked={form.autoUpload}
                   onChange={(e) => setForm((f) => ({ ...f, autoUpload: e.target.checked }))} />
@@ -365,9 +445,9 @@ export function AdminIntegrations() {
             <div className="flex gap-2 mt-6">
               <button onClick={save} disabled={!form.name || saving}
                 className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
-                {saving ? "Kaydediliyor..." : "Kaydet"}
+                {saving ? "Kaydediliyor..." : editId ? "Güncelle" : "Kaydet"}
               </button>
-              <button onClick={() => setShowAdd(false)}
+              <button onClick={() => { setShowAdd(false); setEditId(null); }}
                 className="flex-1 bg-[#222] hover:bg-[#2a2a2a] text-[#aaa] font-medium py-2.5 rounded-lg text-sm transition-colors">
                 İptal
               </button>

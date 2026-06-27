@@ -320,8 +320,48 @@ def admin_integration_detail(request, integration_id):
         i.auto_upload = bool(d['autoUpload'])
     if 'isActive' in d:
         i.is_active = bool(d['isActive'])
+    if d.get('name'):
+        i.name = d['name']
+    if d.get('login') is not None:
+        i.login = d['login']
+    if d.get('key') is not None:
+        i.key = d['key']
+    if d.get('apiKey') is not None:
+        i.api_key = d['apiKey']
+    if d.get('email') is not None:
+        i.email = d['email']
     i.save()
-    return Response({'message': 'Güncellendi'})
+    return Response({'integration': _fmt_integration(i)})
+
+
+_INTEGRATION_TEST_URLS = {
+    "streamtape":   lambda i: f"https://api.streamtape.com/account/info?login={i.login}&key={i.key or i.api_key}",
+    "doodstream":   lambda i: f"https://doodapi.com/api/account/info?key={i.api_key or i.key}",
+    "mixdrop":      lambda i: f"https://ul.mixdrop.ag/api/account?email={i.email}&key={i.api_key or i.key}",
+    "streamlare":   lambda i: f"https://streamlare.com/api/account/info?key={i.api_key or i.key}",
+    "vidoza":       lambda i: f"https://vidoza.net/api/account/info?api_key={i.api_key or i.key}",
+    "filemoon":     lambda i: f"https://filemoonapi.com/api/account/info?key={i.api_key or i.key}",
+    "streamwish":   lambda i: f"https://api.streamwish.com/api/account/info?key={i.api_key or i.key}",
+    "vidhide":      lambda i: f"https://vidhide.com/api/account/info?key={i.api_key or i.key}",
+    "voe":          lambda i: f"https://voe.sx/api/account/info?key={i.api_key or i.key}",
+    "upstream":     lambda i: f"https://upstream.to/api/account/info?key={i.api_key or i.key}",
+    "luluvdo":      lambda i: f"https://luluvdo.com/api/account/info?key={i.api_key or i.key}",
+    "uqload":       lambda i: f"https://uqload.io/api/account/info?key={i.api_key or i.key}",
+    "streamhide":   lambda i: f"https://streamhide.com/api/account/info?key={i.api_key or i.key}",
+    "supervideo":   lambda i: f"https://supervideo.tv/api/account/info?key={i.api_key or i.key}",
+    "dropload":     lambda i: f"https://dropload.io/api/account/info?key={i.api_key or i.key}",
+    "embedsito":    lambda i: f"https://embedsito.com/api/account/info?key={i.api_key or i.key}",
+    "vidlox":       lambda i: f"https://vidlox.me/api/account/info?key={i.api_key or i.key}",
+    "clipwatching": lambda i: f"https://clipwatching.com/api/account/info?key={i.api_key or i.key}",
+    "streamsb":     lambda i: f"https://streamsb.net/api/account/info?key={i.api_key or i.key}",
+    "hxfile":       lambda i: f"https://hxfile.ch/api/account/info?key={i.api_key or i.key}",
+    "vidplay":      lambda i: f"https://vidplay.online/api/account/info?key={i.api_key or i.key}",
+    "nxbex":        lambda i: f"https://nxbex.com/api/account/info?key={i.api_key or i.key}",
+    "dropgalaxy":   lambda i: f"https://dropgalaxy.com/api/account/info?key={i.api_key or i.key}",
+    "evoload":      lambda i: f"https://evoload.io/api/account/info?key={i.api_key or i.key}",
+    "fembed":       lambda i: f"https://www.fembed.com/api/account/info?key={i.api_key or i.key}",
+    "hotlinking":   lambda i: f"https://hotlinking.co/api/account/info?key={i.api_key or i.key}",
+}
 
 
 @api_view(['POST'])
@@ -332,24 +372,25 @@ def admin_integration_test(request, integration_id):
     i = IntegrationConfig.objects.filter(id=integration_id).first()
     if not i:
         return Response({'error': 'Bulunamadı'}, status=404)
+    url_fn = _INTEGRATION_TEST_URLS.get(i.platform)
+    if not url_fn:
+        return Response({'ok': True, 'info': {'message': 'Kimlik bilgileri kaydedildi (API test desteklenmiyor)'}})
     try:
-        if i.platform == 'streamtape' and i.login and i.key:
-            url = f'https://api.streamtape.com/account/info?login={i.login}&key={i.key}'
-            with urllib.request.urlopen(url, timeout=8) as r:
-                d = json.loads(r.read().decode())
-                if d.get('status') == 200:
-                    return Response({'ok': True, 'info': {'storage': d.get('result', {}).get('traffic_left')}})
-                return Response({'ok': False, 'error': d.get('msg')})
-        elif i.platform == 'doodstream' and i.api_key:
-            url = f'https://doodapi.com/api/account/info?key={i.api_key}'
-            with urllib.request.urlopen(url, timeout=8) as r:
-                d = json.loads(r.read().decode())
-                if d.get('status') == 200:
-                    return Response({'ok': True, 'info': {'email': d.get('result', {}).get('email')}})
-                return Response({'ok': False, 'error': d.get('msg')})
-        elif i.platform == 'mixdrop':
-            return Response({'ok': True, 'info': {'message': 'Bağlantı ayarları kaydedildi'}})
-        return Response({'ok': False, 'error': 'Bilinmeyen platform veya eksik kimlik bilgileri'})
+        url = url_fn(i)
+        req = urllib.request.Request(url, headers={'User-Agent': 'Hotpulse/1.0'})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read().decode())
+        status_val = data.get('status') or data.get('code') or data.get('statusCode')
+        if str(status_val) == '200' or status_val == 200 or data.get('ok') or data.get('success'):
+            result = data.get('result') or data.get('data') or {}
+            info = {}
+            for field in ('email', 'username', 'storage', 'traffic_left', 'balance'):
+                if field in result:
+                    info[field] = result[field]
+            return Response({'ok': True, 'info': info or {'message': 'Bağlantı başarılı'}})
+        return Response({'ok': False, 'error': data.get('msg') or data.get('message') or 'Kimlik bilgileri geçersiz'})
+    except urllib.error.HTTPError as e:
+        return Response({'ok': False, 'error': f'HTTP {e.code}: {e.reason}'})
     except Exception as e:
         return Response({'ok': False, 'error': str(e)})
 
