@@ -6,40 +6,339 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
-const PLATFORMS = [
-  // Orijinal 6
-  { id: "streamtape",   name: "Streamtape",   color: "text-orange-400",  bg: "bg-orange-900/20",  logo: "ST", fields: ["login","key"],    docs: "https://streamtape.com/account",      cat: "adult" },
-  { id: "doodstream",   name: "Doodstream",   color: "text-blue-400",    bg: "bg-blue-900/20",    logo: "DS", fields: ["apiKey"],          docs: "https://doodstream.com/api-docs",     cat: "adult" },
-  { id: "mixdrop",      name: "Mixdrop",      color: "text-purple-400",  bg: "bg-purple-900/20",  logo: "MX", fields: ["email","apiKey"],  docs: "https://mixdrop.ag/api",              cat: "adult" },
-  { id: "streamlare",   name: "Streamlare",   color: "text-green-400",   bg: "bg-green-900/20",   logo: "SL", fields: ["apiKey"],          docs: "https://streamlare.com",              cat: "adult" },
-  { id: "vidoza",       name: "Vidoza",       color: "text-red-400",     bg: "bg-red-900/20",     logo: "VZ", fields: ["apiKey"],          docs: "https://vidoza.net",                  cat: "adult" },
-  { id: "filemoon",     name: "Filemoon",     color: "text-yellow-400",  bg: "bg-yellow-900/20",  logo: "FM", fields: ["apiKey"],          docs: "https://filemoon.sx",                 cat: "adult" },
-  // +18 platformlar
-  { id: "streamwish",   name: "StreamWish",   color: "text-violet-400",  bg: "bg-violet-900/20",  logo: "SW", fields: ["apiKey"],          docs: "https://streamwish.com",              cat: "adult" },
-  { id: "vidhide",      name: "VidHide",      color: "text-cyan-400",    bg: "bg-cyan-900/20",    logo: "VH", fields: ["apiKey"],          docs: "https://vidhide.com",                 cat: "adult" },
-  { id: "voe",          name: "Voe.sx",       color: "text-teal-400",    bg: "bg-teal-900/20",    logo: "VO", fields: ["apiKey"],          docs: "https://voe.sx",                      cat: "adult" },
-  { id: "upstream",     name: "Upstream",     color: "text-sky-400",     bg: "bg-sky-900/20",     logo: "US", fields: ["apiKey"],          docs: "https://upstream.to",                 cat: "adult" },
-  { id: "luluvdo",      name: "Luluvdo",      color: "text-pink-400",    bg: "bg-pink-900/20",    logo: "LL", fields: ["apiKey"],          docs: "https://luluvdo.com",                 cat: "adult" },
-  { id: "uqload",       name: "Uqload",       color: "text-rose-400",    bg: "bg-rose-900/20",    logo: "UQ", fields: ["email","apiKey"],  docs: "https://uqload.io",                   cat: "adult" },
-  { id: "streamhide",   name: "StreamHide",   color: "text-slate-400",   bg: "bg-slate-900/20",   logo: "SH", fields: ["apiKey"],          docs: "https://streamhide.com",              cat: "adult" },
-  { id: "supervideo",   name: "SuperVideo",   color: "text-amber-400",   bg: "bg-amber-900/20",   logo: "SV", fields: ["apiKey"],          docs: "https://supervideo.tv",               cat: "adult" },
-  { id: "dropload",     name: "Dropload",     color: "text-indigo-400",  bg: "bg-indigo-900/20",  logo: "DL", fields: ["apiKey"],          docs: "https://dropload.io",                 cat: "adult" },
-  { id: "embedsito",    name: "Embedsito",    color: "text-lime-400",    bg: "bg-lime-900/20",    logo: "ES", fields: ["apiKey"],          docs: "https://embedsito.com",               cat: "adult" },
-  { id: "vidlox",       name: "Vidlox",       color: "text-red-300",     bg: "bg-red-950/30",     logo: "VL", fields: ["apiKey"],          docs: "https://vidlox.me",                   cat: "adult" },
-  { id: "clipwatching", name: "ClipWatching", color: "text-orange-300",  bg: "bg-orange-950/30",  logo: "CW", fields: ["apiKey"],          docs: "https://clipwatching.com",            cat: "adult" },
-  { id: "streamsb",     name: "StreamSB",     color: "text-blue-300",    bg: "bg-blue-950/30",    logo: "SB", fields: ["apiKey"],          docs: "https://streamsb.net",                cat: "adult" },
-  { id: "hxfile",       name: "HXFile",       color: "text-yellow-300",  bg: "bg-yellow-950/30",  logo: "HX", fields: ["apiKey"],          docs: "https://hxfile.ch",                   cat: "adult" },
-  { id: "vidplay",      name: "VidPlay",      color: "text-green-300",   bg: "bg-green-950/30",   logo: "VP", fields: ["apiKey"],          docs: "https://vidplay.online",              cat: "adult" },
-  { id: "nxbex",        name: "Nxbex",        color: "text-purple-300",  bg: "bg-purple-950/30",  logo: "NX", fields: ["apiKey"],          docs: "https://nxbex.com",                   cat: "adult" },
-  { id: "dropgalaxy",   name: "DropGalaxy",   color: "text-cyan-300",    bg: "bg-cyan-950/30",    logo: "DG", fields: ["apiKey"],          docs: "https://dropgalaxy.com",              cat: "adult" },
-  { id: "evoload",      name: "Evoload",      color: "text-emerald-400", bg: "bg-emerald-900/20", logo: "EV", fields: ["apiKey"],          docs: "https://evoload.io",                  cat: "adult" },
-  { id: "fembed",       name: "Fembed",       color: "text-red-500",     bg: "bg-red-900/20",     logo: "FB", fields: ["apiKey"],          docs: "https://www.fembed.com",              cat: "adult" },
-  { id: "hotlinking",   name: "Hotlinking",   color: "text-green-500",   bg: "bg-green-900/20",   logo: "HL", fields: ["apiKey"],          docs: "https://hotlinking.co",               cat: "adult" },
-  // Genel platformlar
-  { id: "youtube",      name: "YouTube",      color: "text-red-400",     bg: "bg-red-900/20",     logo: "YT", fields: ["apiKey"],          docs: "https://console.developers.google.com", cat: "general" },
-  { id: "vimeo",        name: "Vimeo",        color: "text-blue-400",    bg: "bg-blue-900/20",    logo: "VM", fields: ["apiKey"],          docs: "https://developer.vimeo.com",         cat: "general" },
-  { id: "dailymotion",  name: "Dailymotion",  color: "text-sky-400",     bg: "bg-sky-900/20",     logo: "DM", fields: ["apiKey"],          docs: "https://developers.dailymotion.com",  cat: "general" },
-  { id: "rumble",       name: "Rumble",       color: "text-lime-400",    bg: "bg-lime-900/20",    logo: "RU", fields: ["apiKey"],          docs: "https://rumble.com/upload",            cat: "general" },
+interface FieldConfig {
+  loginLabel?: string;
+  loginPlaceholder?: string;
+  keyLabel?: string;
+  keyPlaceholder?: string;
+  emailLabel?: string;
+  emailPlaceholder?: string;
+  apiKeyLabel?: string;
+  apiKeyPlaceholder?: string;
+  hint?: string;
+}
+
+interface Platform {
+  id: string;
+  name: string;
+  color: string;
+  bg: string;
+  logo: string;
+  fields: string[];
+  docs: string;
+  cat: string;
+  fieldConfig: FieldConfig;
+}
+
+const PLATFORMS: Platform[] = [
+  {
+    id: "streamtape", name: "Streamtape", color: "text-orange-400", bg: "bg-orange-900/20", logo: "ST", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://streamtape.com/account",
+    fieldConfig: {
+      loginLabel: "API/FTP Kullanıcı Adı",
+      loginPlaceholder: "931488ed284d0afcaf7f (hesap sayfasından al)",
+      keyLabel: "API/FTP Şifre",
+      keyPlaceholder: "API şifreni gir",
+      hint: "streamtape.com/account → Account Infos bölümünden API/FTP Username ve Password al",
+    },
+  },
+  {
+    id: "doodstream", name: "Doodstream", color: "text-blue-400", bg: "bg-blue-900/20", logo: "DS", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://doodapi.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "doodstream api anahtarın",
+      hint: "doodapi.com → My Account → API Key bölümünden al",
+    },
+  },
+  {
+    id: "mixdrop", name: "Mixdrop", color: "text-purple-400", bg: "bg-purple-900/20", logo: "MX", cat: "adult",
+    fields: ["email", "apiKey"],
+    docs: "https://mixdrop.ag/api",
+    fieldConfig: {
+      emailLabel: "Hesap E-postası",
+      emailPlaceholder: "mixdrop hesabına kayıtlı e-posta",
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "mixdrop api anahtarın",
+      hint: "mixdrop.ag → Hesabım → API bölümünden e-posta ve API anahtarını al",
+    },
+  },
+  {
+    id: "streamlare", name: "Streamlare", color: "text-green-400", bg: "bg-green-900/20", logo: "SL", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://streamlare.com",
+    fieldConfig: {
+      apiKeyLabel: "API Token",
+      apiKeyPlaceholder: "streamlare api token'ın",
+      hint: "streamlare.com → Hesap Ayarları → API Token bölümünden al",
+    },
+  },
+  {
+    id: "vidoza", name: "Vidoza", color: "text-red-400", bg: "bg-red-900/20", logo: "VZ", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://vidoza.net",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "vidoza api anahtarın",
+      hint: "vidoza.net hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "filemoon", name: "Filemoon", color: "text-yellow-400", bg: "bg-yellow-900/20", logo: "FM", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://filemoon.sx",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "filemoon api anahtarın",
+      hint: "filemoon.sx → Hesabım → API Key bölümünden al",
+    },
+  },
+  {
+    id: "streamwish", name: "StreamWish", color: "text-violet-400", bg: "bg-violet-900/20", logo: "SW", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://streamwish.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "streamwish api anahtarın",
+      hint: "streamwish.com → Tools → API bölümünden al",
+    },
+  },
+  {
+    id: "vidhide", name: "VidHide", color: "text-cyan-400", bg: "bg-cyan-900/20", logo: "VH", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://vidhide.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "vidhide api anahtarın",
+      hint: "vidhide.com hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "voe", name: "Voe.sx", color: "text-teal-400", bg: "bg-teal-900/20", logo: "VO", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://voe.sx",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "voe.sx api anahtarın",
+      hint: "voe.sx → Hesap Ayarları → API Key bölümünden al",
+    },
+  },
+  {
+    id: "upstream", name: "Upstream", color: "text-sky-400", bg: "bg-sky-900/20", logo: "US", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://upstream.to",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "upstream.to api anahtarın",
+      hint: "upstream.to hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "luluvdo", name: "Luluvdo", color: "text-pink-400", bg: "bg-pink-900/20", logo: "LL", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://luluvdo.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "luluvdo api anahtarın",
+      hint: "luluvdo.com hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "uqload", name: "Uqload", color: "text-rose-400", bg: "bg-rose-900/20", logo: "UQ", cat: "adult",
+    fields: ["email", "apiKey"],
+    docs: "https://uqload.io",
+    fieldConfig: {
+      emailLabel: "Hesap E-postası",
+      emailPlaceholder: "uqload hesabına kayıtlı e-posta",
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "uqload api anahtarın",
+      hint: "uqload.io → Hesabım → API bölümünden e-posta ve API anahtarını al",
+    },
+  },
+  {
+    id: "streamhide", name: "StreamHide", color: "text-slate-400", bg: "bg-slate-900/20", logo: "SH", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://streamhide.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "streamhide api anahtarın",
+      hint: "streamhide.com hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "supervideo", name: "SuperVideo", color: "text-amber-400", bg: "bg-amber-900/20", logo: "SV", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://supervideo.tv",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "supervideo.tv api anahtarın",
+      hint: "supervideo.tv → Hesabım → API Key bölümünden al",
+    },
+  },
+  {
+    id: "dropload", name: "Dropload", color: "text-indigo-400", bg: "bg-indigo-900/20", logo: "DL", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://dropload.io",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "dropload.io api anahtarın",
+      hint: "dropload.io hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "embedsito", name: "Embedsito", color: "text-lime-400", bg: "bg-lime-900/20", logo: "ES", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://embedsito.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "embedsito api anahtarın",
+      hint: "embedsito.com hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "vidlox", name: "Vidlox", color: "text-red-300", bg: "bg-red-950/30", logo: "VL", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://vidlox.me",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "vidlox.me api anahtarın",
+      hint: "vidlox.me hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "clipwatching", name: "ClipWatching", color: "text-orange-300", bg: "bg-orange-950/30", logo: "CW", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://clipwatching.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "clipwatching api anahtarın",
+      hint: "clipwatching.com hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "streamsb", name: "StreamSB", color: "text-blue-300", bg: "bg-blue-950/30", logo: "SB", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://streamsb.net",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "streamsb api anahtarın",
+      hint: "streamsb.net hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "hxfile", name: "HXFile", color: "text-yellow-300", bg: "bg-yellow-950/30", logo: "HX", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://hxfile.ch",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "hxfile api anahtarın",
+      hint: "hxfile.ch hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "vidplay", name: "VidPlay", color: "text-green-300", bg: "bg-green-950/30", logo: "VP", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://vidplay.online",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "vidplay api anahtarın",
+      hint: "vidplay.online hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "nxbex", name: "Nxbex", color: "text-purple-300", bg: "bg-purple-950/30", logo: "NX", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://nxbex.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "nxbex api anahtarın",
+      hint: "nxbex.com hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "dropgalaxy", name: "DropGalaxy", color: "text-cyan-300", bg: "bg-cyan-950/30", logo: "DG", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://dropgalaxy.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "dropgalaxy api anahtarın",
+      hint: "dropgalaxy.com hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "evoload", name: "Evoload", color: "text-emerald-400", bg: "bg-emerald-900/20", logo: "EV", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://evoload.io",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "evoload api anahtarın",
+      hint: "evoload.io hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "fembed", name: "Fembed", color: "text-red-500", bg: "bg-red-900/20", logo: "FB", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://www.fembed.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "fembed api anahtarın",
+      hint: "fembed.com hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "hotlinking", name: "Hotlinking", color: "text-green-500", bg: "bg-green-900/20", logo: "HL", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://hotlinking.co",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "hotlinking api anahtarın",
+      hint: "hotlinking.co hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "youtube", name: "YouTube", color: "text-red-400", bg: "bg-red-900/20", logo: "YT", cat: "general",
+    fields: ["apiKey"],
+    docs: "https://console.developers.google.com",
+    fieldConfig: {
+      apiKeyLabel: "OAuth Client Secret (JSON)",
+      apiKeyPlaceholder: "Google Cloud Console'dan indirilen JSON",
+      hint: "console.developers.google.com → YouTube Data API v3 → Kimlik Bilgileri → OAuth 2.0 İstemci Kimliği",
+    },
+  },
+  {
+    id: "vimeo", name: "Vimeo", color: "text-blue-400", bg: "bg-blue-900/20", logo: "VM", cat: "general",
+    fields: ["apiKey"],
+    docs: "https://developer.vimeo.com",
+    fieldConfig: {
+      apiKeyLabel: "Erişim Tokeni (Access Token)",
+      apiKeyPlaceholder: "vimeo personal access token",
+      hint: "developer.vimeo.com → Uygulamalarım → Yeni Uygulama → Personal Access Token oluştur",
+    },
+  },
+  {
+    id: "dailymotion", name: "Dailymotion", color: "text-sky-400", bg: "bg-sky-900/20", logo: "DM", cat: "general",
+    fields: ["login", "key"],
+    docs: "https://developers.dailymotion.com",
+    fieldConfig: {
+      loginLabel: "API Key (Client ID)",
+      loginPlaceholder: "dailymotion client id",
+      keyLabel: "API Gizli Anahtarı (Client Secret)",
+      keyPlaceholder: "dailymotion client secret",
+      hint: "dailymotion.com/settings/developer → API Keys bölümünden Client ID ve Client Secret al",
+    },
+  },
+  {
+    id: "rumble", name: "Rumble", color: "text-lime-400", bg: "bg-lime-900/20", logo: "RU", cat: "general",
+    fields: ["apiKey"],
+    docs: "https://rumble.com/upload",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "rumble api anahtarın",
+      hint: "rumble.com hesabından API erişimi talep et",
+    },
+  },
 ];
 
 async function apiFetch(path: string, opts: RequestInit = {}) {
@@ -372,22 +671,36 @@ export function AdminIntegrations() {
                   className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555]" />
               </div>
 
-              {/* Login (Streamtape) */}
-              {selectedPlatform?.fields.includes("login") && (
-                <div>
-                  <label className="text-xs text-[#888] mb-1 block">Login (Kullanıcı Adı)</label>
-                  <input value={form.login}
-                    onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
-                    autoComplete="off"
-                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white" />
+              {/* Platform ipucu */}
+              {selectedPlatform?.fieldConfig.hint && (
+                <div className="flex items-start gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
+                  <span className="text-primary mt-0.5 shrink-0">💡</span>
+                  <p className="text-xs text-primary/80 leading-relaxed">{selectedPlatform.fieldConfig.hint}</p>
                 </div>
               )}
 
-              {/* Key (Streamtape) */}
+              {/* Login alanı (Streamtape, Dailymotion vb.) */}
+              {selectedPlatform?.fields.includes("login") && (
+                <div>
+                  <label className="text-xs text-[#888] mb-1 block">
+                    {selectedPlatform.fieldConfig.loginLabel ?? "Kullanıcı Adı"}
+                  </label>
+                  <input value={form.login}
+                    onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
+                    autoComplete="off"
+                    placeholder={selectedPlatform.fieldConfig.loginPlaceholder ?? ""}
+                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555]" />
+                </div>
+              )}
+
+              {/* Key alanı (Streamtape, Dailymotion vb.) */}
               {selectedPlatform?.fields.includes("key") && (
                 <div>
                   <label className="text-xs text-[#888] mb-1 flex items-center justify-between">
-                    <span>API Key {editId && <span className="text-[#555]">(boş bırakırsan değişmez)</span>}</span>
+                    <span>
+                      {selectedPlatform.fieldConfig.keyLabel ?? "Şifre / Gizli Anahtar"}
+                      {editId && <span className="text-[#555] ml-1">(boş bırakırsan değişmez)</span>}
+                    </span>
                     <button type="button" onClick={() => setShowKey(v => !v)}
                       className="text-[#555] hover:text-[#aaa] transition-colors">
                       {showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -396,27 +709,33 @@ export function AdminIntegrations() {
                   <input type={showKey ? "text" : "password"} value={form.key}
                     onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
                     autoComplete="new-password"
-                    placeholder={editId ? "••••••••" : ""}
+                    placeholder={editId ? "••••••••" : (selectedPlatform.fieldConfig.keyPlaceholder ?? "")}
                     className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444]" />
                 </div>
               )}
 
-              {/* Email (Mixdrop, Uqload) */}
+              {/* Email alanı (Mixdrop, Uqload vb.) */}
               {selectedPlatform?.fields.includes("email") && (
                 <div>
-                  <label className="text-xs text-[#888] mb-1 block">E-posta</label>
+                  <label className="text-xs text-[#888] mb-1 block">
+                    {selectedPlatform.fieldConfig.emailLabel ?? "E-posta"}
+                  </label>
                   <input type="email" value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                     autoComplete="off"
-                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white" />
+                    placeholder={selectedPlatform.fieldConfig.emailPlaceholder ?? ""}
+                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555]" />
                 </div>
               )}
 
-              {/* API Key (çoğu platform) */}
+              {/* API Key alanı (çoğu platform) */}
               {selectedPlatform?.fields.includes("apiKey") && (
                 <div>
                   <label className="text-xs text-[#888] mb-1 flex items-center justify-between">
-                    <span>API Key {editId && <span className="text-[#555]">(boş bırakırsan değişmez)</span>}</span>
+                    <span>
+                      {selectedPlatform.fieldConfig.apiKeyLabel ?? "API Anahtarı"}
+                      {editId && <span className="text-[#555] ml-1">(boş bırakırsan değişmez)</span>}
+                    </span>
                     <button type="button" onClick={() => setShowApiKey(v => !v)}
                       className="text-[#555] hover:text-[#aaa] transition-colors">
                       {showApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -425,7 +744,7 @@ export function AdminIntegrations() {
                   <input type={showApiKey ? "text" : "password"} value={form.apiKey}
                     onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
                     autoComplete="new-password"
-                    placeholder={editId ? "••••••••" : ""}
+                    placeholder={editId ? "••••••••" : (selectedPlatform.fieldConfig.apiKeyPlaceholder ?? "")}
                     className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444]" />
                 </div>
               )}
