@@ -661,6 +661,7 @@ export function AdminIntegrations() {
   const [catFilter, setCatFilter]       = useState<CatFilter>("all");
   const [showKey, setShowKey]           = useState(false);
   const [showApiKey, setShowApiKey]     = useState(false);
+  const [editingInt, setEditingInt]     = useState<any>(null);
 
   const load = async () => {
     setLoading(true);
@@ -686,6 +687,7 @@ export function AdminIntegrations() {
 
   const openEdit = (int: any) => {
     setEditId(int.id);
+    setEditingInt(int);
     setForm({
       platform: int.platform,
       name: int.name,
@@ -725,6 +727,7 @@ export function AdminIntegrations() {
       }
       setShowAdd(false);
       setEditId(null);
+      setEditingInt(null);
       setForm({ ...EMPTY_FORM });
     } catch (e: any) {
       toast({ title: "Hata", description: e.message, variant: "destructive" });
@@ -932,21 +935,76 @@ export function AdminIntegrations() {
       {/* Modal — Ekle / Düzenle */}
       {showAdd && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-          onClick={(e) => e.target === e.currentTarget && setShowAdd(false)}>
-          <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl p-6 w-full max-w-md">
-            <h3 className="font-bold text-lg mb-4">{editId ? "Entegrasyonu Düzenle" : "Platform Ekle"}</h3>
-            <div className="space-y-3">
+          onClick={(e) => e.target === e.currentTarget && (setShowAdd(false), setEditId(null), setEditingInt(null))}>
+          <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+
+            {/* Başlık */}
+            <div className="flex items-center gap-3 mb-5">
+              {selectedPlatform && (
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold shrink-0 ${selectedPlatform.bg} ${selectedPlatform.color}`}>
+                  {selectedPlatform.logo}
+                </div>
+              )}
               <div>
-                <label className="text-xs text-[#888] mb-1 block">Platform</label>
-                <select value={form.platform}
-                  onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
-                  disabled={!!editId}
-                  className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">
-                  <optgroup label="+18 Video / Dosya Hosting">
-                    {PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </optgroup>
-                </select>
+                <h3 className="font-bold text-base leading-tight">
+                  {editId ? `${selectedPlatform?.name ?? "Entegrasyon"} Düzenle` : "Platform Ekle"}
+                </h3>
+                <p className="text-[11px] text-[#555] mt-0.5">
+                  {editId ? "Sadece değiştirmek istediğin alanları doldur" : "Platform kimlik bilgilerini gir"}
+                </p>
               </div>
+            </div>
+
+            {/* Düzenleme modunda: mevcut kayıtlı değerler özeti */}
+            {editId && editingInt && (
+              <div className="mb-4 bg-[#111] border border-[#2a2a2a] rounded-xl p-3 space-y-1.5">
+                <p className="text-[10px] text-[#555] uppercase tracking-widest font-semibold mb-2">Mevcut Kayıtlı Değerler</p>
+                {editingInt.login && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#666] w-24 shrink-0">{selectedPlatform?.fieldConfig.loginLabel ?? "Kullanıcı Adı"}</span>
+                    <span className="text-[11px] text-white font-mono bg-[#1e1e1e] px-2 py-0.5 rounded flex-1 truncate">{editingInt.login}</span>
+                  </div>
+                )}
+                {editingInt.email && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#666] w-24 shrink-0">{selectedPlatform?.fieldConfig.emailLabel ?? "E-posta"}</span>
+                    <span className="text-[11px] text-white font-mono bg-[#1e1e1e] px-2 py-0.5 rounded flex-1 truncate">{editingInt.email}</span>
+                  </div>
+                )}
+                {(editingInt.key && editingInt.key !== "") && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#666] w-24 shrink-0">{selectedPlatform?.fieldConfig.keyLabel ?? "Şifre"}</span>
+                    <span className="text-[11px] text-green-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span> Kayıtlı
+                    </span>
+                  </div>
+                )}
+                {(editingInt.apiKey && editingInt.apiKey !== "") && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#666] w-24 shrink-0">{selectedPlatform?.fieldConfig.apiKeyLabel ?? "API Anahtarı"}</span>
+                    <span className="text-[11px] text-green-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span> Kayıtlı
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {/* Platform seçimi (sadece yeni eklemede) */}
+              {!editId && (
+                <div>
+                  <label className="text-xs text-[#888] mb-1 block">Platform</label>
+                  <select value={form.platform}
+                    onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
+                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white">
+                    <optgroup label="+18 Video / Dosya Hosting">
+                      {PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </optgroup>
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs text-[#888] mb-1 block">Görünen Ad</label>
                 <input value={form.name}
@@ -963,27 +1021,28 @@ export function AdminIntegrations() {
                 </div>
               )}
 
-              {/* Login alanı (Streamtape, Dailymotion vb.) */}
+              {/* Login alanı */}
               {selectedPlatform?.fields.includes("login") && (
                 <div>
                   <label className="text-xs text-[#888] mb-1 block">
                     {selectedPlatform.fieldConfig.loginLabel ?? "Kullanıcı Adı"}
+                    {editId && <span className="text-[#444] ml-1">— güncelle veya boş bırak</span>}
                   </label>
                   <input value={form.login}
                     onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
                     autoComplete="off"
-                    placeholder={selectedPlatform.fieldConfig.loginPlaceholder ?? ""}
-                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555]" />
+                    placeholder={editId ? (editingInt?.login ?? selectedPlatform.fieldConfig.loginPlaceholder ?? "") : (selectedPlatform.fieldConfig.loginPlaceholder ?? "")}
+                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444]" />
                 </div>
               )}
 
-              {/* Key alanı (Streamtape, Dailymotion vb.) */}
+              {/* Key alanı */}
               {selectedPlatform?.fields.includes("key") && (
                 <div>
                   <label className="text-xs text-[#888] mb-1 flex items-center justify-between">
                     <span>
                       {selectedPlatform.fieldConfig.keyLabel ?? "Şifre / Gizli Anahtar"}
-                      {editId && <span className="text-[#555] ml-1">(boş bırakırsan değişmez)</span>}
+                      {editId && <span className="text-[#444] ml-1">— yeni değer gir veya boş bırak</span>}
                     </span>
                     <button type="button" onClick={() => setShowKey(v => !v)}
                       className="text-[#555] hover:text-[#aaa] transition-colors">
@@ -993,32 +1052,33 @@ export function AdminIntegrations() {
                   <input type={showKey ? "text" : "password"} value={form.key}
                     onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
                     autoComplete="new-password"
-                    placeholder={editId ? "••••••••" : (selectedPlatform.fieldConfig.keyPlaceholder ?? "")}
+                    placeholder={editId ? "Değiştirmek için yeni değer gir..." : (selectedPlatform.fieldConfig.keyPlaceholder ?? "")}
                     className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444]" />
                 </div>
               )}
 
-              {/* Email alanı (Mixdrop, Uqload vb.) */}
+              {/* Email alanı */}
               {selectedPlatform?.fields.includes("email") && (
                 <div>
                   <label className="text-xs text-[#888] mb-1 block">
                     {selectedPlatform.fieldConfig.emailLabel ?? "E-posta"}
+                    {editId && <span className="text-[#444] ml-1">— güncelle veya boş bırak</span>}
                   </label>
                   <input type="email" value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                     autoComplete="off"
-                    placeholder={selectedPlatform.fieldConfig.emailPlaceholder ?? ""}
-                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555]" />
+                    placeholder={editId ? (editingInt?.email ?? selectedPlatform.fieldConfig.emailPlaceholder ?? "") : (selectedPlatform.fieldConfig.emailPlaceholder ?? "")}
+                    className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444]" />
                 </div>
               )}
 
-              {/* API Key alanı (çoğu platform) */}
+              {/* API Key alanı */}
               {selectedPlatform?.fields.includes("apiKey") && (
                 <div>
                   <label className="text-xs text-[#888] mb-1 flex items-center justify-between">
                     <span>
                       {selectedPlatform.fieldConfig.apiKeyLabel ?? "API Anahtarı"}
-                      {editId && <span className="text-[#555] ml-1">(boş bırakırsan değişmez)</span>}
+                      {editId && <span className="text-[#444] ml-1">— yeni değer gir veya boş bırak</span>}
                     </span>
                     <button type="button" onClick={() => setShowApiKey(v => !v)}
                       className="text-[#555] hover:text-[#aaa] transition-colors">
@@ -1028,29 +1088,34 @@ export function AdminIntegrations() {
                   <input type={showApiKey ? "text" : "password"} value={form.apiKey}
                     onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
                     autoComplete="new-password"
-                    placeholder={editId ? "••••••••" : (selectedPlatform.fieldConfig.apiKeyPlaceholder ?? "")}
+                    placeholder={editId ? "Değiştirmek için yeni API anahtarı gir..." : (selectedPlatform.fieldConfig.apiKeyPlaceholder ?? "")}
                     className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444]" />
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pt-1">
                 <input type="checkbox" id="autoUpload" checked={form.autoUpload}
-                  onChange={(e) => setForm((f) => ({ ...f, autoUpload: e.target.checked }))} />
-                <label htmlFor="autoUpload" className="text-sm text-[#aaa]">Otomatik yüklemeyi etkinleştir</label>
+                  onChange={(e) => setForm((f) => ({ ...f, autoUpload: e.target.checked }))}
+                  className="accent-primary" />
+                <label htmlFor="autoUpload" className="text-sm text-[#aaa] cursor-pointer select-none">
+                  Otomatik yüklemeyi etkinleştir
+                </label>
               </div>
+
               {selectedPlatform && (
                 <a href={selectedPlatform.docs} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline">
-                  {selectedPlatform.name} API docs →
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                  {selectedPlatform.name} API belgeleri →
                 </a>
               )}
             </div>
-            <div className="flex gap-2 mt-6">
+
+            <div className="flex gap-2 mt-5">
               <button onClick={save} disabled={!form.name || saving}
                 className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
                 {saving ? "Kaydediliyor..." : editId ? "Güncelle" : "Kaydet"}
               </button>
-              <button onClick={() => { setShowAdd(false); setEditId(null); }}
+              <button onClick={() => { setShowAdd(false); setEditId(null); setEditingInt(null); }}
                 className="flex-1 bg-[#222] hover:bg-[#2a2a2a] text-[#aaa] font-medium py-2.5 rounded-lg text-sm transition-colors">
                 İptal
               </button>
