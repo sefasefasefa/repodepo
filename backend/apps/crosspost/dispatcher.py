@@ -14,6 +14,56 @@ from django.utils import timezone
 
 from .models import CrossPostJob, CrossPostSite
 
+# Sağlayıcı key → kullanıcıya gösterilecek isim
+_PROVIDER_DISPLAY_NAMES: dict[str, str] = {
+    "streamtape":   "Streamtape",
+    "doodstream":   "DoodStream",
+    "mixdrop":      "Mixdrop",
+    "vidoza":       "Vidoza",
+    "filemoon":     "FileMoon",
+    "streamwish":   "StreamWish",
+    "voe":          "Voe.sx",
+    "upstream":     "Upstream",
+    "vidhide":      "VidHide",
+    "luluvdo":      "Luluvdo",
+    "uqload":       "UQLoad",
+    "streamhide":   "StreamHide",
+    "supervideo":   "SuperVideo",
+    "dropload":     "Dropload",
+    "embedsito":    "EmbedSito",
+    "vidlox":       "Vidlox",
+    "streamlare":   "Streamlare",
+    "clipwatching": "ClipWatching",
+    "streamsb":     "StreamSB",
+    "hxfile":       "HXFile",
+    "vidplay":      "VidPlay",
+    "nxbex":        "Nxbex",
+    "dropgalaxy":   "DropGalaxy",
+    "evoload":      "Evoload",
+    "fembed":       "Fembed",
+    "hotlinking":   "HotLinking",
+    "filelions":    "FileLions",
+    "vidmoly":      "VidMoly",
+    "streamhub":    "StreamHub",
+    "videovard":    "VideoVard",
+    "waaw":         "Waaw.tv",
+    "upvid":        "UpVid",
+    "vtube":        "VTube",
+    "abysscdn":     "AbyssCDN",
+    "filebee":      "FileBee",
+    "vipfile":      "VipFile",
+    "vidmam":       "Vidmam",
+    "moonvid":      "MoonVid",
+    "gobig":        "GoBig",
+    "jetload":      "JetLoad",
+    "sendvid":      "SendVid",
+    "rapidvideo":   "RapidVideo",
+    "vidcrypt":     "VidCrypt",
+    "embedrise":    "EmbedRise",
+    "kvid":         "Kvid",
+    "megaup":       "MegaUp",
+}
+
 UA = "SociCrossPoster/2.0"
 
 
@@ -95,12 +145,36 @@ def _fail(job, msg: str):
     job.save()
 
 
+def _sync_player(job, remote_url: str):
+    """Crosspost başarılı olunca VideoPlayer tablosuna otomatik ekle/güncelle."""
+    if not remote_url:
+        return
+    try:
+        from apps.videos.models import VideoPlayer
+        provider_key = (job.site.adapter or "").lower()
+        display_name = _PROVIDER_DISPLAY_NAMES.get(provider_key) or job.site.adapter or "Harici"
+        # Aynı video + aynı sağlayıcı için mevcut kaydı güncelle; yoksa oluştur
+        VideoPlayer.objects.update_or_create(
+            video=job.video,
+            label=display_name,
+            defaults={
+                "embed_url": remote_url,
+                "player_type": "iframe",
+                "is_default": False,
+                "sort_order": 10,
+            },
+        )
+    except Exception:
+        pass  # Player senkronizasyonu crosspost başarısını etkilemez
+
+
 def _success(job, remote_url: str = "", response_text: str = ""):
     job.status = "success"
     job.remote_url = remote_url[:500]
     job.response_text = response_text[:2000]
     job.finished_at = timezone.now()
     job.save()
+    _sync_player(job, remote_url)
 
 
 def _run_job(job: CrossPostJob):
