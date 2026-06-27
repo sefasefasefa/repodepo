@@ -43,10 +43,57 @@ def provider_catalog(request):
     return Response({'providers': result})
 
 
+def _sync_integrations_to_sites(user):
+    """
+    IntegrationConfig tablosundaki aktif platformları CrossPostSite'e senkronize eder.
+    Yeni eklenenleri oluşturur, API bilgilerini günceller.
+    """
+    try:
+        from apps.admin_panel.models import IntegrationConfig
+        integrations = IntegrationConfig.objects.filter(is_active=True)
+        for intg in integrations:
+            pk = (intg.platform or '').lower().strip()
+            if not pk:
+                continue
+            catalog_entry = next((p for p in PROVIDER_CATALOG if p['key'] == pk), None)
+            site, created = CrossPostSite.objects.get_or_create(
+                user=user,
+                provider_key=pk,
+                defaults={
+                    'name': intg.name or (catalog_entry['name'] if catalog_entry else pk.title()),
+                    'accepts_adult': catalog_entry['acceptsAdult'] if catalog_entry else False,
+                    'provider_color': catalog_entry['color'] if catalog_entry else '#555',
+                    'provider_letter': catalog_entry['letter'] if catalog_entry else pk[:2].upper(),
+                    'base_url': catalog_entry['baseUrl'] if catalog_entry else '',
+                    'adapter': PROVIDER_DEFAULT_ADAPTER.get(pk, 'generic_webhook'),
+                    'username': intg.login or intg.email or '',
+                    'api_key': intg.api_key or intg.key or '',
+                    'enabled': True,
+                    'auto_post': intg.auto_upload,
+                }
+            )
+            if not created:
+                # Kimlik bilgilerini güncelle (değiştiyse)
+                updated = False
+                new_api_key = intg.api_key or intg.key or ''
+                new_username = intg.login or intg.email or ''
+                if new_api_key and site.api_key != new_api_key:
+                    site.api_key = new_api_key
+                    updated = True
+                if new_username and site.username != new_username:
+                    site.username = new_username
+                    updated = True
+                if updated:
+                    site.save(update_fields=['api_key', 'username'])
+    except Exception:
+        pass  # Senkronizasyon hatası ana akışı bozmasın
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def sites_list_create(request):
     if request.method == 'GET':
+        _sync_integrations_to_sites(request.user)
         qs = CrossPostSite.objects.filter(user=request.user)
         return Response({'sites': [s.to_dict() for s in qs]})
 
