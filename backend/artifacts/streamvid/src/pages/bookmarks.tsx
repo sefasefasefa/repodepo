@@ -146,7 +146,7 @@ export default function Bookmarks() {
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                     <span>{(video as any).viewCount?.toLocaleString()} görüntülenme</span>
                     <span>•</span>
-                    <span>{(video as any).duration}</span>
+                    {(() => { const d = (video as any).duration; if (!d || d <= 0) return null; const h = Math.floor(d/3600), m = Math.floor((d%3600)/60), s = Math.floor(d%60); return <span>{h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`}</span>; })()}
                   </div>
                 </div>
                 <Button variant="ghost" size="icon" className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">

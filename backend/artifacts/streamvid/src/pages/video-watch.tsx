@@ -106,6 +106,15 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
     };
 
     const onLoadedMetadata = () => {
+      // Auto-save duration to backend if not set yet
+      if (vid.duration && Number.isFinite(vid.duration) && vid.duration > 0 && !video.duration) {
+        const _tok = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        fetch(`/api/videos/${video.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: `Bearer ${_tok}` } : {}) },
+          body: JSON.stringify({ duration: Math.round(vid.duration) }),
+        }).catch(() => {/* silent */});
+      }
       if (resumeSeeked.current) return;
       const saved = loadWatchProgress(video.id);
       if (!saved || saved.currentTime < 8 || saved.currentTime >= vid.duration - 10) return;
@@ -554,7 +563,7 @@ export default function VideoWatch() {
                 <span>Crosspost</span>
               </button>
             )}
-            {user && (
+            {user && !isCreatorOrAdmin && (
               <button
                 onClick={() => setShowTranscript(p => !p)}
                 className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[#888] hover:text-white transition-colors touch-manipulation py-1"
@@ -565,8 +574,9 @@ export default function VideoWatch() {
               </button>
             )}
           </div>
-          {showTranscript && user && <SubtitleManager videoId={videoId} token={token} />}
-          {isCreatorOrAdmin && showSubManager && <SubtitleManager videoId={videoId} token={token} />}
+          {(isCreatorOrAdmin ? (showSubManager) : (showTranscript && !!user)) && (
+            <SubtitleManager videoId={videoId} token={token} />
+          )}
           <div className="pt-2">
             <h3 className="text-base font-bold mb-4">{video.commentCount ?? 0} Yorum</h3>
 

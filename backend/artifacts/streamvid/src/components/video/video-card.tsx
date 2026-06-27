@@ -10,10 +10,12 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video }: VideoCardProps) {
-  const formatDuration = (seconds?: number | null) => {
-    if (!seconds) return "0:00";
-    const m = Math.floor(seconds / 60);
+  const formatDuration = (seconds?: number | null): string | null => {
+    if (!seconds || seconds <= 0 || !Number.isFinite(seconds)) return null;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = Math.floor(seconds % 60);
+    if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
@@ -39,9 +41,11 @@ export function VideoCard({ video }: VideoCardProps) {
               <Play className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground opacity-50" />
             </div>
           )}
-          <div className="absolute bottom-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium text-white backdrop-blur-sm">
-            {formatDuration(video.duration)}
-          </div>
+          {formatDuration(video.duration) && (
+            <div className="absolute bottom-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium text-white backdrop-blur-sm">
+              {formatDuration(video.duration)}
+            </div>
+          )}
           {video.isPremium && (
             <div className="absolute top-1.5 right-1.5">
               <Badge variant="default" className="bg-primary text-primary-foreground border-none text-[10px] px-1.5 py-0">
