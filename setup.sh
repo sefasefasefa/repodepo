@@ -131,7 +131,7 @@ fi
 
 # ── 2. Python bağımlılıkları ──────────────────────────────────────────────────
 echo "[2/6] Python paketleri kuruluyor..."
-pip install -r backend/requirements.txt
+python -m pip install -r backend/requirements.txt
 
 # ── 3. Node / pnpm ───────────────────────────────────────────────────────────
 echo "[3/6] Node paketleri kuruluyor..."

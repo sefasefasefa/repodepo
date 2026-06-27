@@ -24,11 +24,13 @@ sleep 1
 
 # ── 2. Kodu çek ──────────────────────────────────────────────────────────────
 echo "[2/5] Git pull..."
+git stash 2>/dev/null || true
 git pull
+git stash pop 2>/dev/null || true
 
 # ── 3. Python bağımlılıkları güncelle ────────────────────────────────────────
 echo "[3/5] Python paketleri güncelleniyor..."
-pip install -r backend/requirements.txt -q
+python -m pip install -r backend/requirements.txt -q
 
 # ── 4. Veritabanı migrate ─────────────────────────────────────────────────────
 echo "[4/5] Veritabanı migrate ediliyor..."
