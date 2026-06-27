@@ -38,6 +38,31 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-core":   ["react", "react-dom"],
+          "react-query":  ["@tanstack/react-query"],
+          "charts":       ["recharts"],
+          "icons":        ["lucide-react"],
+          "ui-radix":     [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-slider",
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-label",
+            "@radix-ui/react-checkbox",
+          ],
+          "routing":      ["wouter"],
+          "utils":        ["date-fns", "clsx", "tailwind-merge", "class-variance-authority"],
+        },
+      },
+    },
   },
   server: {
     port,
