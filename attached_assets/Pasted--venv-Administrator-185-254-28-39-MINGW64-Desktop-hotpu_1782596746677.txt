@@ -1,0 +1,59 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ ./update.sh
+=== Hotpulse Guncelleme ===
+[1/6] Sunucu durduruluyor...
+[2/6] Git pull...
+remote: Enumerating objects: 33, done.
+remote: Counting objects: 100% (33/33), done.
+remote: Compressing objects: 100% (8/8), done.
+remote: Total 24 (delta 20), reused 20 (delta 16), pack-reused 0 (from 0)
+Unpacking objects: 100% (24/24), 233.41 KiB | 1.23 MiB/s, done.
+From https://github.com/sefasefasefa/repodepo
+   e2c1420..7f4d921  main       -> origin/main
+Updating e2c1420..7f4d921
+Fast-forward
+ attached_assets/IMG_5337_1782596076072.png         | Bin 0 -> 206511 bytes
+ attached_assets/IMG_5338_1782596076072.png         | Bin 0 -> 263973 bytes
+ ...4-28-39-MINGW64-Desktop-hotpu_1782596008469.txt | 189 +++++++++++++++++++++
+ backend/.npmrc                                     |   1 +
+ backend/apps/crosspost/views.py                    |  47 +++++
+ backend/package.json                               |   5 +-
+ update.sh                                          |   2 +-
+ 7 files changed, 242 insertions(+), 2 deletions(-)
+ create mode 100644 attached_assets/IMG_5337_1782596076072.png
+ create mode 100644 attached_assets/IMG_5338_1782596076072.png
+ create mode 100644 attached_assets/Pasted--venv-Administrator-185-254-28-39-MINGW64-Desktop-hotpu_1782596008469.txt
+[3/6] Python paketleri guncelleniyor...
+[4/6] Frontend derleniyor...
+Scope: all 4 workspace projects
+✓ Lockfile passes supply-chain policies (verified 4m ago)
+[ERR_PNPM_OUTDATED_LOCKFILE] Cannot install with "frozen-lockfile" because pnpm-lock.yaml is not up to date with <ROOT>\package.json
+
+Note that in CI environments this setting is true by default. If you still need to run install in such cases, use "pnpm install --no-frozen-lockfile"
+
+  Failure reason:
+  specifiers in the lockfile don't match specifiers in package.json:
+* 1 dependencies are mismatched:
+  - prettier (lockfile: ^3.8.3, manifest: ^3.28.3)
+[WARN] The "pnpm" field in package.json is no longer read by pnpm. The following keys were ignored: "pnpm.onlyBuiltDependencies". See https://pnpm.io/settings for the new home of each setting.
+Scope: all 4 workspace projects
+✓ Lockfile passes supply-chain policies (verified 4m ago)
+artifacts/streamvid                      | [WARN] deprecated recharts@2.15.4
+Scope: all 4 workspace projects
+✓ Lockfile passes supply-chain policies (verified 4m ago)
+artifacts/streamvid                      | [WARN] deprecated recharts@2.15.4
+[ERR_PNPM_NO_MATCHING_VERSION] No matching version found for prettier@^3.28.3 while fetching it from https://registry.npmjs.org/
+
+This error happened while installing a direct dependency of C:\Users\Administrator\Desktop\hotpulse\backend
+
+The latest release of prettier is "3.9.0". Published at 27.06.2026 13:26:05
+
+Other releases are:
+  * next: 4.0.0-alpha.13 published at 18.11.2025
+
+If you need the full list of all 189 published versions run "pnpm view prettier versions".
+Progress: resolved 66, reused 66, downloaded 0, added 0
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ 
