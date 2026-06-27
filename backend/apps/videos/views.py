@@ -185,9 +185,38 @@ def get_shorts(request):
     return Response({'videos': enrich_videos_bulk(videos, request.user), 'total': total})
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH', 'PUT'])
 @permission_classes([AllowAny])
 def get_video(request, video_id):
+    if request.method in ('PATCH', 'PUT'):
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=401)
+        try:
+            video = Video.objects.get(id=video_id)
+        except Video.DoesNotExist:
+            return Response({'error': 'Video not found'}, status=404)
+        if video.creator != request.user and request.user.role != 'admin':
+            return Response({'error': 'Forbidden'}, status=403)
+        data = request.data
+        for field, value in {
+            'title': data.get('title'),
+            'description': data.get('description'),
+            'thumbnail_url': data.get('thumbnailUrl', data.get('thumbnail_url')),
+            'video_url': data.get('videoUrl', data.get('video_url')),
+            'hls_url': data.get('hlsUrl', data.get('hls_url')),
+            'duration': data.get('duration'),
+            'type': data.get('type'),
+            'is_premium': data.get('isPremium', data.get('is_premium')),
+            'is_ppv': data.get('isPPV', data.get('is_ppv')),
+            'ppv_price': data.get('ppvPrice', data.get('ppv_price')),
+            'is_published': data.get('isPublished', data.get('is_published')),
+            'tags': data.get('tags'),
+            'category_id': data.get('categoryId', data.get('category_id')),
+        }.items():
+            if value is not None:
+                setattr(video, field, value)
+        video.save()
+        return Response(enrich_video(video, request.user))
     try:
         v = Video.objects.select_related('creator', 'category').get(id=video_id)
     except Video.DoesNotExist:
@@ -249,6 +278,12 @@ def create_video(request):
         if site_ids or auto_flag:
             from apps.crosspost.dispatcher import dispatch_for_video
             dispatch_for_video(video, user, site_ids)
+    except Exception:
+        pass
+
+    # Auto-distribute to active providers in background
+    try:
+        _distribute_video_background(video.id)
     except Exception:
         pass
 
@@ -816,6 +851,12 @@ def upload_video(request):
     User = get_user_model()
     User.objects.filter(id=user.id).update(video_count=F('video_count') + 1)
 
+    # Auto-distribute to active providers in background
+    try:
+        _distribute_video_background(video.id)
+    except Exception:
+        pass
+
     return Response({
         'message': 'Yüklendi',
         'videoId': video.id,
@@ -907,3 +948,135 @@ def upload_subtitle(request, video_id):
         defaults={'label': label, 'vtt_content': vtt}
     )
     return Response({'id': sub.id, 'language': sub.language, 'label': sub.label}, status=201)
+
+
+# ─── Video Distribution to Providers ──────────────────────────────────────────
+
+def _submit_to_provider(integration, video_url, video_title):
+    """Submit video URL to a provider for remote download. Returns embed_url or None."""
+    import urllib.request
+    import urllib.parse
+    import json as _json
+    platform = integration.platform
+    name = urllib.parse.quote(video_title[:80])
+    encoded_url = urllib.parse.quote(video_url, safe='')
+
+    try:
+        if platform == 'streamtape' and integration.login and integration.key:
+            api = f'https://api.streamtape.com/remotedl?login={integration.login}&key={integration.key}&url={encoded_url}&name={name}'
+            with urllib.request.urlopen(api, timeout=15) as r:
+                d = _json.loads(r.read().decode())
+                if d.get('status') == 200:
+                    file_id = d.get('result', {}).get('id', '')
+                    return f'https://streamtape.com/e/{file_id}' if file_id else None
+
+        elif platform == 'doodstream' and integration.api_key:
+            api = f'https://doodapi.com/api/upload/url?key={integration.api_key}&url={encoded_url}&filename={name}'
+            with urllib.request.urlopen(api, timeout=15) as r:
+                d = _json.loads(r.read().decode())
+                if d.get('status') == 200:
+                    filecode = d.get('result', {}).get('filecode', '')
+                    return f'https://doodstream.com/e/{filecode}' if filecode else None
+
+        elif platform == 'mixdrop' and integration.api_key and integration.email:
+            post_data = urllib.parse.urlencode({'url': video_url, 'key': integration.api_key, 'email': integration.email}).encode()
+            req = urllib.request.Request('https://ul.mixdrop.ag/api/upload/url', data=post_data, method='POST')
+            with urllib.request.urlopen(req, timeout=15) as r:
+                d = _json.loads(r.read().decode())
+                ref = (d.get('result') or {}).get('ref', '')
+                return f'https://mixdrop.ag/e/{ref}' if ref else None
+
+        elif platform in ('streamwish', 'vidhide', 'voe', 'upstream', 'luluvdo',
+                           'streamhide', 'supervideo', 'filemoon', 'hxfile',
+                           'vidplay', 'nxbex', 'dropgalaxy', 'evoload',
+                           'streamsb', 'uqload', 'embedsito', 'vidlox',
+                           'clipwatching', 'dropload') and integration.api_key:
+            BASE_MAP = {
+                'streamwish': 'streamwish.com', 'vidhide': 'vidhide.com',
+                'voe': 'voe.sx', 'upstream': 'upstream.to',
+                'luluvdo': 'luluvdo.com', 'streamhide': 'streamhide.com',
+                'supervideo': 'supervideo.tv', 'filemoon': 'filemoonapi.com',
+                'hxfile': 'hxfile.ch', 'vidplay': 'vidplay.online',
+                'nxbex': 'nxbex.com', 'dropgalaxy': 'dropgalaxy.com',
+                'evoload': 'evoload.io', 'streamsb': 'streamsb.net',
+                'uqload': 'uqload.io', 'embedsito': 'embedsito.com',
+                'vidlox': 'vidlox.me', 'clipwatching': 'clipwatching.com',
+                'dropload': 'dropload.io',
+            }
+            base = BASE_MAP.get(platform, f'{platform}.com')
+            api = f'https://{base}/api/upload/url?key={integration.api_key}&url={encoded_url}&filename={name}'
+            with urllib.request.urlopen(api, timeout=15) as r:
+                d = _json.loads(r.read().decode())
+                if d.get('status') == 200:
+                    result = d.get('result', {})
+                    filecode = result.get('filecode') or result.get('file_code') or result.get('id', '')
+                    if filecode:
+                        embed_base = base.replace('api.', '')
+                        return f'https://{embed_base}/e/{filecode}'
+        return None
+    except Exception:
+        return None
+
+
+def _distribute_video_background(video_id):
+    """Run in background thread — distribute video to all active auto-upload providers."""
+    import threading
+    import django
+    django.setup() if not django.apps.registry.apps.ready else None
+
+    def _run():
+        try:
+            from apps.admin_panel.models import IntegrationConfig
+            video = Video.objects.select_related('creator').get(id=video_id)
+            video_url = video.video_url or video.hls_url
+            if not video_url:
+                return
+            # Make absolute URL if relative
+            if video_url.startswith('/'):
+                from django.conf import settings as _s
+                host = getattr(_s, 'SITE_URL', 'http://localhost:8000')
+                video_url = host.rstrip('/') + video_url
+
+            active = IntegrationConfig.objects.filter(is_active=True, auto_upload=True)
+            for intg in active:
+                existing = VideoPlayer.objects.filter(video=video, label__icontains=intg.name).exists()
+                if existing:
+                    continue
+                embed_url = _submit_to_provider(intg, video_url, video.title)
+                if embed_url:
+                    VideoPlayer.objects.create(
+                        video=video,
+                        label=intg.name,
+                        embed_url=embed_url,
+                        player_type='iframe',
+                        is_default=False,
+                    )
+                    IntegrationConfig.objects.filter(id=intg.id).update(
+                        upload_count=F('upload_count') + 1
+                    )
+        except Exception:
+            pass
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def distribute_video(request, video_id):
+    """Manually trigger distribution of a video to all active providers."""
+    if request.user.role not in ('admin', 'moderator', 'creator'):
+        return Response({'error': 'Forbidden'}, status=403)
+    try:
+        video = Video.objects.get(id=video_id)
+    except Video.DoesNotExist:
+        return Response({'error': 'Video not found'}, status=404)
+    if video.creator != request.user and request.user.role not in ('admin', 'moderator'):
+        return Response({'error': 'Forbidden'}, status=403)
+
+    from apps.admin_panel.models import IntegrationConfig
+    active = IntegrationConfig.objects.filter(is_active=True, auto_upload=True)
+    count = active.count()
+
+    _distribute_video_background(video_id)
+    return Response({'message': f'{count} sağlayıcıya dağıtım başlatıldı', 'count': count})

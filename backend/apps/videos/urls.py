@@ -15,6 +15,7 @@ urlpatterns = [
     path('videos/<int:video_id>', views.get_video),
     path('videos/<int:video_id>/update', views.update_video),
     path('videos/<int:video_id>/delete', views.delete_video),
+    path('videos/<int:video_id>/distribute', views.distribute_video),
     path('videos/<int:video_id>/like', views.like_video),
     path('videos/<int:video_id>/unlike', views.unlike_video),
     path('videos/<int:video_id>/bookmark', views.bookmark_video),
