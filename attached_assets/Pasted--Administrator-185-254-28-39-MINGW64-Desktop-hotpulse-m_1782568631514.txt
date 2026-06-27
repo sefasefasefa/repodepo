@@ -1,0 +1,92 @@
+
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$  source /c/Users/Administrator/Desktop/hotpulse/venv/Scripts/activate
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ 
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ cd ~/Desktop/hotpulse/backend/artifacts/streamvid
+pnpm add -D @esbuild/win32-x64
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-mig
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+✓ Lockfile passes supply-chain policies (verified 2m ago)
+[WARN] deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+../..                                    | Progress: resolved 257, reused 0, downloaded 0, added 0, done
+[WARN] Issues with peer dependencies found. Run "pnpm peers check" to list them.
+
+devDependencies:
++ @esbuild/win32-x64 ^0.28.1
+
+../..                                    |   +1 +
+../.. preinstall$ node -e "if(!process.env.npm_config_user_ag…
+└─ Done in 425ms
+Done in 16.5s using pnpm v11.9.0
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse/backend/artifacts/streamvid (main)
+$ 
