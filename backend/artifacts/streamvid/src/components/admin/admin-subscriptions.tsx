@@ -282,6 +282,7 @@ export function AdminSubscriptions() {
     <div className="space-y-6 max-w-6xl">
       {/* Modal */}
       <PlanModal
+        key={modal.form.id ?? "new"}
         open={modal.open}
         onClose={() => setModal(m => ({ ...m, open: false }))}
         initial={modal.form}
