@@ -1,0 +1,736 @@
+[
+{
+  "model": "accounts.user",
+  "fields": {
+    "password": "",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "admin",
+    "email": "Admin@admin.com",
+    "password_hash": "d8a7d99a3787bc6913dfb4f7e8965c2c:b2136e561ab1be567994e0709c86726803bb7119c866d444a31ed2c9b91b87c752561cb612fd3251a12a5eb57dbd0b6c132d102d496b22503dd9abf5fd95f674",
+    "display_name": "Site Yöneticisi",
+    "avatar_url": null,
+    "banner_url": null,
+    "bio": null,
+    "role": "admin",
+    "is_verified": true,
+    "is_banned": false,
+    "ban_reason": null,
+    "follower_count": 0,
+    "following_count": 0,
+    "video_count": 17,
+    "total_views": 0,
+    "subscription_price": null,
+    "social_links": null,
+    "session_token": "d13116a6692dcb749819657758247dffa1df776014c986da039356c988553032",
+    "google_id": null,
+    "phone": null,
+    "phone_verified": false,
+    "sms_otp": null,
+    "sms_otp_expires_at": null,
+    "is_staff": true,
+    "is_active": true,
+    "created_at": "2026-06-26T20:48:44.189Z",
+    "updated_at": "2026-06-26T20:48:44.189Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "subscriptions.subscriptionplan",
+  "pk": 9,
+  "fields": {
+    "name": "Ücretsiz",
+    "description": "Soci platformuna başlamak için temel ücretsiz erişim. Reklamlı izleme, sınırlı içerik.",
+    "price": "0.00",
+    "billing_cycle": "monthly",
+    "features": [
+      "Ücretsiz videolara erişim",
+      "Shorts ve Stories görüntüleme",
+      "Reklamlı izleme",
+      "Maksimum 720p kalite",
+      "Günlük 5 premium önizleme",
+      "Temel arama ve keşif"
+    ],
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T20:55:21.924Z"
+  }
+},
+{
+  "model": "subscriptions.subscriptionplan",
+  "pk": 10,
+  "fields": {
+    "name": "🔞 Temel Üye",
+    "description": "Reklamsız deneyim ve HD içerikler. 18+ platformun tüm standart içeriklerine erişim.",
+    "price": "9.99",
+    "billing_cycle": "monthly",
+    "features": [
+      "Reklamsız izleme deneyimi",
+      "Tüm ücretsiz içeriklere tam erişim",
+      "1080p Full HD kalite",
+      "Shorts ve Stories tam erişim",
+      "Yaratıcıları takip et ve bildirim al",
+      "Temel live stream izleme",
+      "Aylık 50 token hediyesi"
+    ],
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T20:55:21.934Z"
+  }
+},
+{
+  "model": "subscriptions.subscriptionplan",
+  "pk": 11,
+  "fields": {
+    "name": "🔞 Premium Üye",
+    "description": "En çok tercih edilen plan. Premium ve özel içeriklere tam erişim, live stream katılımı.",
+    "price": "19.99",
+    "billing_cycle": "monthly",
+    "features": [
+      "Reklamsız izleme deneyimi",
+      "Tüm premium içeriklere tam erişim",
+      "4K Ultra HD kalite (desteklenen içeriklerde)",
+      "Live stream + sohbet + anket katılımı",
+      "Shorts, Stories, Live Replay tam erişim",
+      "İndirme özelliği (çevrimdışı izleme)",
+      "PPV içeriklerde %20 indirim",
+      "Custom Request gönderme hakkı",
+      "Aylık 200 token hediyesi",
+      "Öncelikli müşteri desteği"
+    ],
+    "is_popular": true,
+    "is_active": true,
+    "created_at": "2026-06-26T20:55:21.952Z"
+  }
+},
+{
+  "model": "subscriptions.subscriptionplan",
+  "pk": 12,
+  "fields": {
+    "name": "🔞 VIP Üye",
+    "description": "Platformun tüm özelliklerine sınırsız erişim. Özel rozetler, yüksek token bonusu ve creator ile doğrudan etkileşim.",
+    "price": "34.99",
+    "billing_cycle": "monthly",
+    "features": [
+      "Reklamsız izleme deneyimi",
+      "Tüm VIP ve özel içeriklere erişim",
+      "4K Ultra HD + HDR kalite",
+      "Sınırsız live stream + özel moderatör rozeti",
+      "Live stream'de yaratıcıya öncelikli mesaj",
+      "İndirme özelliği (sınırsız)",
+      "PPV içeriklerde %40 indirim",
+      "Öncelikli Custom Request işleme",
+      "Aylık 500 token hediyesi",
+      "Özel VIP rozeti ve profil çerçevesi",
+      "Yeni içerik erken erişim (24 saat önce)",
+      "Özel VIP içerik kanalı erişimi"
+    ],
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T20:55:21.963Z"
+  }
+},
+{
+  "model": "subscriptions.subscriptionplan",
+  "pk": 13,
+  "fields": {
+    "name": "🔞 Premium Yıllık",
+    "description": "Premium planın yıllık versiyonu — 2 ay bedava! Tüm premium özellikler tam yıl boyunca.",
+    "price": "199.99",
+    "billing_cycle": "yearly",
+    "features": [
+      "Premium Üye'nin tüm özellikleri",
+      "2 aylık bedava (aylık ödemeye kıyasla)",
+      "Reklamsız izleme deneyimi",
+      "Tüm premium içeriklere tam erişim",
+      "4K Ultra HD kalite",
+      "Live stream + indirme + Custom Request",
+      "PPV içeriklerde %20 indirim",
+      "Yıllık 2.500 token hediyesi (fazladan +100)",
+      "Öncelikli müşteri desteği"
+    ],
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T20:55:21.973Z"
+  }
+},
+{
+  "model": "subscriptions.subscriptionplan",
+  "pk": 14,
+  "fields": {
+    "name": "🔞 VIP Yıllık",
+    "description": "VIP planın yıllık versiyonu — en iyi değer! 2 ay bedava + ekstra token bonusu.",
+    "price": "349.99",
+    "billing_cycle": "yearly",
+    "features": [
+      "VIP Üye'nin tüm özellikleri",
+      "2 aylık bedava (aylık ödemeye kıyasla)",
+      "Reklamsız izleme deneyimi",
+      "Tüm VIP ve özel içeriklere erişim",
+      "4K Ultra HD + HDR kalite",
+      "Sınırsız live stream + öncelikli mesaj",
+      "PPV içeriklerde %40 indirim",
+      "Öncelikli Custom Request işleme",
+      "Yıllık 6.500 token hediyesi (fazladan +500)",
+      "Özel VIP rozeti ve profil çerçevesi",
+      "Yeni içerik erken erişim + VIP içerik kanalı"
+    ],
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T20:55:21.988Z"
+  }
+},
+{
+  "model": "subscriptions.subscriptionplan",
+  "pk": 15,
+  "fields": {
+    "name": "🔞 Creator Fan Pass",
+    "description": "Favori yaratıcılarını destekle, özel içeriklerine kavuş. Yaratıcıya özel fanclub erişimi.",
+    "price": "7.99",
+    "billing_cycle": "monthly",
+    "features": [
+      "Yaratıcının özel fanclub içerikleri",
+      "Yaratıcıya aylık mesaj hakkı (3 adet)",
+      "Fanclub rozeti ve özel renk",
+      "Yaratıcının live streamlerinde öncelik",
+      "Özel fan içerik arşivi erişimi",
+      "Aylık 100 token hediyesi",
+      "Yaratıcının yeni içeriklerine erken erişim"
+    ],
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T20:55:21.998Z"
+  }
+},
+{
+  "model": "subscriptions.subscriptionplan",
+  "pk": 16,
+  "fields": {
+    "name": "🔞 Ömür Boyu VIP",
+    "description": "Bir kez öde, sonsuza dek VIP kal. Platformun tüm geçmiş ve gelecek özelliklerine kalıcı erişim.",
+    "price": "499.99",
+    "billing_cycle": "lifetime",
+    "features": [
+      "VIP Üye'nin tüm özellikleri — sonsuza dek",
+      "Gelecekteki tüm yeni özelliklere otomatik erişim",
+      "Reklamsız deneyim (kalıcı)",
+      "4K Ultra HD + HDR kalite",
+      "Sınırsız indirme ve arşiv erişimi",
+      "PPV içeriklerde %50 indirim (kalıcı)",
+      "Sınırsız Custom Request gönderme",
+      "Aktivasyon'da 1.000 token + yıllık 500 token",
+      "Özel \"Founding Member\" rozeti",
+      "Geliştirici ekibiyle aylık özel Q&A"
+    ],
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T20:55:22.011Z"
+  }
+},
+{
+  "model": "social.badgedefinition",
+  "pk": 1,
+  "fields": {
+    "slug": "verified",
+    "name": "Onaylı Creator",
+    "description": "Onaylanmış içerik üreticisi",
+    "icon": "✅",
+    "color": "#22c55e",
+    "criteria": "verified",
+    "threshold": 1,
+    "is_enabled": true,
+    "sort_order": 0,
+    "created_at": "2026-06-26T20:48:44.859Z"
+  }
+},
+{
+  "model": "social.badgedefinition",
+  "pk": 2,
+  "fields": {
+    "slug": "rising-star",
+    "name": "Yükselen Yıldız",
+    "description": "1000+ takipçi",
+    "icon": "⭐",
+    "color": "#f59e0b",
+    "criteria": "follower_count",
+    "threshold": 1000,
+    "is_enabled": true,
+    "sort_order": 0,
+    "created_at": "2026-06-26T20:48:44.872Z"
+  }
+},
+{
+  "model": "social.badgedefinition",
+  "pk": 3,
+  "fields": {
+    "slug": "popular",
+    "name": "Popüler",
+    "description": "10000+ görüntülenme",
+    "icon": "🔥",
+    "color": "#ef4444",
+    "criteria": "view_count",
+    "threshold": 10000,
+    "is_enabled": true,
+    "sort_order": 0,
+    "created_at": "2026-06-26T20:48:44.884Z"
+  }
+},
+{
+  "model": "social.badgedefinition",
+  "pk": 4,
+  "fields": {
+    "slug": "pro-creator",
+    "name": "Pro Creator",
+    "description": "50+ video",
+    "icon": "🎬",
+    "color": "#7c3aed",
+    "criteria": "video_count",
+    "threshold": 50,
+    "is_enabled": true,
+    "sort_order": 0,
+    "created_at": "2026-06-26T20:48:44.895Z"
+  }
+},
+{
+  "model": "social.badgedefinition",
+  "pk": 5,
+  "fields": {
+    "slug": "top-tipper",
+    "name": "Cömert Destekçi",
+    "description": "Token gönderdi",
+    "icon": "💎",
+    "color": "#06b6d4",
+    "criteria": "tip_given",
+    "threshold": 1,
+    "is_enabled": true,
+    "sort_order": 0,
+    "created_at": "2026-06-26T20:48:44.906Z"
+  }
+},
+{
+  "model": "social.badgedefinition",
+  "pk": 6,
+  "fields": {
+    "slug": "adult-creator",
+    "name": "18+ Creator",
+    "description": "Onaylı yetişkin içerik üreticisi",
+    "icon": "🔞",
+    "color": "#ec4899",
+    "criteria": "adult_verified",
+    "threshold": 1,
+    "is_enabled": true,
+    "sort_order": 0,
+    "created_at": "2026-06-26T20:48:44.918Z"
+  }
+},
+{
+  "model": "social.badgedefinition",
+  "pk": 7,
+  "fields": {
+    "slug": "vip-member",
+    "name": "VIP Üye",
+    "description": "VIP abonelik aktif",
+    "icon": "👑",
+    "color": "#d97706",
+    "criteria": "vip_subscriber",
+    "threshold": 1,
+    "is_enabled": true,
+    "sort_order": 0,
+    "created_at": "2026-06-26T20:48:44.929Z"
+  }
+},
+{
+  "model": "tokens.tokenpackage",
+  "pk": 7,
+  "fields": {
+    "name": "Başlangıç",
+    "tokens": 100,
+    "price_usd": "0.99",
+    "bonus": 0,
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T22:12:16.842Z"
+  }
+},
+{
+  "model": "tokens.tokenpackage",
+  "pk": 8,
+  "fields": {
+    "name": "Popüler",
+    "tokens": 500,
+    "price_usd": "4.99",
+    "bonus": 50,
+    "is_popular": true,
+    "is_active": true,
+    "created_at": "2026-06-26T22:12:16.853Z"
+  }
+},
+{
+  "model": "tokens.tokenpackage",
+  "pk": 9,
+  "fields": {
+    "name": "Değerli",
+    "tokens": 1000,
+    "price_usd": "9.99",
+    "bonus": 150,
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T22:12:16.864Z"
+  }
+},
+{
+  "model": "tokens.tokenpackage",
+  "pk": 10,
+  "fields": {
+    "name": "Premium",
+    "tokens": 2500,
+    "price_usd": "24.99",
+    "bonus": 500,
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T22:12:16.876Z"
+  }
+},
+{
+  "model": "tokens.tokenpackage",
+  "pk": 11,
+  "fields": {
+    "name": "Elit",
+    "tokens": 5000,
+    "price_usd": "49.99",
+    "bonus": 1500,
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T22:12:16.887Z"
+  }
+},
+{
+  "model": "tokens.tokenpackage",
+  "pk": 12,
+  "fields": {
+    "name": "Diamond",
+    "tokens": 10000,
+    "price_usd": "89.99",
+    "bonus": 4000,
+    "is_popular": false,
+    "is_active": true,
+    "created_at": "2026-06-26T22:12:16.898Z"
+  }
+},
+{
+  "model": "affiliate.affiliatesettings",
+  "pk": 1,
+  "fields": {
+    "is_active": false,
+    "commission_rate": "0.1000",
+    "sub_commission_rate": "0.0500",
+    "cookie_days": 30,
+    "min_payout_usd": "10.00",
+    "allowed_events": "register,subscribe,purchase",
+    "updated_at": "2026-06-26T21:33:18.354Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "admin_panel",
+  "fields": {
+    "state": "enabled",
+    "label": "Admin Panel",
+    "description": "Admin panel girişi",
+    "updated_at": "2026-06-26T21:31:18.036Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "adult_content",
+  "fields": {
+    "state": "enabled",
+    "label": "18+ İçerik",
+    "description": "Yetişkin içerik bölümü",
+    "updated_at": "2026-06-26T22:12:17.007Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "affiliate",
+  "fields": {
+    "state": "enabled",
+    "label": "Affiliate",
+    "description": "Affiliate sayfası",
+    "updated_at": "2026-06-26T21:31:18.028Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "audio_calls",
+  "fields": {
+    "state": "enabled",
+    "label": "Sesli Aramalar",
+    "description": "DM içi sesli arama",
+    "updated_at": "2026-06-26T21:31:17.774Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "bookmarks",
+  "fields": {
+    "state": "enabled",
+    "label": "Kaydedilenler",
+    "description": "Kayıtlı içerikler",
+    "updated_at": "2026-06-26T21:31:17.925Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "categories",
+  "fields": {
+    "state": "enabled",
+    "label": "Kategoriler",
+    "description": "Kategori sayfaları",
+    "updated_at": "2026-06-26T21:31:17.869Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "creator_dashboard",
+  "fields": {
+    "state": "enabled",
+    "label": "Creator Dashboard",
+    "description": "Creator paneli",
+    "updated_at": "2026-06-26T21:31:17.999Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "creators",
+  "fields": {
+    "state": "enabled",
+    "label": "Creatorlar",
+    "description": "Creator listeleri ve profilleri",
+    "updated_at": "2026-06-26T21:31:17.878Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "dm_messages",
+  "fields": {
+    "state": "enabled",
+    "label": "Direkt Mesajlar",
+    "description": "Kullanıcılar arası özel mesajlaşma",
+    "updated_at": "2026-06-26T21:31:17.738Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "downloads",
+  "fields": {
+    "state": "enabled",
+    "label": "İndirilenler",
+    "description": "İndirilenler sayfası",
+    "updated_at": "2026-06-26T21:31:17.977Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "history",
+  "fields": {
+    "state": "enabled",
+    "label": "Geçmiş",
+    "description": "İzleme geçmişi",
+    "updated_at": "2026-06-26T21:31:17.916Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "leaderboard",
+  "fields": {
+    "state": "enabled",
+    "label": "Sıralama",
+    "description": "Sadakat sıralaması sayfası",
+    "updated_at": "2026-06-26T21:31:18.009Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "live_chat",
+  "fields": {
+    "state": "enabled",
+    "label": "Canlı Yayın Sohbeti",
+    "description": "Canlı yayınlarda sohbet paneli",
+    "updated_at": "2026-06-26T21:31:17.814Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "live_streams",
+  "fields": {
+    "state": "enabled",
+    "label": "Canlı Yayınlar",
+    "description": "Canlı yayın izleme ve yayın başlatma",
+    "updated_at": "2026-06-26T21:31:17.805Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "match",
+  "fields": {
+    "state": "enabled",
+    "label": "Eşleşme",
+    "description": "Rastgele eşleşme odaları",
+    "updated_at": "2026-06-26T21:31:18.018Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "notifications",
+  "fields": {
+    "state": "enabled",
+    "label": "Bildirimler",
+    "description": "Bildirim merkezi",
+    "updated_at": "2026-06-26T21:31:17.907Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "payment",
+  "fields": {
+    "state": "enabled",
+    "label": "Ödeme",
+    "description": "Ödeme ekranı",
+    "updated_at": "2026-06-26T21:31:17.955Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "payments",
+  "fields": {
+    "state": "enabled",
+    "label": "Ödeme Sistemi",
+    "description": "Genel ödeme altyapısı",
+    "updated_at": "2026-06-26T21:31:17.967Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "playlists",
+  "fields": {
+    "state": "enabled",
+    "label": "Playlistler",
+    "description": "Oynatma listeleri",
+    "updated_at": "2026-06-26T21:31:17.898Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "ppv",
+  "fields": {
+    "state": "enabled",
+    "label": "PPV",
+    "description": "Pay-per-view içerik satın alma",
+    "updated_at": "2026-06-26T22:12:17.018Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "pricing",
+  "fields": {
+    "state": "enabled",
+    "label": "Fiyatlandırma",
+    "description": "Üyelik planları sayfası",
+    "updated_at": "2026-06-26T21:31:17.945Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "search",
+  "fields": {
+    "state": "enabled",
+    "label": "Arama",
+    "description": "Site içi arama",
+    "updated_at": "2026-06-26T21:31:17.859Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "shorts",
+  "fields": {
+    "state": "enabled",
+    "label": "Shorts",
+    "description": "Kısa video akışı",
+    "updated_at": "2026-06-26T21:31:17.833Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "stories",
+  "fields": {
+    "state": "enabled",
+    "label": "Stories",
+    "description": "Hikaye akışı",
+    "updated_at": "2026-06-26T21:31:17.886Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "subscriptions",
+  "fields": {
+    "state": "enabled",
+    "label": "Abonelikler",
+    "description": "Abonelik yönetim ekranı",
+    "updated_at": "2026-06-26T21:31:17.934Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "upload",
+  "fields": {
+    "state": "enabled",
+    "label": "Yükleme",
+    "description": "Video yükleme ekranı",
+    "updated_at": "2026-06-26T21:31:17.986Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "video_calls",
+  "fields": {
+    "state": "enabled",
+    "label": "Görüntülü Aramalar",
+    "description": "DM içi görüntülü arama",
+    "updated_at": "2026-06-26T21:31:17.793Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "videos",
+  "fields": {
+    "state": "enabled",
+    "label": "Videolar",
+    "description": "Video listeleri ve video sayfaları",
+    "updated_at": "2026-06-26T21:31:17.823Z"
+  }
+},
+{
+  "model": "core.featureflag",
+  "pk": "voice_messages",
+  "fields": {
+    "state": "enabled",
+    "label": "Sesli Mesajlar",
+    "description": "DM sesli mesaj kaydı",
+    "updated_at": "2026-06-26T21:31:17.763Z"
+  }
+},
+{
+  "model": "core.georestrictionsettings",
+  "pk": 1,
+  "fields": {
+    "is_enabled": false,
+    "mode": "blocklist",
+    "countries": [],
+    "redirect_url": null,
+    "message": "Bu içerik bulunduğunuz ülkede kullanılamaz.",
+    "updated_at": "2026-06-26T20:38:43.625Z"
+  }
+}
+]

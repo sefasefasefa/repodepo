@@ -33,17 +33,8 @@ python manage.py loaddata /tmp/hotpulse_db.json --ignorenonexistent
 echo "      Veriler yüklendi"
 cd ..
 
-# ── 3. Medya dosyalarını geri yükle ──────────────────────────────────────────
-echo "[3/3] Medya dosyaları geri yükleniyor..."
-if [ -s /tmp/hotpulse_media.tar.gz ]; then
-  tar xzf /tmp/hotpulse_media.tar.gz -C backend/
-  echo "      Medya dosyaları geri yüklendi"
-else
-  echo "      Medya dosyası yok, atlandı"
-fi
-
 # Temizlik
-rm -f /tmp/hotpulse_db.json /tmp/hotpulse_media.tar.gz
+rm -f /tmp/hotpulse_db.json
 
 echo ""
 echo "✓ Geri yükleme tamamlandı!"
