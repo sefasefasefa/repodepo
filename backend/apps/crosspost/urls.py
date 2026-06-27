@@ -9,5 +9,6 @@ urlpatterns = [
     path('cross-post/sites/<int:site_id>/test-login', views.site_test_login),
     path('cross-post/dispatch', views.dispatch),
     path('cross-post/jobs', views.jobs_list),
+    path('cross-post/jobs/summary', views.jobs_summary),
     path('cross-post/jobs/<int:job_id>/retry', views.job_retry),
 ]

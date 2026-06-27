@@ -225,6 +225,39 @@ def jobs_list(request):
     return Response({'jobs': [_job_dict(j) for j in qs]})
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def jobs_summary(request):
+    """Her video için en son crosspost job durumunu (provider bazında) döner."""
+    # Tüm job'ları çek, Python tarafında grupla (SQLite + PostgreSQL uyumlu)
+    qs = (CrossPostJob.objects
+          .filter(user=request.user, video_id__isnull=False)
+          .select_related('site')
+          .order_by('-created_at'))
+
+    # Her (video_id, site_id) için yalnızca en son job'u tut
+    seen: set = set()
+    result: dict = {}
+    for j in qs:
+        key = (j.video_id, j.site_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        vid = str(j.video_id)
+        if vid not in result:
+            result[vid] = []
+        site = j.site
+        result[vid].append({
+            'jobId': j.id,
+            'provider': (site.name if site else None) or '?',
+            'status': j.status,
+            'remoteUrl': j.remote_url or '',
+            'color': (site.provider_color if site else None) or '#555',
+            'letter': (site.provider_letter if site else None) or '?',
+        })
+    return Response({'summary': result})
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def job_retry(request, job_id):

@@ -542,11 +542,23 @@ export function AdminVideos() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [distributing, setDistributing] = useState<number | null>(null);
   const [distributeResult, setDistributeResult] = useState<Record<number, string>>({});
+  const [jobSummary, setJobSummary] = useState<Record<string, any[]>>({});
 
   const { data, isLoading } = useListVideos({ page, limit: 20 } as any);
   const { data: catsData } = useListCategories();
   const deleteMutation = useDeleteVideo();
   const updateMutation = useUpdateVideo();
+
+  // Crosspost durum özeti
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    fetch("/api/cross-post/jobs/summary", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.json())
+      .then(d => { if (d.summary) setJobSummary(d.summary); })
+      .catch(() => {});
+  }, [page]);
 
   const videos = data?.videos ?? [];
   const total = data?.total ?? 0;
@@ -680,6 +692,47 @@ export function AdminVideos() {
                       </span>
                     )}
                   </div>
+
+                  {/* Crosspost durum badge'leri */}
+                  {jobSummary[String(video.id)]?.length > 0 && (
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      {jobSummary[String(video.id)].map((job: any, i: number) => {
+                        const statusColor =
+                          job.status === 'success'  ? 'bg-green-900/40 border-green-700/50 text-green-400' :
+                          job.status === 'failed'   ? 'bg-red-900/40 border-red-700/50 text-red-400' :
+                          job.status === 'running'  ? 'bg-blue-900/40 border-blue-700/50 text-blue-400' :
+                                                     'bg-[#222] border-[#333] text-[#666]';
+                        const dot =
+                          job.status === 'success'  ? '●' :
+                          job.status === 'failed'   ? '●' :
+                          job.status === 'running'  ? '◌' : '○';
+                        return (
+                          <span
+                            key={i}
+                            title={`${job.provider}: ${job.status}${job.remoteUrl ? ' — ' + job.remoteUrl : ''}`}
+                            className={cn(
+                              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium leading-none",
+                              statusColor
+                            )}
+                          >
+                            <span className="text-[8px]">{dot}</span>
+                            {job.provider}
+                            {job.remoteUrl && (
+                              <a
+                                href={job.remoteUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className="opacity-60 hover:opacity-100"
+                              >
+                                <ExternalLink className="h-2.5 w-2.5" />
+                              </a>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Distribution result toast */}
                   {distributeResult[video.id] && (
