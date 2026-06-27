@@ -44,8 +44,7 @@ python -m pip install -r backend/requirements.txt -q || pip install -r backend/r
 echo "[4/6] Frontend derleniyor..."
 if command -v pnpm &>/dev/null; then
     cd backend
-    pnpm approve-builds 2>/dev/null || true
-    pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+    pnpm install --no-frozen-lockfile
     pnpm --filter @workspace/streamvid run build
     cd ..
     echo "   Statik dosyalar kopyalaniyor..."
