@@ -34,6 +34,20 @@ def _local_path(video) -> str | None:
     return None
 
 
+def _public_url(url: str) -> str:
+    """Göreceli URL'leri SITE_URL ile tam adrese çevirir.
+    Streamtape/DoodStream gibi remote download API'leri internetten erişilebilir
+    tam URL ister. /media/... gibi göreceli yollar çalışmaz."""
+    if not url:
+        return url
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    site_url = getattr(settings, "SITE_URL", "").rstrip("/")
+    if not site_url:
+        site_url = "http://localhost:8000"
+    return site_url + ("" if url.startswith("/") else "/") + url
+
+
 def dispatch_for_video(video, user, site_ids: Iterable[int] | None = None, send_all: bool = False):
     """Dispatch crosspost jobs.
 
@@ -217,7 +231,7 @@ def _streamtape(job, site, video, r):
 
     # URL videosu — remote download API kullan
     if not path or not os.path.exists(path):
-        video_src = video.video_url or video.hls_url
+        video_src = _public_url(video.video_url or video.hls_url or "")
         if not video_src:
             return _fail(job, "StreamTape: Dosya bulunamadı ve video URL yok")
         try:
@@ -277,7 +291,7 @@ def _doodstream(job, site, video, r):
 
     # URL videosu — remote URL upload API kullan
     if not path or not os.path.exists(path):
-        video_src = video.video_url or video.hls_url
+        video_src = _public_url(video.video_url or video.hls_url or "")
         if not video_src:
             return _fail(job, "DoodStream: Dosya bulunamadı ve video URL yok")
         try:
@@ -335,7 +349,7 @@ def _mixdrop(job, site, video, r):
 
     # URL videosu — remote URL upload API kullan
     if not path or not os.path.exists(path):
-        video_src = video.video_url or video.hls_url
+        video_src = _public_url(video.video_url or video.hls_url or "")
         if not video_src:
             return _fail(job, "Mixdrop: Dosya bulunamadı ve video URL yok")
         try:
@@ -486,7 +500,7 @@ def _make_api_key_adapter(provider_key: str):
 
         # URL videosu — remote URL upload API kullan
         if not path or not os.path.exists(path):
-            video_src = video.video_url or video.hls_url
+            video_src = _public_url(video.video_url or video.hls_url or "")
             if not video_src:
                 return _fail(job, f"{provider_key}: Dosya bulunamadı ve video URL yok")
             try:
