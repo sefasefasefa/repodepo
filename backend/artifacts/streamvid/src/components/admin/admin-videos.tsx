@@ -262,10 +262,18 @@ function DistributionTab({ videoId }: { videoId: number }) {
 
   if (sites.length === 0) {
     return (
-      <div className="text-center py-8 space-y-2">
+      <div className="text-center py-8 space-y-3">
         <Share2 className="h-8 w-8 mx-auto text-[#333]" />
-        <p className="text-sm text-[#555]">Henüz crosspost sitesi eklenmemiş.</p>
-        <p className="text-xs text-[#444]">Video yükleme sayfasından sağlayıcı ekleyebilirsin.</p>
+        <div className="space-y-1">
+          <p className="text-sm text-[#555]">Henüz crosspost sitesi eklenmemiş.</p>
+          <p className="text-xs text-[#444]">Admin paneli → Entegrasyonlar sekmesinden sağlayıcı ekle.</p>
+        </div>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("admin:goto", { detail: "integrations" }))}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+        >
+          <Link className="h-3 w-3" /> Entegrasyonlar'a Git
+        </button>
       </div>
     );
   }

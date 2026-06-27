@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/lib/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGetAdminDashboard } from "@workspace/api-client-react";
 import { AdminVideos } from "@/components/admin/admin-videos";
 import { AdminUsers } from "@/components/admin/admin-users";
@@ -81,6 +81,15 @@ export default function Admin() {
   const { user } = useAuth();
   const [tab, setTab] = useState("dashboard");
   const { data: dashboard } = useGetAdminDashboard();
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const target = (e as CustomEvent).detail;
+      if (target) setTab(target);
+    };
+    window.addEventListener("admin:goto", handler);
+    return () => window.removeEventListener("admin:goto", handler);
+  }, []);
 
   if (!user || (user.role !== "admin" && user.role !== "moderator")) {
     return (
