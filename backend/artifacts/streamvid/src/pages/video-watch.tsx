@@ -34,9 +34,18 @@ interface PlayerSource {
   language: string;
 }
 
+/** Video ID'sinin geçerli format olup olmadığını kontrol eder (dict/JSON karışmasını önler) */
+function isValidId(id: string | undefined): boolean {
+  if (!id) return false;
+  // Geçerli ID: sadece harf, rakam, tire, alt çizgi — { } ' " : içermez
+  return /^[A-Za-z0-9_\-]{4,64}$/.test(id);
+}
+
 /** Streaming platformu URL'sini embed iframe koduna dönüştürür */
 function resolveEmbedFromUrl(rawUrl: string): string | null {
   if (!rawUrl) return null;
+  // Bozuk URL koruması: dict string karışmış URL'leri filtrele
+  if (rawUrl.includes("{'") || rawUrl.includes('{"') || rawUrl.includes("': '")) return null;
   // Doğrudan video dosyası ise embed gerekmez
   const lower = rawUrl.toLowerCase().split('?')[0];
   if (/\.(mp4|webm|ogg|ogv|m3u8|mpd|mov|mkv|flv|ts)(\?|$)/.test(lower)) return null;
@@ -50,6 +59,7 @@ function resolveEmbedFromUrl(rawUrl: string): string | null {
     // StreamTape: /v/ID/... → /e/ID
     if (host === 'streamtape.com' || host === 'streamtape.to') {
       const id = parts[1] || parts[0];
+      if (!isValidId(id)) return null;
       return iframe(`https://streamtape.com/e/${id}`);
     }
     // DoodStream çeşitleri

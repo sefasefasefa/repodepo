@@ -349,7 +349,14 @@ def _streamtape(job, site, video, r):
         job.response_code = up.status_code
         ud = up.json()
         if ud.get("status") == 200:
-            file_id = ud.get("result", "")
+            result_data = ud.get("result", {})
+            # Streamtape upload yanıtında result bir dict olarak gelir: {id, url, name, ...}
+            if isinstance(result_data, dict):
+                file_id = result_data.get("id", "")
+            elif isinstance(result_data, str):
+                file_id = result_data
+            else:
+                file_id = ""
             remote = f"https://streamtape.com/v/{file_id}" if file_id else ""
             _success(job, remote, up.text)
         else:
