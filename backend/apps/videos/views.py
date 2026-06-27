@@ -969,33 +969,74 @@ def _submit_to_provider(integration, video_url, video_title):
                 ref = (d.get('result') or {}).get('ref', '')
                 return f'https://mixdrop.ag/e/{ref}' if ref else None
 
-        elif platform in ('streamwish', 'vidhide', 'voe', 'upstream', 'luluvdo',
-                           'streamhide', 'supervideo', 'filemoon', 'hxfile',
-                           'vidplay', 'nxbex', 'dropgalaxy', 'evoload',
-                           'streamsb', 'uqload', 'embedsito', 'vidlox',
-                           'clipwatching', 'dropload') and integration.api_key:
-            BASE_MAP = {
-                'streamwish': 'streamwish.com', 'vidhide': 'vidhide.com',
-                'voe': 'voe.sx', 'upstream': 'upstream.to',
-                'luluvdo': 'luluvdo.com', 'streamhide': 'streamhide.com',
-                'supervideo': 'supervideo.tv', 'filemoon': 'filemoonapi.com',
-                'hxfile': 'hxfile.ch', 'vidplay': 'vidplay.online',
-                'nxbex': 'nxbex.com', 'dropgalaxy': 'dropgalaxy.com',
-                'evoload': 'evoload.io', 'streamsb': 'streamsb.net',
-                'uqload': 'uqload.io', 'embedsito': 'embedsito.com',
-                'vidlox': 'vidlox.me', 'clipwatching': 'clipwatching.com',
-                'dropload': 'dropload.io',
+        elif integration.api_key:
+            # Generic API-key platforms: POST to /api/upload/url with key+url
+            PROVIDER_URL_MAP = {
+                # Video streaming hosts
+                'streamwish':   ('api.streamwish.com',   'streamwish.com'),
+                'vidhide':      ('vidhide.com',           'vidhide.com'),
+                'voe':          ('voe.sx',                'voe.sx'),
+                'upstream':     ('upstream.to',           'upstream.to'),
+                'luluvdo':      ('luluvdo.com',           'luluvdo.com'),
+                'streamhide':   ('streamhide.com',        'streamhide.com'),
+                'supervideo':   ('supervideo.tv',         'supervideo.tv'),
+                'filemoon':     ('filemoonapi.com',       'filemoon.sx'),
+                'hxfile':       ('hxfile.ch',             'hxfile.ch'),
+                'vidplay':      ('vidplay.online',        'vidplay.online'),
+                'nxbex':        ('nxbex.com',             'nxbex.com'),
+                'dropgalaxy':   ('dropgalaxy.com',        'dropgalaxy.com'),
+                'evoload':      ('evoload.io',            'evoload.io'),
+                'streamsb':     ('streamsb.net',          'streamsb.net'),
+                'uqload':       ('uqload.io',             'uqload.io'),
+                'embedsito':    ('embedsito.com',         'embedsito.com'),
+                'vidlox':       ('vidlox.me',             'vidlox.me'),
+                'clipwatching': ('clipwatching.com',      'clipwatching.com'),
+                'dropload':     ('dropload.io',           'dropload.io'),
+                'streamlare':   ('streamlare.com',        'streamlare.com'),
+                'fembed':       ('www.fembed.com',        'www.fembed.com'),
+                'hotlinking':   ('hotlinking.co',         'hotlinking.co'),
+                'filelions':    ('filelions.com',         'filelions.com'),
+                'vidmoly':      ('vidmoly.to',            'vidmoly.to'),
+                'streamhub':    ('streamhub.to',          'streamhub.to'),
+                'videovard':    ('videovard.sx',          'videovard.sx'),
+                'waaw':         ('waaw.tv',               'waaw.tv'),
+                'upvid':        ('upvid.co',              'upvid.co'),
+                'vtube':        ('vtube.network',         'vtube.network'),
+                'abysscdn':     ('abysscdn.com',          'abysscdn.com'),
+                'filebee':      ('filebee.to',            'filebee.to'),
+                'vipfile':      ('vipfile.cc',            'vipfile.cc'),
+                'vidmam':       ('vidmam.com',            'vidmam.com'),
+                'moonvid':      ('moonvid.cc',            'moonvid.cc'),
+                'gobig':        ('gobig.cc',              'gobig.cc'),
+                'jetload':      ('jetload.net',           'jetload.net'),
+                'sendvid':      ('sendvid.com',           'sendvid.com'),
+                'rapidvideo':   ('rapidvideo.com',        'rapidvideo.com'),
+                'vidcrypt':     ('vidcrypt.com',          'vidcrypt.com'),
+                'embedrise':    ('embedrise.com',         'embedrise.com'),
+                'kvid':         ('kvid.pro',              'kvid.pro'),
+                'megaup':       ('megaup.net',            'megaup.net'),
+                'vidoza':       ('vidoza.net',            'vidoza.net'),
+                'streamff':     ('streamff.com',          'streamff.com'),
+                'vudeo':        ('vudeo.co',              'vudeo.co'),
+                'gofile':       ('gofile.io',             'gofile.io'),
+                'videobin':     ('videobin.co',           'videobin.co'),
+                'mp4upload':    ('www.mp4upload.com',     'www.mp4upload.com'),
+                'verystream':   ('verystream.com',        'verystream.com'),
+                'embedv':       ('embedv.net',            'embedv.net'),
+                'cloudvideo':   ('cloudvideo.tv',         'cloudvideo.tv'),
+                'streamwo':     ('streamwo.com',          'streamwo.com'),
+                'gounlimited':  ('gounlimited.to',        'gounlimited.to'),
             }
-            base = BASE_MAP.get(platform, f'{platform}.com')
-            api = f'https://{base}/api/upload/url?key={integration.api_key}&url={encoded_url}&filename={name}'
-            with urllib.request.urlopen(api, timeout=15) as r:
-                d = _json.loads(r.read().decode())
-                if d.get('status') == 200:
-                    result = d.get('result', {})
-                    filecode = result.get('filecode') or result.get('file_code') or result.get('id', '')
-                    if filecode:
-                        embed_base = base.replace('api.', '')
-                        return f'https://{embed_base}/e/{filecode}'
+            if platform in PROVIDER_URL_MAP:
+                api_host, embed_host = PROVIDER_URL_MAP[platform]
+                api = f'https://{api_host}/api/upload/url?key={integration.api_key}&url={encoded_url}&filename={name}'
+                with urllib.request.urlopen(api, timeout=15) as r:
+                    d = _json.loads(r.read().decode())
+                    if d.get('status') == 200:
+                        result = d.get('result', {})
+                        filecode = result.get('filecode') or result.get('file_code') or result.get('id', '')
+                        if filecode:
+                            return f'https://{embed_host}/e/{filecode}'
         return None
     except Exception:
         return None
