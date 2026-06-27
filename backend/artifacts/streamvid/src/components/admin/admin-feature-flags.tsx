@@ -3,7 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { useFeatureFlags } from "@/lib/feature-flags";
 import {
   MessageCircle, Mic, Phone, Video, Radio, MessageSquare, Film, Search, FolderOpen, PlaySquare, Bell, History, Bookmark, Coins, Upload, Crown, LayoutDashboard, Trophy, Download, UserRound, Star, ShoppingBag, ListVideo, FileText, ShieldAlert, Shuffle,
-  Loader2, CheckCircle2, AlertTriangle,
+  Loader2, CheckCircle2, AlertTriangle, Languages, Wand2, Globe, Users, PenTool,
 } from "lucide-react";
 
 const TOKEN = () => localStorage.getItem("token") || "";
@@ -43,7 +43,16 @@ const FLAG_DEFS: FlagDef[] = [
   { key: "downloads", label: "İndirilenler", description: "İndirilenler sayfasını kontrol eder.", icon: Download, color: "text-cyan-300", group: "Hesap" },
   { key: "match", label: "Eşleşme", description: "Rastgele eşleşme odalarını kontrol eder.", icon: Shuffle, color: "text-pink-300", group: "Topluluk" },
   { key: "affiliate", label: "Affiliate", description: "Affiliate sayfasını kontrol eder.", icon: Crown, color: "text-orange-300", group: "Topluluk" },
-  { key: "admin_panel", label: "Admin Panel", description: "Admin panel girişini kontrol eder.", icon: ShieldAlert, color: "text-red-300", group: "Yönetim" },
+  { key: "admin_panel",        label: "Admin Panel",            description: "Admin panel girişini kontrol eder.",                                    icon: ShieldAlert, color: "text-red-300",     group: "Yönetim" },
+
+  // ── Transcript ──
+  { key: "transcript_view",      label: "Transcript Görüntüleme", description: "İzleyicilerin altyazı/transcript sekmesini açıp içerikleri okuyabilmesi.", icon: FileText,   color: "text-sky-300",    group: "Transcript" },
+  { key: "transcript_ai_generate",label: "AI Altyazı Üret",       description: "Creator'ların metin yapıştırıp AI ile zaman damgalı VTT üretebilmesi.",   icon: Wand2,      color: "text-violet-400", group: "Transcript" },
+  { key: "transcript_ai_write",  label: "AI Transcript Yaz",      description: "AI yazma asistanı: notlardan/prompttan düzgün transcript oluşturma.",       icon: PenTool,    color: "text-purple-400", group: "Transcript" },
+  { key: "transcript_translate", label: "Altyazı Çevirisi",       description: "Mevcut altyazıyı başka bir dile AI ile çevirme özelliği.",                  icon: Globe,      color: "text-emerald-400",group: "Transcript" },
+  { key: "transcript_community", label: "Topluluk Katkıları",     description: "İzleyicilerin transcript önermesi ve creator onaylaması.",                   icon: Users,      color: "text-orange-400", group: "Transcript" },
+  { key: "transcript_export",    label: "Transcript Dışa Aktar",  description: "Altyazıları VTT, SRT ve TXT olarak indirme butonu.",                        icon: Download,   color: "text-cyan-300",   group: "Transcript" },
+  { key: "transcript_upload",    label: "VTT Yükleme",            description: "Creator'ların hazır VTT/SRT dosyası yükleyebilmesi.",                       icon: Upload,     color: "text-blue-400",   group: "Transcript" },
 ];
 
 type StatusMap = Record<string, "idle" | "saving" | "saved" | "error">;

@@ -575,7 +575,7 @@ export default function VideoWatch() {
             )}
           </div>
           {(isCreatorOrAdmin ? (showSubManager) : (showTranscript && !!user)) && (
-            <SubtitleManager videoId={videoId} token={token} />
+            <SubtitleManager videoId={videoId} token={token} isOwner={!!isCreatorOrAdmin} />
           )}
           <div className="pt-2">
             <h3 className="text-base font-bold mb-4">{video.commentCount ?? 0} Yorum</h3>

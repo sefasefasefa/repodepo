@@ -119,6 +119,94 @@ def auto_subtitle(request, video_id):
     return _ai_stub(request, video_id, 'auto')
 
 
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def ai_write_transcript(request, video_id):
+    """AI writing assistant: takes notes/prompt and returns structured transcript text."""
+    try:
+        video = Video.objects.get(id=video_id)
+    except Video.DoesNotExist:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+    if not _can_edit(request.user, video):
+        return Response({'error': 'Yetkisiz'}, status=403)
+    d = request.data or {}
+    notes = (d.get('notes') or '').strip()
+    template = d.get('template', 'general')
+    if not notes:
+        return Response({'error': 'Notlar boş olamaz'}, status=400)
+
+    # Template-based formatter (AI provider can be swapped in later)
+    intros = {
+        'tutorial': 'Bu videoda size adım adım nasıl yapılacağını göstereceğiz.',
+        'review': 'Bu videoda ürünü / konuyu detaylıca inceleyeceğiz.',
+        'story': 'Şimdi size ilginç bir hikaye anlatacağım.',
+        'presentation': 'Bugünkü sunumumuza hoş geldiniz.',
+        'news': 'Son dakika gelişmeleri hakkında bilgi veriyoruz.',
+        'general': 'Bu videoya hoş geldiniz.',
+    }
+    intro = intros.get(template, intros['general'])
+    paragraphs = [p.strip() for p in notes.replace('\r\n', '\n').split('\n\n') if p.strip()]
+    if not paragraphs:
+        paragraphs = [notes]
+    result_lines = [intro, '']
+    for i, para in enumerate(paragraphs):
+        result_lines.append(para)
+        if i < len(paragraphs) - 1:
+            result_lines.append('')
+    result_lines += ['', 'İzlediğiniz için teşekkürler.']
+    return Response({'transcript': '\n'.join(result_lines)})
+
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def list_pending_subtitles(request, video_id):
+    """List community-submitted (pending) subtitle tracks for creator review."""
+    try:
+        video = Video.objects.get(id=video_id)
+    except Video.DoesNotExist:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+    if not _can_edit(request.user, video):
+        return Response({'error': 'Yetkisiz'}, status=403)
+    subs = VideoSubtitle.objects.filter(video_id=video_id, moderation_status='pending')
+    return Response({'pending': [
+        {'language': s.language, 'langName': s.label, 'preview': s.vtt_content[:200]} for s in subs
+    ]})
+
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def community_submit(request, video_id):
+    """Regular users submit a transcript suggestion for creator approval."""
+    try:
+        Video.objects.get(id=video_id)
+    except Video.DoesNotExist:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+    d = request.data or {}
+    lang = d.get('language', 'tr')
+    content = (d.get('content') or '').strip()
+    if not content:
+        return Response({'error': 'İçerik boş olamaz'}, status=400)
+    if 'WEBVTT' not in content:
+        content = 'WEBVTT\n\n' + content
+    sub, created = VideoSubtitle.objects.get_or_create(
+        video_id=video_id, language=f'{lang}_pending_{request.user.id}',
+        defaults={
+            'label': f'{SUPPORTED_LANGUAGES.get(lang, lang)} (Topluluk)',
+            'vtt_content': content,
+            'is_auto_generated': False,
+            'moderation_status': 'pending',
+        }
+    )
+    if not created:
+        sub.vtt_content = content
+        sub.moderation_status = 'pending'
+        sub.save()
+    return Response({'ok': True, 'message': 'Katkınız incelemeye alındı.'}, status=201)
+
+
 @api_view(['DELETE'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
