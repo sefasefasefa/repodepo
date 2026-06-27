@@ -320,11 +320,35 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
       <div className="w-full max-w-[960px] mx-auto rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
         <ScreenProtectionOverlay className="w-full h-full">
           <div className="w-full h-full bg-black relative group">
-            {activeSource?.embedCode ? (
-              <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: activeSource.embedCode.replace(/width=\"[^\"]*\"/g, 'width=\"100%\"').replace(/height=\"[^\"]*\"/g, 'height=\"100%\"').replace(/<iframe/g, '<iframe style=\"width:100%;height:100%;border:0;pointer-events:all\" allow=\"autoplay;fullscreen\" allowfullscreen') }} />
-            ) : activeSource?.directUrl ? (
-              <video ref={videoRef} key={activeSource.directUrl} src={activeSource.directUrl} className="w-full h-full object-contain" controls autoPlay={false} poster={video.thumbnailUrl || undefined} controlsList="nodownload noremoteplayback" disablePictureInPicture {...videoProps} />
-            ) : null}
+            {(() => {
+              // embedCode bir URL string'i olabilir (admin panelinde link girilmiş) —
+              // bu durumda resolveEmbedFromUrl ile iframe'e çeviriyoruz
+              let embedHtml: string | null = null;
+              let directUrl: string | null = activeSource?.directUrl || null;
+
+              if (activeSource?.embedCode) {
+                const code = activeSource.embedCode.trim();
+                if (code.startsWith('http://') || code.startsWith('https://')) {
+                  // URL olarak girilmiş — iframe'e çevir
+                  embedHtml = resolveEmbedFromUrl(code);
+                  if (!embedHtml) directUrl = code; // çevirilemezse direkt oynat
+                } else {
+                  embedHtml = code;
+                }
+              }
+
+              if (embedHtml) {
+                const safeHtml = embedHtml
+                  .replace(/width="[^"]*"/g, 'width="100%"')
+                  .replace(/height="[^"]*"/g, 'height="100%"')
+                  .replace(/<iframe/g, '<iframe style="width:100%;height:100%;border:0;pointer-events:all" allow="autoplay;fullscreen" allowfullscreen');
+                return <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: safeHtml }} />;
+              }
+              if (directUrl) {
+                return <video ref={videoRef} key={directUrl} src={directUrl} className="w-full h-full object-contain" controls autoPlay={false} poster={video.thumbnailUrl || undefined} controlsList="nodownload noremoteplayback" disablePictureInPicture {...videoProps} />;
+              }
+              return null;
+            })()}
             {isDirectVideo && (
               <div ref={overlayControlsRef} className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-start gap-1 sm:gap-2">
                 {/* CC */}
