@@ -1,0 +1,655 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ ./update.sh
+=== Hotpulse Güncelleme ===
+[1/4] Waitress durduruluyor...
+[2/4] Git pull...
+remote: Enumerating objects: 82, done.
+remote: Counting objects: 100% (82/82), done.
+remote: Compressing objects: 100% (62/62), done.
+remote: Total 72 (delta 8), reused 72 (delta 8), pack-reused 0 (from 0)
+Unpacking objects: 100% (72/72), 784.66 KiB | 750.00 KiB/s, done.
+From https://github.com/sefasefasefa/repodepo
+   e6b60d5..81a66f8  main       -> origin/main
+Updating e6b60d5..81a66f8
+Fast-forward
+ backend/artifacts/streamvid/src/App.tsx            | 184 +++++++-------
+ backend/artifacts/streamvid/vite.config.ts         |  25 ++
+ backend/static/assets/admin-fMUPgczx.js            |  66 +++++
+ backend/static/assets/affiliate-hv28_cRM.js        |   1 +
+ backend/static/assets/app-layout-jVrQTWpU.js       |   1 +
+ backend/static/assets/badge-B4MBrZ9q.js            |   1 +
+ backend/static/assets/become-creator-Cr-zeCz1.js   |   1 +
+ backend/static/assets/bookmarks-CG2BvS4o.js        |   1 +
+ backend/static/assets/button-Bt2DcDJN.js           |   1 +
+ backend/static/assets/categories-BmUSTGpE.js       |   1 +
+ backend/static/assets/category-detail-CdBGqavK.js  |   1 +
+ backend/static/assets/charts-Ba8jaE1u.js           |  65 +++++
+ .../static/assets/creator-dashboard-BHss0ptJ.js    |   1 +
+ backend/static/assets/creator-profile-mb_x8WM9.js  |   1 +
+ backend/static/assets/creators-DOHIYWTy.js         |   1 +
+ backend/static/assets/crosspost-jobs-DvjKNtWE.js   |   1 +
+ backend/static/assets/custom-page-D-O4Lobu.js      |   1 +
+ .../static/assets/custom-request-modal-DxRzuzxb.js |   1 +
+ backend/static/assets/developer-C_KHoxNv.js        |   1 +
+ backend/static/assets/downloads-D0folacI.js        |   1 +
+ backend/static/assets/form-Da5gNig2.js             |   1 +
+ backend/static/assets/history-CML3k_9w.js          |   1 +
+ backend/static/assets/home-DQb2Em4q.js             |   1 +
+ backend/static/assets/icons-7mcGg5NX.js            |   1 +
+ backend/static/assets/index-BLVyFKtB.js            | 270 ---------------------
+ backend/static/assets/index-CFRG3PPb.css           |   1 -
+ backend/static/assets/index-ChRwg7HL.css           |   1 +
+ backend/static/assets/index-D2n8ztvH.js            |   6 +
+ backend/static/assets/index-_so6nEpS.js            |  10 +
+ backend/static/assets/label-CCV7nC_v.js            |   1 +
+ backend/static/assets/leaderboard-CCc0_Iu5.js      |   1 +
+ backend/static/assets/link-filter-CCJRzgw1.js      |   1 +
+ backend/static/assets/live-streams-B7oeLkv6.js     |   1 +
+ backend/static/assets/live-watch-B6ezVmFO.js       |  40 +++
+ backend/static/assets/login-5A6r0y3V.js            |   1 +
+ backend/static/assets/match-rooms-Bz668YM7.js      |   1 +
+ backend/static/assets/messages-B5_qayyl.js         |   1 +
+ backend/static/assets/my-requests-Txn23tgr.js      |   1 +
+ backend/static/assets/not-found-CWYUjNZg.js        |   6 +
+ backend/static/assets/notifications-CJEI54px.js    |   1 +
+ backend/static/assets/payment-C8MWt2Rg.js          |   1 +
+ backend/static/assets/playlist-detail-DEnjSW8K.js  |   1 +
+ backend/static/assets/playlists-D4ZphwXP.js        |   1 +
+ backend/static/assets/pricing-1O1xG3JN.js          |   1 +
+ backend/static/assets/profile-DK_Zff1U.js          |   7 +
+ backend/static/assets/react-core-l0sNRNKZ.js       |   1 +
+ backend/static/assets/react-query-B8grpUaP.js      |   1 +
+ backend/static/assets/register-ESX5MBGo.js         |   1 +
+ backend/static/assets/routing-Bzd4TU89.js          |   1 +
+ .../assets/screen-protection-overlay-BN25DILx.js   |   1 +
+ backend/static/assets/search-CttwalaP.js           |   1 +
+ backend/static/assets/shorts-CdA8weBS.js           |   1 +
+ backend/static/assets/skeleton-BB6uM2-_.js         |   1 +
+ backend/static/assets/stories-DD_CuBPo.js          |   1 +
+ backend/static/assets/subscriptions-HnrK3AJp.js    |   1 +
+ backend/static/assets/tabs-F6vd_bgI.js             |   1 +
+ backend/static/assets/textarea-CXg4UEiX.js         |   1 +
+ backend/static/assets/ui-radix-C7AyGS9S.js         |  45 ++++
+ backend/static/assets/upload-BLq7HUNY.js           |   8 +
+ .../assets/use-screen-protection-CfJfeS0U.js       |   1 +
+ backend/static/assets/utils-BdEa6iqF.js            |   1 +
+ backend/static/assets/video-card-D3MyWd_L.js       |   1 +
+ backend/static/assets/video-watch-18WIcbN0.js      |  27 +++
+ backend/static/assets/videos-Bg5oBK2L.js           |   1 +
+ backend/static/assets/watch-progress-9VSsGmG4.js   |   1 +
+ backend/static/index.html                          |   9 +-
+ 66 files changed, 463 insertions(+), 357 deletions(-)
+ create mode 100644 backend/static/assets/admin-fMUPgczx.js
+ create mode 100644 backend/static/assets/affiliate-hv28_cRM.js
+ create mode 100644 backend/static/assets/app-layout-jVrQTWpU.js create mode 100644 backend/static/assets/badge-B4MBrZ9q.js
+ create mode 100644 backend/static/assets/become-creator-Cr-zeCz1.js
+ create mode 100644 backend/static/assets/bookmarks-CG2BvS4o.js
+ create mode 100644 backend/static/assets/button-Bt2DcDJN.js
+ create mode 100644 backend/static/assets/categories-BmUSTGpE.js create mode 100644 backend/static/assets/category-detail-CdBGqavK.js
+ create mode 100644 backend/static/assets/charts-Ba8jaE1u.js
+ create mode 100644 backend/static/assets/creator-dashboard-BHss0ptJ.js
+ create mode 100644 backend/static/assets/creator-profile-mb_x8WM9.js
+ create mode 100644 backend/static/assets/creators-DOHIYWTy.js
+ create mode 100644 backend/static/assets/crosspost-jobs-DvjKNtWE.js
+ create mode 100644 backend/static/assets/custom-page-D-O4Lobu.js
+ create mode 100644 backend/static/assets/custom-request-modal-DxRzuzxb.js
+ create mode 100644 backend/static/assets/developer-C_KHoxNv.js
+ create mode 100644 backend/static/assets/downloads-D0folacI.js
+ create mode 100644 backend/static/assets/form-Da5gNig2.js
+ create mode 100644 backend/static/assets/history-CML3k_9w.js
+ create mode 100644 backend/static/assets/home-DQb2Em4q.js
+ create mode 100644 backend/static/assets/icons-7mcGg5NX.js
+ delete mode 100644 backend/static/assets/index-BLVyFKtB.js
+ delete mode 100644 backend/static/assets/index-CFRG3PPb.css
+ create mode 100644 backend/static/assets/index-ChRwg7HL.css
+ create mode 100644 backend/static/assets/index-D2n8ztvH.js
+ create mode 100644 backend/static/assets/index-_so6nEpS.js
+ create mode 100644 backend/static/assets/label-CCV7nC_v.js
+ create mode 100644 backend/static/assets/leaderboard-CCc0_Iu5.js
+ create mode 100644 backend/static/assets/link-filter-CCJRzgw1.js
+ create mode 100644 backend/static/assets/live-streams-B7oeLkv6.js
+ create mode 100644 backend/static/assets/live-watch-B6ezVmFO.js create mode 100644 backend/static/assets/login-5A6r0y3V.js
+ create mode 100644 backend/static/assets/match-rooms-Bz668YM7.js
+ create mode 100644 backend/static/assets/messages-B5_qayyl.js
+ create mode 100644 backend/static/assets/my-requests-Txn23tgr.js
+ create mode 100644 backend/static/assets/not-found-CWYUjNZg.js
+ create mode 100644 backend/static/assets/notifications-CJEI54px.js
+ create mode 100644 backend/static/assets/payment-C8MWt2Rg.js
+ create mode 100644 backend/static/assets/playlist-detail-DEnjSW8K.js
+ create mode 100644 backend/static/assets/playlists-D4ZphwXP.js
+ create mode 100644 backend/static/assets/pricing-1O1xG3JN.js
+ create mode 100644 backend/static/assets/profile-DK_Zff1U.js
+ create mode 100644 backend/static/assets/react-core-l0sNRNKZ.js create mode 100644 backend/static/assets/react-query-B8grpUaP.js
+ create mode 100644 backend/static/assets/register-ESX5MBGo.js
+ create mode 100644 backend/static/assets/routing-Bzd4TU89.js
+ create mode 100644 backend/static/assets/screen-protection-overlay-BN25DILx.js
+ create mode 100644 backend/static/assets/search-CttwalaP.js
+ create mode 100644 backend/static/assets/shorts-CdA8weBS.js
+ create mode 100644 backend/static/assets/skeleton-BB6uM2-_.js
+ create mode 100644 backend/static/assets/stories-DD_CuBPo.js
+ create mode 100644 backend/static/assets/subscriptions-HnrK3AJp.js
+ create mode 100644 backend/static/assets/tabs-F6vd_bgI.js
+ create mode 100644 backend/static/assets/textarea-CXg4UEiX.js
+ create mode 100644 backend/static/assets/ui-radix-C7AyGS9S.js
+ create mode 100644 backend/static/assets/upload-BLq7HUNY.js
+ create mode 100644 backend/static/assets/use-screen-protection-CfJfeS0U.js
+ create mode 100644 backend/static/assets/utils-BdEa6iqF.js
+ create mode 100644 backend/static/assets/video-card-D3MyWd_L.js create mode 100644 backend/static/assets/video-watch-18WIcbN0.js
+ create mode 100644 backend/static/assets/videos-Bg5oBK2L.js
+ create mode 100644 backend/static/assets/watch-progress-9VSsGmG4.js
+[3/4] Veritabanı migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, tokens, videos
+Running migrations:
+  No migrations to apply.
+[4/4] Statik dosyalar toplanıyor...
+
+✓ Güncelleme tamamlandı! Sunucu başlatılıyor...
+
+INFO 2026-06-27 19:45:06,376 wasyncore Serving on http://0.0.0.0:8000
+WARNING 2026-06-27 19:45:13,206 task Task queue depth is 1
+WARNING 2026-06-27 19:45:13,221 task Task queue depth is 2
+WARNING 2026-06-27 19:45:13,231 task Task queue depth is 3
+WARNING 2026-06-27 19:45:13,242 task Task queue depth is 3
+WARNING 2026-06-27 19:45:13,255 task Task queue depth is 4
+WARNING 2026-06-27 19:45:14,098 task Task queue depth is 1
+WARNING 2026-06-27 19:45:14,103 task Task queue depth is 2
+WARNING 2026-06-27 19:45:14,106 task Task queue depth is 3
+WARNING 2026-06-27 19:45:14,112 task Task queue depth is 4
+WARNING 2026-06-27 19:45:14,718 task Task queue depth is 1
+WARNING 2026-06-27 19:45:14,720 task Task queue depth is 2
+WARNING 2026-06-27 19:45:14,724 task Task queue depth is 3
+WARNING 2026-06-27 19:45:14,732 task Task queue depth is 3
+WARNING 2026-06-27 19:45:14,737 task Task queue depth is 3
+WARNING 2026-06-27 19:45:14,739 task Task queue depth is 4
+WARNING 2026-06-27 19:45:14,744 task Task queue depth is 4
+WARNING 2026-06-27 19:45:15,323 task Task queue depth is 1
+WARNING 2026-06-27 19:45:15,324 task Task queue depth is 2
+WARNING 2026-06-27 19:45:15,326 task Task queue depth is 3
+INFO 2026-06-27 19:45:33,310 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:46:11,961 task Task queue depth is 1
+WARNING 2026-06-27 19:46:12,006 task Task queue depth is 1
+WARNING 2026-06-27 19:46:15,316 task Task queue depth is 1
+WARNING 2026-06-27 19:46:27,833 task Task queue depth is 1
+WARNING 2026-06-27 19:46:27,833 task Task queue depth is 2
+WARNING 2026-06-27 19:46:27,879 task Task queue depth is 3
+WARNING 2026-06-27 19:46:27,883 task Task queue depth is 4
+WARNING 2026-06-27 19:46:27,895 task Task queue depth is 3
+WARNING 2026-06-27 19:46:27,930 task Task queue depth is 3
+WARNING 2026-06-27 19:46:27,937 task Task queue depth is 4
+WARNING 2026-06-27 19:46:27,943 task Task queue depth is 5
+WARNING 2026-06-27 19:46:31,940 task Task queue depth is 1
+WARNING 2026-06-27 19:46:31,940 task Task queue depth is 2
+WARNING 2026-06-27 19:46:31,951 task Task queue depth is 3
+WARNING 2026-06-27 19:46:31,961 task Task queue depth is 4
+WARNING 2026-06-27 19:46:45,321 task Task queue depth is 1
+WARNING 2026-06-27 19:46:56,505 task Task queue depth is 1
+WARNING 2026-06-27 19:46:56,505 task Task queue depth is 2
+WARNING 2026-06-27 19:46:56,505 task Task queue depth is 3
+WARNING 2026-06-27 19:46:56,505 task Task queue depth is 4
+WARNING 2026-06-27 19:46:56,505 task Task queue depth is 5
+WARNING 2026-06-27 19:46:56,505 task Task queue depth is 6
+WARNING 2026-06-27 19:46:58,035 task Task queue depth is 1
+WARNING 2026-06-27 19:46:58,035 task Task queue depth is 2
+WARNING 2026-06-27 19:46:58,050 task Task queue depth is 3
+WARNING 2026-06-27 19:46:58,559 task Task queue depth is 1
+WARNING 2026-06-27 19:46:58,560 task Task queue depth is 2
+WARNING 2026-06-27 19:46:58,561 task Task queue depth is 3
+WARNING 2026-06-27 19:46:58,568 task Task queue depth is 4
+WARNING 2026-06-27 19:46:58,572 task Task queue depth is 5
+WARNING 2026-06-27 19:46:58,580 task Task queue depth is 6
+WARNING 2026-06-27 19:46:58,584 task Task queue depth is 6
+WARNING 2026-06-27 19:46:58,587 task Task queue depth is 7
+WARNING 2026-06-27 19:46:58,601 task Task queue depth is 8
+INFO 2026-06-27 19:47:07,039 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:47:15,332 task Task queue depth is 1
+WARNING 2026-06-27 19:47:18,018 task Task queue depth is 1
+WARNING 2026-06-27 19:47:18,018 task Task queue depth is 2
+WARNING 2026-06-27 19:47:18,018 task Task queue depth is 3
+WARNING 2026-06-27 19:47:18,018 task Task queue depth is 4
+WARNING 2026-06-27 19:47:20,065 task Task queue depth is 1
+WARNING 2026-06-27 19:47:20,065 task Task queue depth is 2
+WARNING 2026-06-27 19:47:20,065 task Task queue depth is 3
+WARNING 2026-06-27 19:47:20,065 task Task queue depth is 4
+WARNING 2026-06-27 19:47:20,065 task Task queue depth is 5
+WARNING 2026-06-27 19:47:37,977 task Task queue depth is 1
+WARNING 2026-06-27 19:47:37,977 task Task queue depth is 2
+WARNING 2026-06-27 19:47:40,019 task Task queue depth is 1
+WARNING 2026-06-27 19:47:40,034 task Task queue depth is 2
+WARNING 2026-06-27 19:47:48,222 task Task queue depth is 1
+WARNING 2026-06-27 19:47:48,222 task Task queue depth is 2
+WARNING 2026-06-27 19:47:59,489 task Task queue depth is 1
+WARNING 2026-06-27 19:47:59,499 log Forbidden: /api/videos/26
+WARNING 2026-06-27 19:48:08,193 task Task queue depth is 1
+WARNING 2026-06-27 19:48:15,317 task Task queue depth is 1
+WARNING 2026-06-27 19:48:28,772 task Task queue depth is 1
+ERROR 2026-06-27 19:48:28,889 log Internal Server Error: /api/webhooks/admin/stats
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\decorators\csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\backend\apps\admin_panel\webhook_views.py", line 302, in webhook_stats
+    .order_by('-count')[:10]
+     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\db\models\query.py", line 1656, in order_by
+    raise TypeError("Cannot reorder a query once a slice has been taken.")
+TypeError: Cannot reorder a query once a slice has been taken.
+WARNING 2026-06-27 19:48:41,970 task Task queue depth is 1
+WARNING 2026-06-27 19:48:41,970 task Task queue depth is 2
+WARNING 2026-06-27 19:48:48,127 task Task queue depth is 1
+INFO 2026-06-27 19:48:55,128 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:49:28,588 task Task queue depth is 1
+WARNING 2026-06-27 19:49:28,588 task Task queue depth is 2
+WARNING 2026-06-27 19:49:29,090 task Task queue depth is 1
+WARNING 2026-06-27 19:49:29,091 task Task queue depth is 2
+WARNING 2026-06-27 19:49:29,092 task Task queue depth is 3
+WARNING 2026-06-27 19:49:29,092 task Task queue depth is 4
+WARNING 2026-06-27 19:49:29,093 task Task queue depth is 5
+WARNING 2026-06-27 19:49:34,206 task Task queue depth is 1
+WARNING 2026-06-27 19:49:34,206 task Task queue depth is 2
+WARNING 2026-06-27 19:49:34,206 task Task queue depth is 3
+WARNING 2026-06-27 19:49:34,206 task Task queue depth is 4
+WARNING 2026-06-27 19:49:34,223 task Task queue depth is 5
+WARNING 2026-06-27 19:49:34,229 task Task queue depth is 6
+WARNING 2026-06-27 19:49:34,232 task Task queue depth is 7
+WARNING 2026-06-27 19:49:34,252 task Task queue depth is 8
+INFO 2026-06-27 19:49:38,237 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:49:44,222 task Task queue depth is 1
+WARNING 2026-06-27 19:49:44,237 task Task queue depth is 1
+ERROR 2026-06-27 19:49:44,269 log Internal Server Error: /api/webhooks/admin/stats
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\decorators\csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\backend\apps\admin_panel\webhook_views.py", line 302, in webhook_stats
+    .order_by('-count')[:10]
+     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\db\models\query.py", line 1656, in order_by
+    raise TypeError("Cannot reorder a query once a slice has been taken.")
+TypeError: Cannot reorder a query once a slice has been taken.
+WARNING 2026-06-27 19:49:48,549 task Task queue depth is 1
+WARNING 2026-06-27 19:49:48,549 task Task queue depth is 2
+WARNING 2026-06-27 19:49:48,574 task Task queue depth is 3
+WARNING 2026-06-27 19:49:51,610 task Task queue depth is 1
+WARNING 2026-06-27 19:49:51,610 task Task queue depth is 2
+WARNING 2026-06-27 19:49:51,610 task Task queue depth is 3
+WARNING 2026-06-27 19:49:51,610 task Task queue depth is 4
+WARNING 2026-06-27 19:49:51,610 task Task queue depth is 5
+WARNING 2026-06-27 19:49:51,610 task Task queue depth is 6
+WARNING 2026-06-27 19:49:51,610 task Task queue depth is 7
+WARNING 2026-06-27 19:49:51,658 task Task queue depth is 6
+WARNING 2026-06-27 19:49:51,681 task Task queue depth is 6
+INFO 2026-06-27 19:50:08,585 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:50:11,579 task Task queue depth is 1
+WARNING 2026-06-27 19:50:11,595 task Task queue depth is 2
+WARNING 2026-06-27 19:50:11,595 task Task queue depth is 3
+WARNING 2026-06-27 19:50:11,608 task Task queue depth is 4
+WARNING 2026-06-27 19:50:11,610 task Task queue depth is 5
+WARNING 2026-06-27 19:50:11,621 task Task queue depth is 5
+WARNING 2026-06-27 19:50:11,623 task Task queue depth is 6
+WARNING 2026-06-27 19:50:31,554 task Task queue depth is 1
+WARNING 2026-06-27 19:50:31,554 task Task queue depth is 2
+WARNING 2026-06-27 19:50:31,554 task Task queue depth is 3
+WARNING 2026-06-27 19:50:31,573 log Forbidden: /api/videos/26
+WARNING 2026-06-27 19:50:31,590 task Task queue depth is 2
+WARNING 2026-06-27 19:50:41,785 task Task queue depth is 1
+WARNING 2026-06-27 19:50:41,801 task Task queue depth is 2
+WARNING 2026-06-27 19:50:41,801 task Task queue depth is 3
+WARNING 2026-06-27 19:50:41,801 task Task queue depth is 4
+WARNING 2026-06-27 19:50:41,824 log Forbidden: /api/videos/26
+WARNING 2026-06-27 19:50:44,034 task Task queue depth is 1
+WARNING 2026-06-27 19:50:44,034 task Task queue depth is 2
+WARNING 2026-06-27 19:50:44,034 task Task queue depth is 3
+WARNING 2026-06-27 19:50:44,058 task Task queue depth is 4
+ERROR 2026-06-27 19:50:44,082 log Internal Server Error: /api/webhooks/admin/stats
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\decorators\csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\backend\apps\admin_panel\webhook_views.py", line 302, in webhook_stats
+    .order_by('-count')[:10]
+     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\db\models\query.py", line 1656, in order_by
+    raise TypeError("Cannot reorder a query once a slice has been taken.")
+TypeError: Cannot reorder a query once a slice has been taken.
+WARNING 2026-06-27 19:50:51,005 task Task queue depth is 1
+WARNING 2026-06-27 19:50:59,426 task Task queue depth is 1
+WARNING 2026-06-27 19:50:59,442 task Task queue depth is 2
+WARNING 2026-06-27 19:50:59,779 task Task queue depth is 1
+WARNING 2026-06-27 19:50:59,780 task Task queue depth is 2
+WARNING 2026-06-27 19:50:59,799 log Not Found: /api/affiliate/admin/payouts
+WARNING 2026-06-27 19:50:59,806 log Not Found: /api/affiliate/admin/links
+WARNING 2026-06-27 19:51:01,753 task Task queue depth is 1
+WARNING 2026-06-27 19:51:04,861 task Task queue depth is 1
+ERROR 2026-06-27 19:51:04,898 log Internal Server Error: /api/webhooks/admin/stats
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\decorators\csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\backend\apps\admin_panel\webhook_views.py", line 302, in webhook_stats
+    .order_by('-count')[:10]
+     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\db\models\query.py", line 1656, in order_by
+    raise TypeError("Cannot reorder a query once a slice has been taken.")
+TypeError: Cannot reorder a query once a slice has been taken.
+WARNING 2026-06-27 19:51:13,098 task Task queue depth is 1
+WARNING 2026-06-27 19:51:39,417 task Task queue depth is 1
+ERROR 2026-06-27 19:51:39,442 log Internal Server Error: /api/webhooks/admin/stats
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\decorators\csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\backend\apps\admin_panel\webhook_views.py", line 302, in webhook_stats
+    .order_by('-count')[:10]
+     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\db\models\query.py", line 1656, in order_by
+    raise TypeError("Cannot reorder a query once a slice has been taken.")
+TypeError: Cannot reorder a query once a slice has been taken.
+WARNING 2026-06-27 19:51:42,205 task Task queue depth is 1
+WARNING 2026-06-27 19:51:43,114 task Task queue depth is 1
+WARNING 2026-06-27 19:51:43,269 task Task queue depth is 1
+WARNING 2026-06-27 19:51:44,752 task Task queue depth is 1
+WARNING 2026-06-27 19:51:44,767 task Task queue depth is 2
+WARNING 2026-06-27 19:51:44,767 task Task queue depth is 3
+WARNING 2026-06-27 19:51:45,276 task Task queue depth is 1
+WARNING 2026-06-27 19:51:45,281 task Task queue depth is 2
+WARNING 2026-06-27 19:51:45,291 task Task queue depth is 3
+WARNING 2026-06-27 19:51:45,306 task Task queue depth is 4
+WARNING 2026-06-27 19:51:45,562 task Task queue depth is 5
+WARNING 2026-06-27 19:51:45,565 task Task queue depth is 6
+WARNING 2026-06-27 19:51:45,604 task Task queue depth is 6
+WARNING 2026-06-27 19:51:45,664 task Task queue depth is 6
+WARNING 2026-06-27 19:51:45,665 task Task queue depth is 7
+WARNING 2026-06-27 19:51:46,257 task Task queue depth is 1
+INFO 2026-06-27 19:51:51,681 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:52:04,725 task Task queue depth is 1
+WARNING 2026-06-27 19:52:04,744 task Task queue depth is 2
+WARNING 2026-06-27 19:52:04,765 task Task queue depth is 2
+WARNING 2026-06-27 19:52:04,777 task Task queue depth is 3
+WARNING 2026-06-27 19:52:14,973 task Task queue depth is 1
+WARNING 2026-06-27 19:52:24,694 task Task queue depth is 1
+WARNING 2026-06-27 19:52:26,235 task Task queue depth is 1
+WARNING 2026-06-27 19:52:26,235 task Task queue depth is 2
+WARNING 2026-06-27 19:52:26,235 task Task queue depth is 2
+WARNING 2026-06-27 19:52:26,235 task Task queue depth is 3
+WARNING 2026-06-27 19:52:26,235 task Task queue depth is 4
+WARNING 2026-06-27 19:52:26,235 task Task queue depth is 5
+WARNING 2026-06-27 19:52:26,246 task Task queue depth is 6
+WARNING 2026-06-27 19:52:29,642 task Task queue depth is 1
+WARNING 2026-06-27 19:52:29,825 task Task queue depth is 1
+WARNING 2026-06-27 19:52:29,825 task Task queue depth is 2
+WARNING 2026-06-27 19:52:29,828 task Task queue depth is 3
+WARNING 2026-06-27 19:52:29,829 task Task queue depth is 4
+WARNING 2026-06-27 19:52:29,830 task Task queue depth is 5
+WARNING 2026-06-27 19:52:29,831 task Task queue depth is 6
+WARNING 2026-06-27 19:52:29,831 task Task queue depth is 7
+WARNING 2026-06-27 19:52:29,834 task Task queue depth is 8
+WARNING 2026-06-27 19:52:29,863 task Task queue depth is 7
+WARNING 2026-06-27 19:52:29,866 task Task queue depth is 8
+WARNING 2026-06-27 19:52:29,869 task Task queue depth is 9
+WARNING 2026-06-27 19:52:29,870 task Task queue depth is 10
+WARNING 2026-06-27 19:52:29,875 task Task queue depth is 10
+WARNING 2026-06-27 19:52:29,876 task Task queue depth is 11
+WARNING 2026-06-27 19:52:33,095 task Task queue depth is 1
+WARNING 2026-06-27 19:52:33,132 task Task queue depth is 1
+WARNING 2026-06-27 19:52:34,500 task Task queue depth is 1
+INFO 2026-06-27 19:52:39,785 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:52:49,786 task Task queue depth is 1
+WARNING 2026-06-27 19:52:49,786 task Task queue depth is 2
+WARNING 2026-06-27 19:52:49,786 task Task queue depth is 3
+WARNING 2026-06-27 19:52:49,802 task Task queue depth is 4
+WARNING 2026-06-27 19:52:52,346 task Task queue depth is 1
+WARNING 2026-06-27 19:52:52,346 task Task queue depth is 2
+WARNING 2026-06-27 19:52:52,346 task Task queue depth is 3
+WARNING 2026-06-27 19:52:52,346 task Task queue depth is 4
+WARNING 2026-06-27 19:52:52,346 task Task queue depth is 5
+WARNING 2026-06-27 19:52:59,520 task Task queue depth is 1
+ERROR 2026-06-27 19:52:59,536 log Internal Server Error: /api/webhooks/admin/stats
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\decorators\csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\backend\apps\admin_panel\webhook_views.py", line 302, in webhook_stats
+    .order_by('-count')[:10]
+     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\db\models\query.py", line 1656, in order_by
+    raise TypeError("Cannot reorder a query once a slice has been taken.")
+TypeError: Cannot reorder a query once a slice has been taken.
+WARNING 2026-06-27 19:53:08,722 task Task queue depth is 1
+WARNING 2026-06-27 19:53:09,762 task Task queue depth is 1
+WARNING 2026-06-27 19:53:09,763 task Task queue depth is 2
+WARNING 2026-06-27 19:53:12,314 task Task queue depth is 1
+WARNING 2026-06-27 19:53:12,314 task Task queue depth is 2
+WARNING 2026-06-27 19:53:19,488 task Task queue depth is 1
+WARNING 2026-06-27 19:53:19,488 task Task queue depth is 2
+WARNING 2026-06-27 19:53:19,488 task Task queue depth is 3
+WARNING 2026-06-27 19:53:20,737 task Task queue depth is 1
+WARNING 2026-06-27 19:53:20,873 task Task queue depth is 2
+WARNING 2026-06-27 19:53:20,896 log Not Found: /api/affiliate/admin/links
+WARNING 2026-06-27 19:53:20,956 log Not Found: /api/affiliate/admin/payouts
+WARNING 2026-06-27 19:53:21,236 task Task queue depth is 1
+WARNING 2026-06-27 19:53:21,236 task Task queue depth is 2
+WARNING 2026-06-27 19:53:29,206 task Task queue depth is 1
+WARNING 2026-06-27 19:53:33,815 task Task queue depth is 1
+WARNING 2026-06-27 19:53:33,815 task Task queue depth is 2
+WARNING 2026-06-27 19:53:33,815 task Task queue depth is 3
+WARNING 2026-06-27 19:53:34,329 task Task queue depth is 1
+WARNING 2026-06-27 19:53:34,329 task Task queue depth is 2
+WARNING 2026-06-27 19:53:34,329 task Task queue depth is 3
+WARNING 2026-06-27 19:53:34,329 task Task queue depth is 4
+WARNING 2026-06-27 19:53:34,329 task Task queue depth is 5
+WARNING 2026-06-27 19:53:34,329 task Task queue depth is 6
+INFO 2026-06-27 19:53:39,853 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:53:53,785 task Task queue depth is 1
+WARNING 2026-06-27 19:53:53,785 task Task queue depth is 2
+WARNING 2026-06-27 19:53:53,785 task Task queue depth is 3
+WARNING 2026-06-27 19:53:53,801 task Task queue depth is 4
+WARNING 2026-06-27 19:53:53,801 task Task queue depth is 5
+WARNING 2026-06-27 19:53:53,801 task Task queue depth is 6
+WARNING 2026-06-27 19:53:53,801 task Task queue depth is 7
+WARNING 2026-06-27 19:53:53,808 task Task queue depth is 8
+WARNING 2026-06-27 19:54:13,760 task Task queue depth is 1
+WARNING 2026-06-27 19:54:13,760 task Task queue depth is 2
+WARNING 2026-06-27 19:54:13,760 task Task queue depth is 3
+WARNING 2026-06-27 19:54:13,760 task Task queue depth is 4
+WARNING 2026-06-27 19:54:19,738 task Task queue depth is 1
+WARNING 2026-06-27 19:54:23,486 task Task queue depth is 1
+WARNING 2026-06-27 19:54:23,486 task Task queue depth is 2
+WARNING 2026-06-27 19:54:33,207 task Task queue depth is 1
+WARNING 2026-06-27 19:54:43,285 task Task queue depth is 1
+WARNING 2026-06-27 19:54:43,460 task Task queue depth is 1
+WARNING 2026-06-27 19:54:47,080 task Task queue depth is 1
+WARNING 2026-06-27 19:54:47,080 task Task queue depth is 2
+WARNING 2026-06-27 19:54:47,095 task Task queue depth is 3
+WARNING 2026-06-27 19:54:49,879 task Task queue depth is 1
+WARNING 2026-06-27 19:54:49,879 task Task queue depth is 2
+WARNING 2026-06-27 19:54:49,879 task Task queue depth is 3
+WARNING 2026-06-27 19:54:50,112 task Task queue depth is 1
+WARNING 2026-06-27 19:54:50,113 task Task queue depth is 2
+WARNING 2026-06-27 19:54:50,113 task Task queue depth is 3
+WARNING 2026-06-27 19:54:50,114 task Task queue depth is 4
+WARNING 2026-06-27 19:54:50,114 task Task queue depth is 5
+WARNING 2026-06-27 19:54:50,115 task Task queue depth is 6
+WARNING 2026-06-27 19:54:50,115 task Task queue depth is 7
+WARNING 2026-06-27 19:54:50,116 task Task queue depth is 8
+WARNING 2026-06-27 19:54:50,117 task Task queue depth is 9
+WARNING 2026-06-27 19:54:50,117 task Task queue depth is 10
+WARNING 2026-06-27 19:54:50,121 task Task queue depth is 11
+WARNING 2026-06-27 19:55:14,162 task Task queue depth is 1
+WARNING 2026-06-27 19:55:14,162 task Task queue depth is 2
+WARNING 2026-06-27 19:55:14,162 task Task queue depth is 3
+WARNING 2026-06-27 19:55:14,178 task Task queue depth is 4
+WARNING 2026-06-27 19:55:14,178 task Task queue depth is 5
+WARNING 2026-06-27 19:55:14,178 task Task queue depth is 6
+WARNING 2026-06-27 19:55:14,178 task Task queue depth is 7
+WARNING 2026-06-27 19:55:14,178 task Task queue depth is 8
+WARNING 2026-06-27 19:55:14,178 task Task queue depth is 9
+WARNING 2026-06-27 19:55:14,185 task Task queue depth is 10
+WARNING 2026-06-27 19:55:14,186 task Task queue depth is 11
+WARNING 2026-06-27 19:55:14,688 task Task queue depth is 1
+INFO 2026-06-27 19:55:24,050 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:55:34,144 task Task queue depth is 1
+WARNING 2026-06-27 19:55:34,144 task Task queue depth is 2
+WARNING 2026-06-27 19:55:34,161 task Task queue depth is 3
+WARNING 2026-06-27 19:55:37,719 task Task queue depth is 1
+WARNING 2026-06-27 19:55:37,719 task Task queue depth is 2
+WARNING 2026-06-27 19:55:37,719 task Task queue depth is 3
+WARNING 2026-06-27 19:55:37,719 task Task queue depth is 4
+WARNING 2026-06-27 19:55:37,719 task Task queue depth is 5
+WARNING 2026-06-27 19:55:37,719 task Task queue depth is 6
+WARNING 2026-06-27 19:55:40,798 task Task queue depth is 1
+WARNING 2026-06-27 19:55:40,798 task Task queue depth is 2
+WARNING 2026-06-27 19:55:40,798 task Task queue depth is 3
+WARNING 2026-06-27 19:55:40,798 task Task queue depth is 4
+WARNING 2026-06-27 19:55:40,798 task Task queue depth is 5
+WARNING 2026-06-27 19:55:40,798 task Task queue depth is 6
+WARNING 2026-06-27 19:55:40,798 task Task queue depth is 7
+WARNING 2026-06-27 19:55:40,798 task Task queue depth is 8
+WARNING 2026-06-27 19:55:40,798 task Task queue depth is 9
+WARNING 2026-06-27 19:55:40,812 task Task queue depth is 10
+WARNING 2026-06-27 19:55:40,815 task Task queue depth is 11
+WARNING 2026-06-27 19:55:40,839 task Task queue depth is 10
+WARNING 2026-06-27 19:55:40,850 task Task queue depth is 11
+INFO 2026-06-27 19:55:44,381 channel Client disconnected while serving /api/notifications/stream
+INFO 2026-06-27 19:55:54,256 channel Client disconnected while serving /api/notifications/stream
+WARNING 2026-06-27 19:56:00,778 task Task queue depth is 1
+WARNING 2026-06-27 19:56:00,813 task Task queue depth is 2
+WARNING 2026-06-27 19:56:03,847 task Task queue depth is 1
+WARNING 2026-06-27 19:56:03,851 task Task queue depth is 2
+WARNING 2026-06-27 19:56:03,854 task Task queue depth is 3
+WARNING 2026-06-27 19:56:03,865 task Task queue depth is 4
+WARNING 2026-06-27 19:56:23,801 task Task queue depth is 1
+WARNING 2026-06-27 19:56:23,801 task Task queue depth is 2
+WARNING 2026-06-27 19:56:23,846 log Forbidden: /api/videos/26
+WARNING 2026-06-27 19:56:30,972 task Task queue depth is 1
+WARNING 2026-06-27 19:56:30,972 task Task queue depth is 2
+WARNING 2026-06-27 19:56:30,972 task Task queue depth is 3
+WARNING 2026-06-27 19:56:31,049 log Forbidden: /api/videos/26
+WARNING 2026-06-27 19:56:45,034 task Task queue depth is 1
