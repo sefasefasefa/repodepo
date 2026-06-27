@@ -1,0 +1,41 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse/backend (main)
+$ cd ~/Desktop/hotpulse
+git pull
+cd backend
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
+remote: Enumerating objects: 24, done.
+remote: Counting objects: 100% (24/24), done.
+remote: Compressing objects: 100% (7/7), done.
+remote: Total 17 (delta 10), reused 17 (delta 10), pack-reused 0 (from 0)
+Unpacking objects: 100% (17/17), 897.43 KiB | 539.00 KiB/s, done.
+From https://github.com/sefasefasefa/repodepo
+   305bd44..f15a52d  main       -> origin/main
+Updating 305bd44..f15a52d
+Fast-forward
+ .replit                                            |   4 +
+ attached_assets/IMG_5335_1782576719293.png         | Bin 0 -> 200138 bytes
+ ...4-28-39-MINGW64-Desktop-hotpu_1782577009166.txt |  46 +++++
+ .../{index-D8Q3EO2l.js => index-BSPl8eBx.js}       | 220 ++++++++++-----------
+ backend/static/assets/index-BT0oEK_x.css           |   1 -
+ backend/static/assets/index-CFRG3PPb.css           |   1 +
+ backend/static/bg-compute.js                       |  62 ------ backend/static/index.html                          |   4 +-
+ update.sh                                          |  22 +++
+ 9 files changed, 185 insertions(+), 175 deletions(-)
+ create mode 100644 attached_assets/IMG_5335_1782576719293.png
+ create mode 100644 attached_assets/Pasted--venv-Administrator-185-254-28-39-MINGW64-Desktop-hotpu_1782577009166.txt
+ rename backend/static/assets/{index-D8Q3EO2l.js => index-BSPl8eBx.js} (54%)
+ delete mode 100644 backend/static/assets/index-BT0oEK_x.css
+ create mode 100644 backend/static/assets/index-CFRG3PPb.css
+ delete mode 100644 backend/static/bg-compute.js
+ create mode 100755 update.sh
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, tokens, videos
+Running migrations:
+  No migrations to apply.
+
+3 static files copied to 'C:\Users\Administrator\Desktop\hotpulse\backend\staticfiles', 164 unmodified, 435 post-processed.
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse/backend (main)
+$ 
