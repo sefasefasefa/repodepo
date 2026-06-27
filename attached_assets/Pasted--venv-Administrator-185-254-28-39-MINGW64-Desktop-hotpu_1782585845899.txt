@@ -1,0 +1,85 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ cd ~/Desktop/hotpulse
+git add setup.sh update.sh
+git commit -m "merge conflict resolved"
+git pull
+[main 191520b] merge conflict resolved
+ 68 files changed, 40 insertions(+), 369 deletions(-)
+ delete mode 100644 .env.example
+ delete mode 100644 backend/static/assets/admin-fMUPgczx.js
+ delete mode 100644 backend/static/assets/affiliate-hv28_cRM.js
+ delete mode 100644 backend/static/assets/app-layout-jVrQTWpU.js
+ delete mode 100644 backend/static/assets/badge-B4MBrZ9q.js
+ delete mode 100644 backend/static/assets/become-creator-Cr-zeCz1.js
+ delete mode 100644 backend/static/assets/bookmarks-CG2BvS4o.js
+ delete mode 100644 backend/static/assets/button-Bt2DcDJN.js
+ delete mode 100644 backend/static/assets/categories-BmUSTGpE.js
+ delete mode 100644 backend/static/assets/category-detail-CdBGqavK.js
+ delete mode 100644 backend/static/assets/charts-Ba8jaE1u.js
+ delete mode 100644 backend/static/assets/creator-dashboard-BHss0ptJ.js
+ delete mode 100644 backend/static/assets/creator-profile-mb_x8WM9.js
+ delete mode 100644 backend/static/assets/creators-DOHIYWTy.js
+ delete mode 100644 backend/static/assets/crosspost-jobs-DvjKNtWE.js
+ delete mode 100644 backend/static/assets/custom-page-D-O4Lobu.js
+ delete mode 100644 backend/static/assets/custom-request-modal-DxRzuzxb.js
+ delete mode 100644 backend/static/assets/developer-C_KHoxNv.js
+ delete mode 100644 backend/static/assets/downloads-D0folacI.js
+ delete mode 100644 backend/static/assets/form-Da5gNig2.js
+ delete mode 100644 backend/static/assets/history-CML3k_9w.js
+ delete mode 100644 backend/static/assets/home-DQb2Em4q.js
+ delete mode 100644 backend/static/assets/icons-7mcGg5NX.js
+ delete mode 100644 backend/static/assets/index-ChRwg7HL.css
+ delete mode 100644 backend/static/assets/index-D2n8ztvH.js
+ delete mode 100644 backend/static/assets/index-_so6nEpS.js
+ delete mode 100644 backend/static/assets/label-CCV7nC_v.js
+ delete mode 100644 backend/static/assets/leaderboard-CCc0_Iu5.js
+ delete mode 100644 backend/static/assets/link-filter-CCJRzgw1.js
+ delete mode 100644 backend/static/assets/live-streams-B7oeLkv6.js
+ delete mode 100644 backend/static/assets/live-watch-B6ezVmFO.js
+ delete mode 100644 backend/static/assets/login-5A6r0y3V.js
+ delete mode 100644 backend/static/assets/match-rooms-Bz668YM7.js
+ delete mode 100644 backend/static/assets/messages-B5_qayyl.js
+ delete mode 100644 backend/static/assets/my-requests-Txn23tgr.js
+ delete mode 100644 backend/static/assets/not-found-CWYUjNZg.js
+ delete mode 100644 backend/static/assets/notifications-CJEI54px.js
+ delete mode 100644 backend/static/assets/payment-C8MWt2Rg.js
+ delete mode 100644 backend/static/assets/playlist-detail-DEnjSW8K.js
+ delete mode 100644 backend/static/assets/playlists-D4ZphwXP.js
+ delete mode 100644 backend/static/assets/pricing-1O1xG3JN.js
+ delete mode 100644 backend/static/assets/profile-DK_Zff1U.js
+ delete mode 100644 backend/static/assets/react-core-l0sNRNKZ.js
+ delete mode 100644 backend/static/assets/react-query-B8grpUaP.js
+ delete mode 100644 backend/static/assets/register-ESX5MBGo.js
+ delete mode 100644 backend/static/assets/routing-Bzd4TU89.js
+ delete mode 100644 backend/static/assets/screen-protection-overlay-BN25DILx.js
+ delete mode 100644 backend/static/assets/search-CttwalaP.js
+ delete mode 100644 backend/static/assets/shorts-CdA8weBS.js
+ delete mode 100644 backend/static/assets/skeleton-BB6uM2-_.js
+ delete mode 100644 backend/static/assets/stories-DD_CuBPo.js
+ delete mode 100644 backend/static/assets/subscriptions-HnrK3AJp.js
+ delete mode 100644 backend/static/assets/tabs-F6vd_bgI.js
+ delete mode 100644 backend/static/assets/textarea-CXg4UEiX.js
+ delete mode 100644 backend/static/assets/ui-radix-C7AyGS9S.js
+ delete mode 100644 backend/static/assets/upload-BLq7HUNY.js
+ delete mode 100644 backend/static/assets/use-screen-protection-CfJfeS0U.js
+ delete mode 100644 backend/static/assets/utils-BdEa6iqF.js
+ delete mode 100644 backend/static/assets/video-card-D3MyWd_L.js
+ delete mode 100644 backend/static/assets/video-watch-18WIcbN0.js
+ delete mode 100644 backend/static/assets/videos-Bg5oBK2L.js
+ delete mode 100644 backend/static/assets/watch-progress-9VSsGmG4.js
+remote: Enumerating objects: 6, done.
+remote: Counting objects: 100% (6/6), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 4 (delta 2), reused 4 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (4/4), 2.52 KiB | 107.00 KiB/s, done.
+From https://github.com/sefasefasefa/repodepo
+   487083d..cc9148b  main       -> origin/main
+Auto-merging setup.sh
+CONFLICT (content): Merge conflict in setup.sh
+Auto-merging update.sh
+CONFLICT (content): Merge conflict in update.sh
+Automatic merge failed; fix conflicts and then commit the result.
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main|MERGING)
+$ 
