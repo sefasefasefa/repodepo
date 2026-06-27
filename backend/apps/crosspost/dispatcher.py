@@ -35,9 +35,7 @@ def _local_path(video) -> str | None:
 
 
 def _public_url(url: str) -> str:
-    """Göreceli URL'leri SITE_URL ile tam adrese çevirir.
-    Streamtape/DoodStream gibi remote download API'leri internetten erişilebilir
-    tam URL ister. /media/... gibi göreceli yollar çalışmaz."""
+    """Göreceli URL'leri SITE_URL ile tam adrese çevirir."""
     if not url:
         return url
     if url.startswith("http://") or url.startswith("https://"):
@@ -46,6 +44,26 @@ def _public_url(url: str) -> str:
     if not site_url:
         site_url = "http://localhost:8000"
     return site_url + ("" if url.startswith("/") else "/") + url
+
+
+def _fetch_to_tempfile(url: str, r) -> tuple:
+    """URL'deki videoyu geçici dosyaya indirir. (tmp_path, hata_mesajı) döner.
+    Başarılıysa hata_mesajı boş string, başarısızsa tmp_path None olur."""
+    import tempfile
+    try:
+        src = _public_url(url)
+        if not src:
+            return None, "Boş URL"
+        resp = r.get(src, headers={"User-Agent": UA}, stream=True, timeout=120)
+        if resp.status_code != 200:
+            return None, f"İndirme hatası HTTP {resp.status_code}"
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
+            for chunk in resp.iter_content(chunk_size=8 * 1024 * 1024):
+                if chunk:
+                    tmp.write(chunk)
+            return tmp.name, ""
+    except Exception as exc:
+        return None, f"{type(exc).__name__}: {exc}"
 
 
 def dispatch_for_video(video, user, site_ids: Iterable[int] | None = None, send_all: bool = False):
@@ -228,30 +246,17 @@ def _streamtape(job, site, video, r):
         return _fail(job, "StreamTape: login ve API anahtarı gerekli")
 
     path = _local_path(video)
+    tmp = None
 
-    # URL videosu — remote download API kullan
+    # Yerel dosya yoksa URL'den indir
     if not path or not os.path.exists(path):
-        video_src = _public_url(video.video_url or video.hls_url or "")
+        video_src = video.video_url or video.hls_url or ""
         if not video_src:
             return _fail(job, "StreamTape: Dosya bulunamadı ve video URL yok")
-        try:
-            from urllib.parse import quote
-            encoded = quote(video_src, safe='')
-            fname = quote((video.title or 'video')[:80])
-            ru = r.get(
-                f"https://api.streamtape.com/remotedl?login={login}&key={key}&url={encoded}&name={fname}",
-                headers={"User-Agent": UA}, timeout=30,
-            )
-            job.response_code = ru.status_code
-            rd = ru.json()
-            if rd.get("status") == 200:
-                file_id = (rd.get("result") or {}).get("id", "")
-                _success(job, f"https://streamtape.com/v/{file_id}" if file_id else "", ru.text)
-            else:
-                _fail(job, f"StreamTape remote URL hatası: {ru.text[:500]}")
-        except Exception as exc:
-            _fail(job, f"StreamTape remote URL: {type(exc).__name__}: {exc}")
-        return
+        path, err = _fetch_to_tempfile(video_src, r)
+        if not path:
+            return _fail(job, f"StreamTape: Video indirilemedi — {err}")
+        tmp = path
 
     try:
         resp = r.get(
@@ -277,6 +282,10 @@ def _streamtape(job, site, video, r):
             _fail(job, f"StreamTape yükleme hatası: {up.text[:500]}")
     except Exception as exc:
         _fail(job, f"StreamTape: {type(exc).__name__}: {exc}")
+    finally:
+        if tmp:
+            try: os.unlink(tmp)
+            except: pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -288,30 +297,16 @@ def _doodstream(job, site, video, r):
         return _fail(job, "DoodStream: API anahtarı gerekli")
 
     path = _local_path(video)
+    tmp = None
 
-    # URL videosu — remote URL upload API kullan
     if not path or not os.path.exists(path):
-        video_src = _public_url(video.video_url or video.hls_url or "")
+        video_src = video.video_url or video.hls_url or ""
         if not video_src:
             return _fail(job, "DoodStream: Dosya bulunamadı ve video URL yok")
-        try:
-            from urllib.parse import quote
-            encoded = quote(video_src, safe='')
-            fname = quote((video.title or 'video')[:80])
-            ru = r.get(
-                f"https://doodapi.com/api/upload/url?key={key}&url={encoded}&filename={fname}",
-                headers={"User-Agent": UA}, timeout=30,
-            )
-            job.response_code = ru.status_code
-            rd = ru.json()
-            if rd.get("status") == 200:
-                filecode = (rd.get("result") or {}).get("filecode", "")
-                _success(job, f"https://doodstream.com/e/{filecode}" if filecode else "", ru.text)
-            else:
-                _fail(job, f"DoodStream remote URL hatası: {ru.text[:500]}")
-        except Exception as exc:
-            _fail(job, f"DoodStream remote URL: {type(exc).__name__}: {exc}")
-        return
+        path, err = _fetch_to_tempfile(video_src, r)
+        if not path:
+            return _fail(job, f"DoodStream: Video indirilemedi — {err}")
+        tmp = path
 
     try:
         resp = r.get("https://doodapi.com/api/upload/server", params={"key": key},
@@ -334,6 +329,10 @@ def _doodstream(job, site, video, r):
             _fail(job, f"DoodStream yükleme hatası: {up.text[:500]}")
     except Exception as exc:
         _fail(job, f"DoodStream: {type(exc).__name__}: {exc}")
+    finally:
+        if tmp:
+            try: os.unlink(tmp)
+            except: pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -346,28 +345,16 @@ def _mixdrop(job, site, video, r):
         return _fail(job, "Mixdrop: e-posta ve API anahtarı gerekli")
 
     path = _local_path(video)
+    tmp = None
 
-    # URL videosu — remote URL upload API kullan
     if not path or not os.path.exists(path):
-        video_src = _public_url(video.video_url or video.hls_url or "")
+        video_src = video.video_url or video.hls_url or ""
         if not video_src:
             return _fail(job, "Mixdrop: Dosya bulunamadı ve video URL yok")
-        try:
-            resp = r.post(
-                "https://ul.mixdrop.ag/api/upload/url",
-                data={"url": video_src, "email": email, "key": key},
-                headers={"User-Agent": UA}, timeout=30,
-            )
-            job.response_code = resp.status_code
-            rd = resp.json()
-            fileref = (rd.get("result") or {}).get("fileref", "")
-            if fileref:
-                _success(job, f"https://mixdrop.ag/e/{fileref}", resp.text)
-            else:
-                _fail(job, f"Mixdrop remote URL hatası: {resp.text[:500]}")
-        except Exception as exc:
-            _fail(job, f"Mixdrop remote URL: {type(exc).__name__}: {exc}")
-        return
+        path, err = _fetch_to_tempfile(video_src, r)
+        if not path:
+            return _fail(job, f"Mixdrop: Video indirilemedi — {err}")
+        tmp = path
 
     try:
         with open(path, "rb") as f:
@@ -386,6 +373,10 @@ def _mixdrop(job, site, video, r):
             _fail(job, f"Mixdrop hatası: {resp.text[:500]}")
     except Exception as exc:
         _fail(job, f"Mixdrop: {type(exc).__name__}: {exc}")
+    finally:
+        if tmp:
+            try: os.unlink(tmp)
+            except: pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -497,36 +488,17 @@ def _make_api_key_adapter(provider_key: str):
             return _fail(job, f"{provider_key}: API anahtarı gerekli")
 
         path = _local_path(video)
+        tmp = None
 
-        # URL videosu — remote URL upload API kullan
         if not path or not os.path.exists(path):
-            video_src = _public_url(video.video_url or video.hls_url or "")
+            video_src = video.video_url or video.hls_url or ""
             if not video_src:
                 return _fail(job, f"{provider_key}: Dosya bulunamadı ve video URL yok")
-            try:
-                from urllib.parse import quote
-                encoded = quote(video_src, safe='')
-                fname = quote((video.title or 'video')[:80])
-                ru = r.get(
-                    f"{url_api}?key={key}&url={encoded}&filename={fname}",
-                    headers={"User-Agent": UA}, timeout=30,
-                )
-                job.response_code = ru.status_code
-                rd = ru.json()
-                if rd.get("status") == 200:
-                    result = rd.get("result", {})
-                    filecode = result.get("filecode") or result.get("file_code") or result.get("id", "")
-                    if filecode:
-                        _success(job, f"{embed_base}/e/{filecode}", ru.text)
-                    else:
-                        _fail(job, f"{provider_key} remote URL: filecode alınamadı: {ru.text[:300]}")
-                else:
-                    _fail(job, f"{provider_key} remote URL hatası: {ru.text[:300]}")
-            except Exception as exc:
-                _fail(job, f"{provider_key} remote URL: {type(exc).__name__}: {exc}")
-            return
+            path, err = _fetch_to_tempfile(video_src, r)
+            if not path:
+                return _fail(job, f"{provider_key}: Video indirilemedi — {err}")
+            tmp = path
 
-        # Local dosya — upload server al, dosyayı POST et
         try:
             resp = r.get(server_api, params={"key": key},
                          headers={"User-Agent": UA}, timeout=30)
@@ -553,6 +525,10 @@ def _make_api_key_adapter(provider_key: str):
                 _fail(job, f"{provider_key} yükleme hatası: {up.text[:500]}")
         except Exception as exc:
             _fail(job, f"{provider_key}: {type(exc).__name__}: {exc}")
+        finally:
+            if tmp:
+                try: os.unlink(tmp)
+                except: pass
 
     return _adapter
 
