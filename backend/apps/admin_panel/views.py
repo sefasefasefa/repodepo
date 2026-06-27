@@ -170,7 +170,7 @@ def edit_user(request, user_id):
         if len(password) < 6:
             return Response({'error': 'Şifre en az 6 karakter olmalı'}, status=400)
         user.set_password(password)
-        update_fields.append('password')
+        update_fields.append('password_hash')
 
     if update_fields:
         user.save(update_fields=update_fields)
