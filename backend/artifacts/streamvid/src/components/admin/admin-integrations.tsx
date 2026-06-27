@@ -297,46 +297,333 @@ const PLATFORMS: Platform[] = [
       hint: "hotlinking.co hesabından API anahtarını al",
     },
   },
+  // ── Ek +18 video/dosya hosting platformları ──────────────────────────────
   {
-    id: "youtube", name: "YouTube", color: "text-red-400", bg: "bg-red-900/20", logo: "YT", cat: "general",
+    id: "sendvid", name: "Sendvid", color: "text-blue-400", bg: "bg-blue-900/20", logo: "SV", cat: "adult",
     fields: ["apiKey"],
-    docs: "https://console.developers.google.com",
-    fieldConfig: {
-      apiKeyLabel: "OAuth Client Secret (JSON)",
-      apiKeyPlaceholder: "Google Cloud Console'dan indirilen JSON",
-      hint: "console.developers.google.com → YouTube Data API v3 → Kimlik Bilgileri → OAuth 2.0 İstemci Kimliği",
-    },
-  },
-  {
-    id: "vimeo", name: "Vimeo", color: "text-blue-400", bg: "bg-blue-900/20", logo: "VM", cat: "general",
-    fields: ["apiKey"],
-    docs: "https://developer.vimeo.com",
-    fieldConfig: {
-      apiKeyLabel: "Erişim Tokeni (Access Token)",
-      apiKeyPlaceholder: "vimeo personal access token",
-      hint: "developer.vimeo.com → Uygulamalarım → Yeni Uygulama → Personal Access Token oluştur",
-    },
-  },
-  {
-    id: "dailymotion", name: "Dailymotion", color: "text-sky-400", bg: "bg-sky-900/20", logo: "DM", cat: "general",
-    fields: ["login", "key"],
-    docs: "https://developers.dailymotion.com",
-    fieldConfig: {
-      loginLabel: "API Key (Client ID)",
-      loginPlaceholder: "dailymotion client id",
-      keyLabel: "API Gizli Anahtarı (Client Secret)",
-      keyPlaceholder: "dailymotion client secret",
-      hint: "dailymotion.com/settings/developer → API Keys bölümünden Client ID ve Client Secret al",
-    },
-  },
-  {
-    id: "rumble", name: "Rumble", color: "text-lime-400", bg: "bg-lime-900/20", logo: "RU", cat: "general",
-    fields: ["apiKey"],
-    docs: "https://rumble.com/upload",
+    docs: "https://sendvid.com",
     fieldConfig: {
       apiKeyLabel: "API Anahtarı",
-      apiKeyPlaceholder: "rumble api anahtarın",
-      hint: "rumble.com hesabından API erişimi talep et",
+      apiKeyPlaceholder: "sendvid api anahtarın",
+      hint: "sendvid.com → Hesabım → API bölümünden anahtarı al",
+    },
+  },
+  {
+    id: "pixeldrain", name: "Pixeldrain", color: "text-gray-400", bg: "bg-gray-900/20", logo: "PD", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://pixeldrain.com/api",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "pixeldrain api anahtarın",
+      hint: "pixeldrain.com → Hesabım → API Keys → Yeni anahtar oluştur",
+    },
+  },
+  {
+    id: "streamff", name: "Streamff", color: "text-indigo-400", bg: "bg-indigo-900/20", logo: "SF", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://streamff.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "streamff api anahtarın",
+      hint: "streamff.com hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "vudeo", name: "Vudeo", color: "text-violet-400", bg: "bg-violet-900/20", logo: "VD", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://vudeo.net",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "vudeo api anahtarın",
+      hint: "vudeo.net → Hesabım → API bölümünden anahtarı al",
+    },
+  },
+  {
+    id: "vidmoly", name: "VidMoly", color: "text-cyan-400", bg: "bg-cyan-900/20", logo: "VM", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://vidmoly.to",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "vidmoly api anahtarın",
+      hint: "vidmoly.to → Hesabım → API Key bölümünden al",
+    },
+  },
+  {
+    id: "gofile", name: "Gofile", color: "text-blue-300", bg: "bg-blue-950/30", logo: "GF", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://gofile.io/api",
+    fieldConfig: {
+      apiKeyLabel: "API Token",
+      apiKeyPlaceholder: "gofile hesap token'ın",
+      hint: "gofile.io → Profil → API Token bölümünden al",
+    },
+  },
+  {
+    id: "krakenfiles", name: "KrakenFiles", color: "text-red-400", bg: "bg-red-900/20", logo: "KF", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://krakenfiles.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "krakenfiles api anahtarın",
+      hint: "krakenfiles.com → Hesabım → API bölümünden anahtarı al",
+    },
+  },
+  {
+    id: "rapidgator", name: "Rapidgator", color: "text-green-400", bg: "bg-green-900/20", logo: "RG", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://rapidgator.net/article/api",
+    fieldConfig: {
+      loginLabel: "E-posta (Hesap)",
+      loginPlaceholder: "rapidgator hesabına kayıtlı e-posta",
+      keyLabel: "Şifre",
+      keyPlaceholder: "hesap şifreni gir",
+      hint: "rapidgator.net API'si e-posta + şifre ile çalışır — hesap sayfasından alabilirsin",
+    },
+  },
+  {
+    id: "turbobit", name: "Turbobit", color: "text-orange-400", bg: "bg-orange-900/20", logo: "TB", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://turbobit.net/api",
+    fieldConfig: {
+      loginLabel: "E-posta (Hesap)",
+      loginPlaceholder: "turbobit hesabına kayıtlı e-posta",
+      keyLabel: "Şifre",
+      keyPlaceholder: "hesap şifreni gir",
+      hint: "turbobit.net → API sayfası → e-posta + şifre ile bağlan",
+    },
+  },
+  {
+    id: "1fichier", name: "1Fichier", color: "text-yellow-400", bg: "bg-yellow-900/20", logo: "1F", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://1fichier.com/api.html",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "1fichier api anahtarın",
+      hint: "1fichier.com → Hesabım → API bölümünden anahtarı al",
+    },
+  },
+  {
+    id: "nitroflare", name: "Nitroflare", color: "text-blue-500", bg: "bg-blue-900/20", logo: "NF", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://nitroflare.com/api",
+    fieldConfig: {
+      loginLabel: "E-posta (Hesap)",
+      loginPlaceholder: "nitroflare hesabına kayıtlı e-posta",
+      keyLabel: "Şifre",
+      keyPlaceholder: "hesap şifreni gir",
+      hint: "nitroflare.com → Hesap Ayarları → API bölümünden e-posta + şifre ile bağlan",
+    },
+  },
+  {
+    id: "katfile", name: "Katfile", color: "text-purple-400", bg: "bg-purple-900/20", logo: "KT", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://katfile.com/api",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı",
+      loginPlaceholder: "katfile kullanıcı adın",
+      keyLabel: "API Anahtarı",
+      keyPlaceholder: "katfile api anahtarın",
+      hint: "katfile.com → Hesabım → API Keys bölümünden kullanıcı adı ve anahtarı al",
+    },
+  },
+  {
+    id: "filedot", name: "Filedot", color: "text-pink-400", bg: "bg-pink-900/20", logo: "FD", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://filedot.xyz/api",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı",
+      loginPlaceholder: "filedot kullanıcı adın",
+      keyLabel: "API Anahtarı",
+      keyPlaceholder: "filedot api anahtarın",
+      hint: "filedot.xyz → Hesabım → API bölümünden kullanıcı adı ve anahtarı al",
+    },
+  },
+  {
+    id: "uploaded", name: "Uploaded.net", color: "text-teal-400", bg: "bg-teal-900/20", logo: "UL", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://uploaded.net/api",
+    fieldConfig: {
+      loginLabel: "E-posta (Hesap)",
+      loginPlaceholder: "uploaded.net hesabına kayıtlı e-posta",
+      keyLabel: "Şifre",
+      keyPlaceholder: "hesap şifreni gir",
+      hint: "uploaded.net → API belgelerine göre e-posta + şifre ile kimlik doğrulaması yapılır",
+    },
+  },
+  {
+    id: "dailyuploads", name: "DailyUploads", color: "text-amber-400", bg: "bg-amber-900/20", logo: "DU", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://dailyuploads.net/api",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı",
+      loginPlaceholder: "dailyuploads kullanıcı adın",
+      keyLabel: "API Anahtarı",
+      keyPlaceholder: "dailyuploads api anahtarın",
+      hint: "dailyuploads.net → Hesabım → API bölümünden al",
+    },
+  },
+  {
+    id: "hexupload", name: "HexUpload", color: "text-lime-400", bg: "bg-lime-900/20", logo: "HU", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://hexupload.net/api",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "hexupload api anahtarın",
+      hint: "hexupload.net → Hesabım → API Key bölümünden al",
+    },
+  },
+  {
+    id: "wdupload", name: "WDUpload", color: "text-sky-400", bg: "bg-sky-900/20", logo: "WD", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://wdupload.com",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı",
+      loginPlaceholder: "wdupload kullanıcı adın",
+      keyLabel: "Şifre",
+      keyPlaceholder: "hesap şifreni gir",
+      hint: "wdupload.com → Hesap bilgilerinle bağlan",
+    },
+  },
+  {
+    id: "streamwo", name: "Streamwo", color: "text-violet-300", bg: "bg-violet-950/30", logo: "WO", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://streamwo.com",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "streamwo api anahtarın",
+      hint: "streamwo.com → Hesabım → API bölümünden al",
+    },
+  },
+  {
+    id: "embedv", name: "EmbedV", color: "text-rose-400", bg: "bg-rose-900/20", logo: "EV2", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://embedv.net",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "embedv api anahtarın",
+      hint: "embedv.net hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "cloudvideo", name: "CloudVideo", color: "text-cyan-300", bg: "bg-cyan-950/30", logo: "CV", cat: "adult",
+    fields: ["login", "apiKey"],
+    docs: "https://cloudvideo.tv",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı",
+      loginPlaceholder: "cloudvideo kullanıcı adın",
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "cloudvideo api anahtarın",
+      hint: "cloudvideo.tv → Hesabım → API bölümünden kullanıcı adı ve anahtarı al",
+    },
+  },
+  {
+    id: "videobin", name: "Videobin", color: "text-orange-300", bg: "bg-orange-950/30", logo: "VB", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://videobin.co",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "videobin api anahtarın",
+      hint: "videobin.co hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "gounlimited", name: "GoUnlimited", color: "text-green-300", bg: "bg-green-950/30", logo: "GU", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://gounlimited.to",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "gounlimited api anahtarın",
+      hint: "gounlimited.to → Hesabım → API bölümünden al",
+    },
+  },
+  {
+    id: "mexa", name: "Mexa.sh", color: "text-yellow-300", bg: "bg-yellow-950/30", logo: "MX2", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://mexa.sh",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "mexa.sh api anahtarın",
+      hint: "mexa.sh → Hesabım → API Key bölümünden al",
+    },
+  },
+  {
+    id: "filerio", name: "Filerio", color: "text-purple-300", bg: "bg-purple-950/30", logo: "FR", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://filerio.in",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı",
+      loginPlaceholder: "filerio kullanıcı adın",
+      keyLabel: "Şifre",
+      keyPlaceholder: "hesap şifreni gir",
+      hint: "filerio.in → Hesabım bölümünden kullanıcı adı ve şifreyi kullan",
+    },
+  },
+  {
+    id: "uploadee", name: "Uploadee", color: "text-blue-200", bg: "bg-blue-950/30", logo: "UE", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://upload.ee",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "upload.ee api anahtarın",
+      hint: "upload.ee → Hesabım → API bölümünden anahtarı al",
+    },
+  },
+  {
+    id: "bowfile", name: "Bowfile", color: "text-emerald-300", bg: "bg-emerald-950/30", logo: "BW", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://bowfile.com",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı",
+      loginPlaceholder: "bowfile kullanıcı adın",
+      keyLabel: "API Anahtarı",
+      keyPlaceholder: "bowfile api anahtarın",
+      hint: "bowfile.com → Hesabım → API Keys bölümünden al",
+    },
+  },
+  {
+    id: "sendspace", name: "SendSpace", color: "text-sky-300", bg: "bg-sky-950/30", logo: "SS", cat: "adult",
+    fields: ["login", "apiKey"],
+    docs: "https://www.sendspace.com/dev/api.html",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı",
+      loginPlaceholder: "sendspace kullanıcı adın",
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "sendspace api anahtarın",
+      hint: "sendspace.com → Hesabım → API bölümünden kullanıcı adı ve anahtarı al",
+    },
+  },
+  {
+    id: "anonfile", name: "AnonFiles (Alt)", color: "text-slate-300", bg: "bg-slate-950/30", logo: "AF", cat: "adult",
+    fields: ["apiKey"],
+    docs: "https://anonfiles.com/docs/api",
+    fieldConfig: {
+      apiKeyLabel: "API Anahtarı",
+      apiKeyPlaceholder: "api anahtarın",
+      hint: "Hesabından API anahtarını al",
+    },
+  },
+  {
+    id: "verystream", name: "Verystream", color: "text-red-300", bg: "bg-red-950/30", logo: "VS", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://verystream.com",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı (Login)",
+      loginPlaceholder: "verystream kullanıcı adın",
+      keyLabel: "API Anahtarı (Key)",
+      keyPlaceholder: "verystream api anahtarın",
+      hint: "verystream.com → Account → API bölümünden kullanıcı adı ve anahtarı al",
+    },
+  },
+  {
+    id: "mp4upload", name: "MP4Upload", color: "text-indigo-300", bg: "bg-indigo-950/30", logo: "M4", cat: "adult",
+    fields: ["login", "key"],
+    docs: "https://www.mp4upload.com",
+    fieldConfig: {
+      loginLabel: "Kullanıcı Adı",
+      loginPlaceholder: "mp4upload kullanıcı adın",
+      keyLabel: "API Anahtarı",
+      keyPlaceholder: "mp4upload api anahtarın",
+      hint: "mp4upload.com → Hesabım → API bölümünden kullanıcı adı ve anahtarı al",
     },
   },
 ];
@@ -359,7 +646,7 @@ const EMPTY_FORM = {
   platform: "streamtape", name: "", login: "", key: "", apiKey: "", email: "", autoUpload: true,
 };
 
-type CatFilter = "all" | "adult" | "general";
+type CatFilter = "all" | "adult";
 
 export function AdminIntegrations() {
   const { toast } = useToast();
@@ -519,11 +806,11 @@ export function AdminIntegrations() {
             className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-primary/50"
           />
         </div>
-        {(["all","adult","general"] as CatFilter[]).map(f => (
+        {(["all","adult"] as CatFilter[]).map(f => (
           <button key={f} onClick={() => setCatFilter(f)}
             className={cn("px-3 py-1.5 rounded-lg text-xs border transition-all",
               catFilter === f ? "border-primary bg-primary/15 text-white font-semibold" : "border-[#2a2a2a] bg-[#1a1a1a] text-[#666] hover:border-[#444]")}>
-            {f === "all" ? "Tümü" : f === "adult" ? "+18 Platformlar" : "Genel Platformlar"}
+            {f === "all" ? `Tümü (${PLATFORMS.length})` : `+18 Platformlar (${PLATFORMS.filter(p => p.cat === "adult").length})`}
           </button>
         ))}
       </div>
@@ -542,7 +829,7 @@ export function AdminIntegrations() {
                 </div>
                 <div className="min-w-0">
                   <p className={cn("font-semibold text-xs truncate", added ? p.color : "text-[#aaa]")}>{p.name}</p>
-                  <p className="text-[9px] text-[#555]">{added ? `${added.uploadCount || 0} yükleme` : p.cat === "adult" ? "+18" : "Genel"}</p>
+                  <p className="text-[9px] text-[#555]">{added ? `${added.uploadCount || 0} yükleme` : "+18"}</p>
                 </div>
               </div>
               {added ? (
@@ -655,11 +942,8 @@ export function AdminIntegrations() {
                   onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
                   disabled={!!editId}
                   className="w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">
-                  <optgroup label="+18 Platformlar">
-                    {PLATFORMS.filter(p => p.cat === "adult").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </optgroup>
-                  <optgroup label="Genel Platformlar">
-                    {PLATFORMS.filter(p => p.cat === "general").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <optgroup label="+18 Video / Dosya Hosting">
+                    {PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </optgroup>
                 </select>
               </div>
