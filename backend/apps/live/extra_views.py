@@ -5,13 +5,11 @@ from django.db.models import F
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import LiveStream, LiveChatMessage, LiveViewer, LivePollVote
 from .views import _fmt_stream
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([AllowAny])
 def record_view(request, stream_id):
     try:
@@ -50,7 +48,6 @@ def record_view(request, stream_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def poll_vote(request, stream_id):
     try:
@@ -81,7 +78,6 @@ def poll_vote(request, stream_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def update_goal(request, stream_id):
     try:
@@ -103,7 +99,6 @@ def update_goal(request, stream_id):
 
 
 @api_view(['DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def delete_chat_message(request, stream_id, msg_id):
     try:
@@ -117,7 +112,6 @@ def delete_chat_message(request, stream_id, msg_id):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def my_streams(request):
     streams = LiveStream.objects.filter(user=request.user).order_by('-created_at')[:20]
@@ -125,7 +119,6 @@ def my_streams(request):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def rotate_stream_key(request, stream_id):
     try:

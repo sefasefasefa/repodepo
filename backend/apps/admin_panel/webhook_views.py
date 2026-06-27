@@ -20,15 +20,13 @@ Endpoints:
 import threading
 from django.utils import timezone
 from django.db.models import Count, Q, Avg
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import WebhookEndpoint, WebhookDelivery, WebhookSettings
 from . import webhook_service as svc
 
-AUTH = [JWTAuthentication]
 PERM = [IsAuthenticated]
 
 
@@ -79,7 +77,6 @@ def _delivery_dict(d: WebhookDelivery) -> dict:
 # ── Endpoints CRUD ─────────────────────────────────────────────────────────────
 
 @api_view(['GET', 'POST'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def endpoint_list(request):
     if not _is_admin(request.user):
@@ -107,7 +104,6 @@ def endpoint_list(request):
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def endpoint_detail(request, ep_id):
     if not _is_admin(request.user):
@@ -147,7 +143,6 @@ def endpoint_detail(request, ep_id):
 
 
 @api_view(['POST'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def endpoint_toggle(request, ep_id):
     if not _is_admin(request.user):
@@ -162,7 +157,6 @@ def endpoint_toggle(request, ep_id):
 
 
 @api_view(['POST'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def endpoint_test(request, ep_id):
     """Fire a test event to a specific endpoint synchronously and return delivery result."""
@@ -194,7 +188,6 @@ def endpoint_test(request, ep_id):
 # ── Delivery History ───────────────────────────────────────────────────────────
 
 @api_view(['GET'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def delivery_list(request):
     if not _is_admin(request.user):
@@ -236,7 +229,6 @@ def delivery_list(request):
 
 
 @api_view(['GET'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def delivery_detail(request, delivery_id):
     if not _is_admin(request.user):
@@ -257,7 +249,6 @@ def delivery_detail(request, delivery_id):
 
 
 @api_view(['POST'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def delivery_retry(request, delivery_id):
     if not _is_admin(request.user):
@@ -287,7 +278,6 @@ def delivery_retry(request, delivery_id):
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
 @api_view(['GET'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def webhook_stats(request):
     if not _is_admin(request.user):
@@ -370,7 +360,6 @@ def webhook_stats(request):
 # ── Manual fire & global toggle ──────────────────────────────────────────────
 
 @api_view(['POST'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def manual_fire(request):
     """Manually fire an event to all (or one) endpoint(s)."""
@@ -397,7 +386,6 @@ def manual_fire(request):
 
 
 @api_view(['GET', 'PUT'])
-@authentication_classes(AUTH)
 @permission_classes(PERM)
 def global_toggle(request):
     """Global webhook system enable/disable."""

@@ -2,7 +2,6 @@ from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import AffiliateLink, AffiliateCommission, AffiliatePayout, AffiliateSettings
 
 
@@ -18,7 +17,6 @@ def _get_settings():
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def stats(request):
     me = request.user
@@ -50,7 +48,6 @@ def stats(request):
 
 
 @api_view(['PUT'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_settings(request):
     if not _is_admin(request.user):
@@ -77,7 +74,6 @@ def admin_settings(request):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_links(request):
     if not _is_admin(request.user):
@@ -96,7 +92,6 @@ def admin_links(request):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_commissions(request):
     if not _is_admin(request.user):
@@ -111,7 +106,6 @@ def admin_commissions(request):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_payouts(request):
     if not _is_admin(request.user):
@@ -129,7 +123,6 @@ def admin_payouts(request):
 
 
 @api_view(['PATCH'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_payout_detail(request, payout_id):
     if not _is_admin(request.user):
@@ -150,7 +143,6 @@ def admin_payout_detail(request, payout_id):
 
 
 @api_view(['PATCH'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_link_detail(request, link_id):
     if not _is_admin(request.user):

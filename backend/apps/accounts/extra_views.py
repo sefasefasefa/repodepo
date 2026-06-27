@@ -3,7 +3,6 @@ from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from apps.videos.models import Video
 from .views import format_user
 
@@ -11,7 +10,6 @@ User = get_user_model()
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([AllowAny])
 def user_videos(request, user_id):
     try:
@@ -45,7 +43,6 @@ def user_videos(request, user_id):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([AllowAny])
 def user_stats(request, user_id):
     try:

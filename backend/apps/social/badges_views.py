@@ -2,7 +2,6 @@ from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import BadgeDefinition, UserBadge, BadgeSystemSettings
 
 User = get_user_model()
@@ -55,7 +54,6 @@ def _fmt_user_badge(ub):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def my_badges(request):
     badges = UserBadge.objects.filter(user=request.user).select_related('badge').order_by('-earned_at')
@@ -63,7 +61,6 @@ def my_badges(request):
 
 
 @api_view(['PATCH'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def update_my_badge(request, ub_id):
     try:
@@ -78,7 +75,6 @@ def update_my_badge(request, ub_id):
 
 
 @api_view(['GET', 'PUT'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_settings(request):
     if not _is_admin(request.user):
@@ -99,7 +95,6 @@ def admin_settings(request):
 
 
 @api_view(['GET', 'POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_definitions(request):
     if not _is_admin(request.user):
@@ -121,7 +116,6 @@ def admin_definitions(request):
 
 
 @api_view(['PATCH', 'DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_definition_detail(request, def_id):
     if not _is_admin(request.user):
@@ -145,7 +139,6 @@ def admin_definition_detail(request, def_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_award(request):
     if not _is_admin(request.user):
@@ -163,7 +156,6 @@ def admin_award(request):
 
 
 @api_view(['DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_revoke(request, ub_id):
     if not _is_admin(request.user):
@@ -173,7 +165,6 @@ def admin_revoke(request, ub_id):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_user_badges(request):
     if not _is_admin(request.user):
@@ -197,7 +188,6 @@ def admin_user_badges(request):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_auto_award(request):
     if not _is_admin(request.user):

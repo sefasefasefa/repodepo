@@ -4,7 +4,6 @@ from rest_framework.decorators import (api_view, authentication_classes,
                                        permission_classes)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.videos.models import Video
 
@@ -20,7 +19,6 @@ def _site_or_404(user, site_id):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def provider_catalog(request):
     """Tam sağlayıcı kataloğunu döner. Kullanıcının yapılandırdığı sitelerle eşleştirir."""
@@ -46,7 +44,6 @@ def provider_catalog(request):
 
 
 @api_view(['GET', 'POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def sites_list_create(request):
     if request.method == 'GET':
@@ -84,7 +81,6 @@ def sites_list_create(request):
 
 
 @api_view(['GET', 'PATCH', 'DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def site_detail(request, site_id):
     site = _site_or_404(request.user, site_id)
@@ -120,7 +116,6 @@ def site_detail(request, site_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def site_test_login(request, site_id):
     site = _site_or_404(request.user, site_id)
@@ -134,7 +129,6 @@ def site_test_login(request, site_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def dispatch(request):
     """Manuel olarak bir video icin cross-post tetikle."""
@@ -154,7 +148,6 @@ def dispatch(request):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def jobs_list(request):
     qs = (CrossPostJob.objects
@@ -186,7 +179,6 @@ def jobs_list(request):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def job_retry(request, job_id):
     """Başarısız bir job'u yeniden dene."""

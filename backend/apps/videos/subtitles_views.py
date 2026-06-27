@@ -2,7 +2,6 @@ from django.http import HttpResponse
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Video, VideoSubtitle
 
 
@@ -20,7 +19,6 @@ def _can_edit(user, video):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([AllowAny])
 def get_subtitle_lang(request, video_id, lang):
     try:
@@ -31,7 +29,6 @@ def get_subtitle_lang(request, video_id, lang):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def upload_transcript(request, video_id):
     try:
@@ -58,7 +55,6 @@ def upload_transcript(request, video_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def approve_subtitle(request, video_id, lang):
     try:
@@ -99,28 +95,24 @@ def _ai_stub(request, video_id, action='generate'):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def generate_subtitle(request, video_id):
     return _ai_stub(request, video_id, 'generate')
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def translate_subtitle(request, video_id):
     return _ai_stub(request, video_id, 'translate')
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def auto_subtitle(request, video_id):
     return _ai_stub(request, video_id, 'auto')
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def ai_write_transcript(request, video_id):
     """AI writing assistant: takes notes/prompt and returns structured transcript text."""
@@ -159,7 +151,6 @@ def ai_write_transcript(request, video_id):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def list_pending_subtitles(request, video_id):
     """List community-submitted (pending) subtitle tracks for creator review."""
@@ -176,7 +167,6 @@ def list_pending_subtitles(request, video_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def community_submit(request, video_id):
     """Regular users submit a transcript suggestion for creator approval."""
@@ -208,7 +198,6 @@ def community_submit(request, video_id):
 
 
 @api_view(['DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def delete_subtitle(request, video_id, lang):
     try:

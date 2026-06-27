@@ -4,7 +4,6 @@ from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import TokenTransaction, TokenPackage, WithdrawalRequest
 from .views import get_balance, TOKEN_TO_USD, COMMISSION_RATE
 
@@ -14,7 +13,6 @@ def _is_admin(u):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def creator_earnings(request):
     me = request.user
@@ -63,7 +61,6 @@ def _fmt_pkg(p):
 
 
 @api_view(['GET', 'POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_packages(request):
     if not _is_admin(request.user):
@@ -83,7 +80,6 @@ def admin_packages(request):
 
 
 @api_view(['PUT', 'DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_package_detail(request, pkg_id):
     if not _is_admin(request.user):

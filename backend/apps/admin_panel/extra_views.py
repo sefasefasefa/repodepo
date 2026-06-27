@@ -1,9 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Sum, Q
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from apps.videos.models import Video, VideoReport, CustomPage
 from apps.subscriptions.models import Payment
 
@@ -19,7 +18,6 @@ def _is_super_admin(u):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def unban_user(request, user_id):
     if not _is_super_admin(request.user):
@@ -29,7 +27,6 @@ def unban_user(request, user_id):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_dashboard(request):
     if not _is_admin(request.user):
@@ -67,7 +64,6 @@ def admin_dashboard(request):
 
 # ─── Reports PATCH ──────────────────────────────────────────────────────
 @api_view(['PATCH'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def update_report(request, report_id):
     if not _is_admin(request.user):
@@ -101,7 +97,6 @@ def _fmt_page(p, full=False):
 
 
 @api_view(['GET', 'POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([AllowAny])
 def pages(request):
     if request.method == 'POST':
@@ -135,7 +130,6 @@ def pages(request):
 
 
 @api_view(['PUT', 'DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def page_detail(request, page_id):
     if not _is_super_admin(request.user):

@@ -4,12 +4,10 @@ from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import UserSubscription, Payment
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cancel_subscription(request):
     UserSubscription.objects.filter(user=request.user).update(
@@ -19,7 +17,6 @@ def cancel_subscription(request):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def ppv_purchase(request, video_id):
     Payment.objects.create(
@@ -30,7 +27,6 @@ def ppv_purchase(request, video_id):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def creator_earnings(request):
     me = request.user

@@ -1,10 +1,9 @@
 """Admin payment gateway CRUD + public active gateway listing.
 Mirrors api-server/src/routes/payments.ts."""
 from django.utils import timezone
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import PaymentGateway
 from apps.subscriptions.models import Payment
 
@@ -28,7 +27,6 @@ def _fmt_gw(g, mask=True):
 
 
 @api_view(['GET', 'POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def gateways(request):
     if not _is_admin(request.user):
@@ -51,7 +49,6 @@ def gateways(request):
 
 
 @api_view(['DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def gateway_delete(request, gw_id):
     if not _is_admin(request.user):
@@ -63,7 +60,6 @@ def gateway_delete(request, gw_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def gateway_set_default(request, gw_id):
     if not _is_admin(request.user):
@@ -76,7 +72,6 @@ def gateway_set_default(request, gw_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def gateway_toggle(request, gw_id):
     if not _is_admin(request.user):
@@ -91,7 +86,6 @@ def gateway_toggle(request, gw_id):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def transactions(request):
     if not _is_admin(request.user):
@@ -121,7 +115,6 @@ def transactions(request):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def gateway_test(request, gw_id):
     if not _is_admin(request.user):

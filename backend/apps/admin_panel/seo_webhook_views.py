@@ -1,10 +1,9 @@
 import os
 import uuid
-from rest_framework.decorators import api_view, permission_classes, authentication_classes, parser_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.conf import settings
 from .models import SeoSettings, WebhookSettings
 
@@ -37,7 +36,6 @@ def _seo_to_dict(s):
 
 
 @api_view(['GET', 'PUT'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def seo_settings(request):
     if not _is_admin(request.user):
@@ -101,7 +99,6 @@ ALL_EVENTS = [
 
 
 @api_view(['GET', 'PUT'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def webhook_settings(request):
     if not _is_admin(request.user):
@@ -131,7 +128,6 @@ def webhook_settings(request):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def watermark_upload(request):
@@ -159,7 +155,6 @@ def watermark_upload(request):
 
 
 @api_view(['GET', 'PUT'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def watermark_admin_settings(request):
     from apps.videos.models import WatermarkSettings

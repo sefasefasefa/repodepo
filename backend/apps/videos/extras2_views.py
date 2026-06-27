@@ -24,7 +24,6 @@ def _is_admin(u):
 
 # ─── Reports sub-resource ──────────────────────────────────────────────
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def report_video(request, video_id):
     d = request.data or {}
@@ -40,7 +39,6 @@ def report_video(request, video_id):
 
 # ─── Watch history ─────────────────────────────────────────────────────
 @api_view(['DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def clear_history(request):
     WatchHistory.objects.filter(user=request.user).delete()
@@ -85,7 +83,6 @@ def watermark_config(request):
 
 
 @api_view(['PATCH'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def video_watermark(request, video_id):
     try:
@@ -101,7 +98,6 @@ def video_watermark(request, video_id):
 
 # ─── Categories CRUD ───────────────────────────────────────────────────
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def create_category(request):
     if not _is_admin(request.user):
@@ -119,7 +115,6 @@ def create_category(request):
 
 
 @api_view(['PUT'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def update_category(request, cat_id):
     if not _is_admin(request.user):
@@ -145,7 +140,6 @@ def update_category(request, cat_id):
 
 
 @api_view(['DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def delete_category(request, cat_id):
     if not _is_admin(request.user):
@@ -214,7 +208,6 @@ def _fmt_video(v, liked_ids=None):
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([AllowAny])
 def recommendations_for_you(request):
     limit = min(50, int(request.GET.get('limit', 20)))
