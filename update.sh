@@ -1,17 +1,23 @@
 #!/bin/bash
 set -e
 
-echo "=== Hotpulse Güncelleme ==="
+echo "=== Hotpulse Guncelleme ==="
 
-# ── İşletim sistemi tespiti ───────────────────────────────────────────────────
+# ── venv'deki pip'i PATH'e ekle (Git Bash uyumlulugu) ─────────────────────
+cd "$(dirname "$0")"
+if [ -d "venv/Scripts" ]; then
+    export PATH="$PWD/venv/Scripts:$PATH"
+elif [ -d "venv/bin" ]; then
+    export PATH="$PWD/venv/bin:$PATH"
+fi
+
+# ── İşletim sistemi ───────────────────────────────────────────────────
 case "$(uname -s)" in
-    Linux*)   OS="linux" ;;
-    Darwin*)  OS="mac" ;;
     MINGW*|MSYS*|CYGWIN*) OS="windows" ;;
-    *)        OS="unknown" ;;
+    *) OS="linux" ;;
 esac
 
-# ── 1. Çalışan sunucuyu durdur ───────────────────────────────────────────────
+# ── 1. Sunucuyu durdur ──────────────────────────────────────────────
 echo "[1/5] Sunucu durduruluyor..."
 if [ "$OS" = "windows" ]; then
     taskkill //F //IM python.exe 2>/dev/null || true
@@ -22,28 +28,29 @@ else
 fi
 sleep 1
 
-# ── 2. Kodu çek ──────────────────────────────────────────────────────────────
+# ── 2. Kodu cek (conflict varsa remote ustu al) ────────────────────────
 echo "[2/5] Git pull..."
-git stash 2>/dev/null || true
-git pull
-git stash pop 2>/dev/null || true
+git fetch origin
+if ! git merge --ff-only origin/main 2>/dev/null; then
+    echo "   Yerel degisiklikler var, remote ustu aliniyor..."
+    git reset --hard origin/main
+fi
 
-# ── 3. Python bağımlılıkları güncelle ────────────────────────────────────────
-echo "[3/5] Python paketleri güncelleniyor..."
-python -m pip install -r backend/requirements.txt -q || pip install -r backend/requirements.txt -q
+# ── 3. Python bağımlılıkları ────────────────────────────────────────────
+echo "[3/5] Python paketleri guncelleniyor..."
+pip install -r backend/requirements.txt -q
 
-# ── 4. Veritabanı migrate ─────────────────────────────────────────────────────
-echo "[4/5] Veritabanı migrate ediliyor..."
+# ── 4. Migrate ─────────────────────────────────────────────────────────
+echo "[4/5] Veritabani migrate ediliyor..."
 cd backend
 python manage.py migrate --noinput
 
-# ── 5. Statik dosyaları topla ─────────────────────────────────────────────────
-echo "[5/5] Statik dosyalar toplanıyor..."
+# ── 5. Collectstatic ───────────────────────────────────────────────
+echo "[5/5] Statik dosyalar toplaniyor..."
 python manage.py collectstatic --noinput -v 0
 cd ..
 
 echo ""
-echo "✓ Güncelleme tamamlandı! Sunucu başlatılıyor..."
+echo "Guncelleme tamamlandi! Sunucu baslatiliyor..."
 echo ""
-
 exec ./start.sh
