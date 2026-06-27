@@ -102,6 +102,8 @@ export function Navbar() {
                   src={siteSettings.logoUrl}
                   alt={siteName}
                   className="h-7 object-contain"
+                  loading="eager"
+                  decoding="async"
                   onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
               ) : (

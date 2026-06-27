@@ -61,7 +61,10 @@ def ensure_defaults():
 def list_features(request):
     cached = cache.get('features:all')
     if cached is not None:
-        return Response(cached)
+        resp = Response(cached)
+        resp['Cache-Control'] = 'public, max-age=120, stale-while-revalidate=60'
+        resp['Vary'] = 'Accept-Encoding'
+        return resp
     ensure_defaults()
     flags = FeatureFlag.objects.all()
     flag_map = {f.key: f.state for f in flags}
@@ -76,7 +79,10 @@ def list_features(request):
         })
     result = {'flags': flag_map, 'details': details}
     cache.set('features:all', result, 120)
-    return Response(result)
+    resp = Response(result)
+    resp['Cache-Control'] = 'public, max-age=120, stale-while-revalidate=60'
+    resp['Vary'] = 'Accept-Encoding'
+    return resp
 
 
 @api_view(['PATCH'])

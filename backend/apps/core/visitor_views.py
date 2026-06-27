@@ -6,6 +6,7 @@ from collections import defaultdict
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from django.core.cache import cache
 
 from .models import GeoRestrictionSettings
 
@@ -140,21 +141,37 @@ def _get_geo_settings():
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def geo_check(request):
-    s = _get_geo_settings()
-    if not s.is_enabled:
-        return Response({'blocked': False, 'country': None, 'enabled': False})
-    # No external IP lookup — return LOCAL for local IPs, XX otherwise.
+    # Settings DB'den 5dk cache ile al
+    cached_settings = cache.get('geo_settings:v1')
+    if cached_settings is None:
+        s = _get_geo_settings()
+        cached_settings = {
+            'is_enabled': s.is_enabled, 'mode': s.mode,
+            'countries': s.countries or [], 'message': s.message,
+            'redirect_url': s.redirect_url,
+        }
+        cache.set('geo_settings:v1', cached_settings, 300)
+
+    if not cached_settings['is_enabled']:
+        resp = Response({'blocked': False, 'country': None, 'enabled': False})
+        resp['Cache-Control'] = 'public, max-age=600, stale-while-revalidate=120'
+        return resp
+
     ip = _get_client_ip(request)
     country = 'LOCAL' if _is_local_ip(ip) else 'XX'
-    countries = s.countries or []
-    if s.mode == 'allowlist':
+    countries = cached_settings['countries']
+    mode = cached_settings['mode']
+    if mode == 'allowlist':
         blocked = country != 'LOCAL' and bool(countries) and country not in countries
     else:
         blocked = country in countries
-    return Response({
+    resp = Response({
         'blocked': blocked, 'country': country, 'enabled': True,
-        'mode': s.mode, 'message': s.message, 'redirectUrl': s.redirect_url,
+        'mode': mode, 'message': cached_settings['message'],
+        'redirectUrl': cached_settings['redirect_url'],
     })
+    resp['Cache-Control'] = 'private, max-age=600'
+    return resp
 
 
 @api_view(['GET', 'PUT'])

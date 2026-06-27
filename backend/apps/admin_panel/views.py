@@ -359,7 +359,10 @@ def process_creator_application(request, app_id):
 def public_site_config(request):
     cached = cache.get('site_config:public')
     if cached is not None:
-        return Response(cached)
+        resp = Response(cached)
+        resp['Cache-Control'] = 'public, max-age=120, stale-while-revalidate=60'
+        resp['Vary'] = 'Accept-Encoding'
+        return resp
     s, _ = SiteSettings.objects.get_or_create(id=1)
     result = {
         'siteName': s.site_name,
@@ -371,7 +374,10 @@ def public_site_config(request):
         'maintenanceMode': s.maintenance_mode,
     }
     cache.set('site_config:public', result, 120)
-    return Response(result)
+    resp = Response(result)
+    resp['Cache-Control'] = 'public, max-age=120, stale-while-revalidate=60'
+    resp['Vary'] = 'Accept-Encoding'
+    return resp
 
 
 @api_view(['GET'])
