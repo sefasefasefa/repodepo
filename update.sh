@@ -38,7 +38,7 @@ fi
 
 # ── 3. Python bağımlılıkları ────────────────────────────────────────────
 echo "[3/5] Python paketleri guncelleniyor..."
-pip install -r backend/requirements.txt -q
+python -m pip install -r backend/requirements.txt -q || pip install -r backend/requirements.txt -q
 
 # ── 4. Migrate ─────────────────────────────────────────────────────────
 echo "[4/5] Veritabani migrate ediliyor..."
