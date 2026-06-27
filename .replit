@@ -44,7 +44,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && python manage.py runserver 0.0.0.0:8000"
+args = "cd backend && python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
 waitForPort = 8000
 
 [[ports]]
@@ -55,11 +55,13 @@ externalPort = 80
 localPort = 8000
 externalPort = 8000
 
-[[ports]]
-localPort = 22983
-externalPort = 3000
-
 [deployment]
 deploymentTarget = "autoscale"
 run = ["bash", "-c", "cd backend && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]
 build = ["bash", "-c", "cd backend && pip install -r requirements.txt && pnpm install && pnpm --filter @workspace/streamvid run build && cp -r artifacts/streamvid/dist/public/. static/ && python manage.py migrate --run-syncdb && python manage.py collectstatic --noinput"]
+
+[userenv]
+
+[userenv.shared]
+DEBUG = "True"
+SECRET_KEY = "dv#o+!knmn#g&$euhkb&r1g#r@=z1w_x4m%qg7520s8inrl8r5"
