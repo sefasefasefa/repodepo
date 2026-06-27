@@ -18,7 +18,7 @@ const DEFAULT: PublicSiteSettings = {
   registrationEnabled: true,
 };
 
-const CACHE_KEY = "pub_site_settings_v1";
+const CACHE_KEY = "pub_site_settings_v2";
 const CACHE_TTL = 5 * 60 * 1000;
 
 interface Ctx {

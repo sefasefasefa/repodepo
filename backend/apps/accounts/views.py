@@ -44,6 +44,15 @@ def format_user(user, is_following=False, is_subscribed=False):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
+    # Kayıt açık/kapalı kontrolü
+    try:
+        from apps.admin_panel.models import SiteSettings
+        s, _ = SiteSettings.objects.get_or_create(id=1)
+        if not s.registration_enabled:
+            return Response({'error': 'Yeni kullanıcı kayıtları şu an kapalı.'}, status=403)
+    except Exception:
+        pass
+
     data = request.data
     username = data.get('username', '').strip()
     email = data.get('email', '').strip().lower()

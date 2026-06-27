@@ -316,6 +316,8 @@ def public_site_config(request):
         'logoUrl': s.logo_url,
         'faviconUrl': s.favicon_url,
         'primaryColor': s.primary_color,
+        'registrationEnabled': s.registration_enabled,
+        'maintenanceMode': s.maintenance_mode,
     })
 
 
