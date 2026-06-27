@@ -178,6 +178,12 @@ export default function CreatorDashboard() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawMsg, setWithdrawMsg] = useState("");
 
+  useEffect(() => {
+    if (user && user.role !== "creator") {
+      window.location.href = "/";
+    }
+  }, [user]);
+
   const { data: earnings, refetch: refetchEarnings } = useGetCreatorEarnings({
     query: { enabled: !!user },
   });

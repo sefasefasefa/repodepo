@@ -117,7 +117,7 @@ export function Sidebar() {
   const { data: categoriesData } = useListCategories();
   const categories: any[] = (categoriesData as any)?.categories ?? (Array.isArray(categoriesData) ? categoriesData : []);
 
-  const isCreator = user?.role === "creator" || user?.role === "admin";
+  const isCreator = user?.role === "creator";
   const isAdmin = user?.role === "admin";
   const crosspostBadge = useCrosspostBadge();
 
