@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -113,9 +114,10 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'hotpulse-cache',
-        'TIMEOUT': 300,
+        'TIMEOUT': 120,
         'OPTIONS': {
-            'MAX_ENTRIES': 5000,
+            'MAX_ENTRIES': 10000,
+            'CULL_FREQUENCY': 4,
         },
     }
 }
@@ -150,7 +152,17 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [],
+    'DEFAULT_THROTTLE_RATES': {},
 }
+
+# Veritabanı bağlantı optimizasyonu (SQLite için de)
+if not os.environ.get('DATABASE_URL'):
+    DATABASES['default']['OPTIONS'] = {
+        'timeout': 20,
+        'check_same_thread': False,
+    }
+    DATABASES['default']['CONN_MAX_AGE'] = 300
 
 from datetime import timedelta
 

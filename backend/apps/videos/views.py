@@ -1,6 +1,7 @@
 import os
 from django.db.models import Q, F
 from django.utils import timezone
+from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -169,6 +170,16 @@ def get_feed(request):
 @permission_classes([AllowAny])
 def get_trending(request):
     limit = min(int(request.query_params.get('limit', 20)), 50)
+    # Anonim kullanıcılar için 2 dakika önbellekle
+    if not request.user.is_authenticated:
+        ck = f'trending:{limit}'
+        cached = cache.get(ck)
+        if cached is not None:
+            return Response(cached)
+        qs = Video.objects.filter(is_published=True).select_related('creator', 'category').order_by('-view_count', '-like_count')[:limit]
+        result = {'videos': enrich_videos_bulk(list(qs), None)}
+        cache.set(ck, result, 120)
+        return Response(result)
     qs = Video.objects.filter(is_published=True).select_related('creator', 'category').order_by('-view_count', '-like_count')[:limit]
     return Response({'videos': enrich_videos_bulk(list(qs), request.user)})
 
@@ -548,11 +559,16 @@ def get_bookmarks(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_categories(request):
+    cached = cache.get('categories:all')
+    if cached is not None:
+        return Response(cached)
     cats = Category.objects.all().order_by('name')
-    return Response({'categories': [
+    result = {'categories': [
         {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
         for c in cats
-    ]})
+    ]}
+    cache.set('categories:all', result, 300)
+    return Response(result)
 
 
 @api_view(['GET'])
