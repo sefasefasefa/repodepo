@@ -15,7 +15,7 @@ import { WatermarkOverlay } from "@/components/video/watermark-overlay";
 import { SubtitleOverlay } from "@/components/video/subtitle-overlay";
 import { SubtitleManager } from "@/components/video/subtitle-manager";
 import { ScreenProtectionOverlay, getVideoProtectionProps } from "@/components/video/screen-protection-overlay";
-import { isScreenProtectionEnabled } from "@/lib/use-screen-protection";
+import { useScreenProtectionState } from "@/lib/use-screen-protection";
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ interface PlayerSource {
 
 function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }) {
   const showWatermark: boolean = !!video.watermarkEnabled;
-  const [screenProt] = useState(isScreenProtectionEnabled);
+  const screenProt = useScreenProtectionState();
   const videoProps = getVideoProtectionProps(screenProt);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const overlayControlsRef = useRef<HTMLDivElement | null>(null);

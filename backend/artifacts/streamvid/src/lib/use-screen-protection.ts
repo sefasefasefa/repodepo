@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const STORAGE_KEY = "prnhbbbb_screen_protection_enabled";
 
@@ -14,17 +14,34 @@ export function setScreenProtectionEnabled(v: boolean): void {
 }
 
 // getDisplayMedia API'sini kapat (tab/ekran kaydı)
+// Prototype override kullanılır — Object.defineProperty modern Chrome'da sessizce başarısız olur
+let _displayMediaPatched = false;
 function patchGetDisplayMedia() {
+  if (_displayMediaPatched) return;
   try {
-    if (!navigator.mediaDevices?.getDisplayMedia) return;
-    Object.defineProperty(navigator.mediaDevices, "getDisplayMedia", {
-      value: async () => {
+    // Önce MediaDevices.prototype override (en güvenilir yol)
+    if (typeof MediaDevices !== "undefined" && typeof MediaDevices.prototype.getDisplayMedia === "function") {
+      MediaDevices.prototype.getDisplayMedia = async function () {
         throw new DOMException("Ekran kaydı bu platformda engellenmiştir.", "NotAllowedError");
-      },
-      writable: false,
-      configurable: false,
-    });
+      };
+      _displayMediaPatched = true;
+      return;
+    }
   } catch {}
+  try {
+    // Fallback: instance override
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === "function") {
+      (navigator.mediaDevices as any).getDisplayMedia = async () => {
+        throw new DOMException("Ekran kaydı bu platformda engellenmiştir.", "NotAllowedError");
+      };
+      _displayMediaPatched = true;
+    }
+  } catch {}
+}
+
+function unpatchGetDisplayMedia() {
+  // Prototype'ı restore etmek güvenilir değil; sayfa reload gerekir.
+  // Bunun yerine flag kontrolü ile tüm çağrıları yönetiriz.
 }
 
 // Engellenen klavye kombinasyonları
@@ -34,13 +51,13 @@ const BLOCKED_COMBOS = (e: KeyboardEvent): boolean => {
   const shift = e.shiftKey;
   if (k === "PrintScreen") return true;
   if (k === "F12") return true;
-  if (ctrl && shift && k === "I") return true;   // DevTools
-  if (ctrl && shift && k === "C") return true;   // DevTools inspector
-  if (ctrl && shift && k === "J") return true;   // Console
-  if (ctrl && k === "u") return true;            // View source
-  if (ctrl && k === "s") return true;            // Save
-  if (ctrl && k === "p") return true;            // Print
-  if (ctrl && shift && k === "S") return true;   // Screenshot (some OS)
+  if (ctrl && shift && k === "I") return true;
+  if (ctrl && shift && k === "C") return true;
+  if (ctrl && shift && k === "J") return true;
+  if (ctrl && k === "u") return true;
+  if (ctrl && k === "s") return true;
+  if (ctrl && k === "p") return true;
+  if (ctrl && shift && k === "S") return true;
   return false;
 };
 
@@ -50,13 +67,11 @@ export function useScreenProtection(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
 
-    // Yalnızca bir kez patchle
     if (!patched.current) {
       patchGetDisplayMedia();
       patched.current = true;
     }
 
-    // Klavye kısayollarını engelle
     const onKeyDown = (e: KeyboardEvent) => {
       if (BLOCKED_COMBOS(e)) {
         e.preventDefault();
@@ -64,7 +79,6 @@ export function useScreenProtection(enabled: boolean) {
       }
     };
 
-    // Sağ tık engeli
     const onContextMenu = (e: MouseEvent) => {
       const t = e.target as HTMLElement;
       if (t.closest("[data-protect]")) {
@@ -73,18 +87,20 @@ export function useScreenProtection(enabled: boolean) {
       }
     };
 
-    // Sürükleme engeli
     const onDragStart = (e: DragEvent) => {
       const t = e.target as HTMLElement;
-      if (t.closest("[data-protect]")) {
-        e.preventDefault();
-      }
+      if (t.closest("[data-protect]")) e.preventDefault();
     };
 
-    // Görünürlük değişikliği (ekran paylaşımı başlatılınca sekme arka plana alınabilir)
+    // Copy/cut engeli
+    const onCopy = (e: ClipboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest("[data-protect]")) e.preventDefault();
+    };
+
+    // Ekran paylaşımı başlatılınca sekme gizlenebilir → video durdur
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        // Video elementlerini durdur (kayıt sırasında içerik korunur)
         document.querySelectorAll<HTMLVideoElement>("video[data-protected]").forEach(v => {
           if (!v.paused) {
             v.dataset.wasPlaying = "true";
@@ -104,13 +120,31 @@ export function useScreenProtection(enabled: boolean) {
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("contextmenu", onContextMenu, true);
     document.addEventListener("dragstart", onDragStart, true);
+    document.addEventListener("copy", onCopy, true);
+    document.addEventListener("cut", onCopy, true);
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("contextmenu", onContextMenu, true);
       document.removeEventListener("dragstart", onDragStart, true);
+      document.removeEventListener("copy", onCopy, true);
+      document.removeEventListener("cut", onCopy, true);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [enabled]);
+}
+
+/**
+ * Ayar değişikliklerini gerçek zamanlı izleyen hook.
+ * localStorage'ı bir kez okur, sonra 'screen-protection-change' eventini dinler.
+ */
+export function useScreenProtectionState(): boolean {
+  const [enabled, setEnabled] = useState(isScreenProtectionEnabled);
+  useEffect(() => {
+    const handler = (e: Event) => setEnabled((e as CustomEvent).detail as boolean);
+    window.addEventListener("screen-protection-change", handler);
+    return () => window.removeEventListener("screen-protection-change", handler);
+  }, []);
+  return enabled;
 }

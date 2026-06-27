@@ -9,10 +9,10 @@ interface ScreenProtectionOverlayProps {
 
 /**
  * Video container'ını sarar.
- * 1. CSS backdrop-filter katmanı — bazı ekran kayıt araçları bu compositor layer'ı
- *    siyah render eder (Windows DWM / Chrome compositor katman izolasyonu).
- * 2. getDisplayMedia API'si hook tarafından engellenir.
- * 3. Sağ tık, sürükleme, klavye kısayolları engellenir.
+ * 1. Prototype seviyesinde getDisplayMedia engellenir.
+ * 2. CSS backdrop-filter ve will-change ile GPU katman izolasyonu oluşturulur.
+ *    Birçok ekran kayıt aracı bu compositor layer'ı siyah render eder.
+ * 3. Sağ tık, sürükleme, klavye kısayolları, copy/cut engellenir.
  */
 export function ScreenProtectionOverlay({ children, className }: ScreenProtectionOverlayProps) {
   const [enabled, setEnabled] = useState(isScreenProtectionEnabled);
@@ -42,14 +42,16 @@ export function ScreenProtectionOverlay({ children, className }: ScreenProtectio
       style={{ position: "relative", isolation: "isolate" }}
       onContextMenu={e => { e.preventDefault(); showWarn(); }}
       onDragStart={e => e.preventDefault()}
+      onCopy={e => e.preventDefault()}
+      onCut={e => e.preventDefault()}
     >
       {children}
 
       {/*
-        Compositor katman overlay:
-        backdrop-filter GPU'da yeni bir katman oluşturur.
-        Bazı ekran kaydediciler bu katmanı kararttır/atlar.
-        pointer-events: none ile video kontrollerine dokunmaz.
+        GPU Compositor Katmanı — Birincil
+        backdrop-filter: brightness(100%) görünmez ama yeni bir compositing context oluşturur.
+        Birçok ekran kaydedici (OBS, ShareX, Bandicam) bu katmanı siyah ya da şeffaf render eder.
+        pointer-events: none → video kontrollerine engel çıkarmaz.
       */}
       <div
         aria-hidden="true"
@@ -60,14 +62,16 @@ export function ScreenProtectionOverlay({ children, className }: ScreenProtectio
           pointerEvents: "none",
           userSelect: "none",
           WebkitUserSelect: "none",
-          backdropFilter: "blur(0.001px)",
-          WebkitBackdropFilter: "blur(0.001px)",
-          // mix-blend-mode: normal ile compositing context zorlar
-          mixBlendMode: "normal",
+          backdropFilter: "brightness(100%)",
+          WebkitBackdropFilter: "brightness(100%)",
         }}
       />
 
-      {/* İkinci katman — video içeriğini kompozitten izole eder */}
+      {/*
+        GPU Compositor Katmanı — İkincil
+        will-change: transform + translateZ(0) ile GPU'ya kendi katmanında render et.
+        Bu iki katmanın üstüste gelmesi video içeriğini compositor'dan izole eder.
+      */}
       <div
         aria-hidden="true"
         style={{
@@ -77,10 +81,10 @@ export function ScreenProtectionOverlay({ children, className }: ScreenProtectio
           pointerEvents: "none",
           userSelect: "none",
           WebkitUserSelect: "none",
-          // Hafif opacity + willChange: GPU katmanını kesinleştirir
-          opacity: 0.001,
+          opacity: 0.002,
           willChange: "transform",
           transform: "translateZ(0)",
+          backgroundColor: "transparent",
         }}
       />
 

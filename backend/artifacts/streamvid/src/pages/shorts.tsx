@@ -9,7 +9,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ScreenProtectionOverlay, getVideoProtectionProps } from "@/components/video/screen-protection-overlay";
-import { isScreenProtectionEnabled } from "@/lib/use-screen-protection";
+import { useScreenProtectionState } from "@/lib/use-screen-protection";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -101,7 +101,7 @@ export default function Shorts() {
 
 function ShortPlayer({ short, isActive }: { short: any; isActive: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const screenProt = isScreenProtectionEnabled();
+  const screenProt = useScreenProtectionState();
   const videoProps = getVideoProtectionProps(screenProt);
   const [isPlaying, setIsPlaying]     = useState(false);
   const [isMuted, setIsMuted]         = useState(false);

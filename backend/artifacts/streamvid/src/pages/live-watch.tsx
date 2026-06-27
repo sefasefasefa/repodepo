@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useFeatureState } from "@/lib/feature-flags";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ScreenProtectionOverlay, getVideoProtectionProps } from "@/components/video/screen-protection-overlay";
-import { isScreenProtectionEnabled } from "@/lib/use-screen-protection";
+import { useScreenProtectionState } from "@/lib/use-screen-protection";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
