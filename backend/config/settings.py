@@ -80,7 +80,13 @@ import dj_database_url as _dj_db_url
 
 _DATABASE_URL = os.environ.get('DATABASE_URL')
 if _DATABASE_URL:
-    DATABASES = {'default': _dj_db_url.parse(_DATABASE_URL)}
+    _db_config = _dj_db_url.parse(_DATABASE_URL)
+    _db_config['CONN_MAX_AGE'] = 60
+    _db_config['OPTIONS'] = {
+        'connect_timeout': 10,
+        'options': '-c default_transaction_isolation=read\ committed',
+    }
+    DATABASES = {'default': _db_config}
 else:
     DATABASES = {
         'default': {
@@ -102,6 +108,24 @@ LANGUAGE_CODE = 'tr'
 TIME_ZONE = 'Europe/Istanbul'
 USE_I18N = True
 USE_TZ = True
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'hotpulse-cache',
+        'TIMEOUT': 300,
+        'OPTIONS': {
+            'MAX_ENTRIES': 5000,
+        },
+    }
+}
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+]
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
