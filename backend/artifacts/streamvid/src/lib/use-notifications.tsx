@@ -23,71 +23,61 @@ interface NotifCtx {
 
 const Ctx = createContext<NotifCtx>({ unreadCount: 0, notifications: [], markRead: () => {}, markAllRead: () => {}, connected: false });
 
+const POLL_INTERVAL = 30000;
+
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user, token } = useAuth() as any;
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotifItem[]>([]);
   const [connected, setConnected] = useState(false);
-  const esRef = useRef<EventSource | null>(null);
-  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastIdRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchInitial = useCallback(async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!token) return;
     try {
-      const r = await fetch("/api/notifications?limit=30", { headers: { Authorization: `Bearer ${token}` } });
-      if (!r.ok) return;
+      const r = await fetch("/api/notifications?limit=30", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) { setConnected(false); return; }
       const d = await r.json();
-      setNotifications(d.notifications ?? []);
+      const items: NotifItem[] = d.notifications ?? [];
+      setNotifications(items);
       setUnreadCount(d.unreadCount ?? 0);
-    } catch {}
+      setConnected(true);
+
+      const maxId = items.reduce((m, n) => Math.max(m, n.id), 0);
+      if (maxId > lastIdRef.current) {
+        if (lastIdRef.current > 0) {
+          const newItems = items.filter(n => n.id > lastIdRef.current);
+          newItems.forEach(n => {
+            if ("Notification" in window && Notification.permission === "granted") {
+              new Notification(n.title, { body: n.message, icon: "/favicon.ico" });
+            }
+          });
+        }
+        lastIdRef.current = maxId;
+      }
+    } catch {
+      setConnected(false);
+    }
   }, [token]);
 
-  const connect = useCallback(() => {
-    if (!token || !user) return;
-    if (esRef.current) { esRef.current.close(); esRef.current = null; }
-
-    const es = new EventSource(`/api/notifications/stream?token=${encodeURIComponent(token)}`);
-    esRef.current = es;
-
-    es.addEventListener("connected", () => {
-      setConnected(true);
-      fetchInitial();
-    });
-
-    es.addEventListener("notification", (e) => {
-      try {
-        const notif: NotifItem = JSON.parse(e.data);
-        setNotifications(prev => [notif, ...prev].slice(0, 50));
-        setUnreadCount(c => c + 1);
-        if ("Notification" in window && Notification.permission === "granted") {
-          new Notification(notif.title, { body: notif.message, icon: "/favicon.ico" });
-        }
-      } catch {}
-    });
-
-    es.addEventListener("ping", () => {});
-
-    es.onerror = () => {
-      setConnected(false);
-      es.close();
-      esRef.current = null;
-      retryRef.current = setTimeout(connect, 5000);
-    };
-  }, [token, user, fetchInitial]);
-
   useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+
     if (user && token) {
-      fetchInitial();
-      connect();
+      fetchNotifications();
+      timerRef.current = setInterval(fetchNotifications, POLL_INTERVAL);
     } else {
       setConnected(false);
       setUnreadCount(0);
       setNotifications([]);
-      esRef.current?.close();
+      lastIdRef.current = 0;
     }
+
     return () => {
-      esRef.current?.close();
-      if (retryRef.current) clearTimeout(retryRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [user?.id, token]);
 

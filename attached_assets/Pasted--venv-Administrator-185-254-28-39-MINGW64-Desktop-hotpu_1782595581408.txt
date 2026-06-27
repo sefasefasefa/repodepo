@@ -1,0 +1,135 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ ./update.sh
+=== Hotpulse Guncelleme ===
+[1/5] Sunucu durduruluyor...
+[2/5] Git pull...
+remote: Enumerating objects: 38, done.
+remote: Counting objects: 100% (38/38), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 24 (delta 17), reused 24 (delta 17), pack-reused 0 (from 0)
+Unpacking objects: 100% (24/24), 168.83 KiB | 586.00 KiB/s, done.
+From https://github.com/sefasefasefa/repodepo
+   f43f8d0..127a558  main       -> origin/main
+Updating f43f8d0..127a558
+   Yerel degisiklikler var, remote ustu aliniyor...
+HEAD is now at 127a558 Automatically tune server performance based on hardware
+[3/5] Python paketleri guncelleniyor...
+[4/5] Veritabani migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, tokens, videos
+Running migrations:
+  No migrations to apply.
+[5/5] Statik dosyalar toplaniyor...
+
+Guncelleme tamamlandi! Sunucu baslatiliyor...
+
+Windows: Donanim analiz ediliyor...
+
+  Donanim  : 3 CPU cekirdek, 4095MB GB RAM
+  Threads  : 6  (cpu_core x2, min=4, max=48)
+  Conn Lmt : 579  (RAM'e gore otomatik)
+  Timeout  : 180 s
+
+Waitress sunucusu baslatiliyor (port 8000)...
+INFO 2026-06-28 00:09:55,903 wasyncore Serving on http://0.0.0.0:8000
+WARNING 2026-06-28 00:13:10,014 task Task queue depth is 1
+WARNING 2026-06-28 00:13:27,424 task Task queue depth is 1
+WARNING 2026-06-28 00:13:27,424 task Task queue depth is 2
+WARNING 2026-06-28 00:13:27,472 task Task queue depth is 1
+WARNING 2026-06-28 00:13:27,487 task Task queue depth is 1
+WARNING 2026-06-28 00:13:27,501 task Task queue depth is 2
+WARNING 2026-06-28 00:13:27,515 task Task queue depth is 2
+WARNING 2026-06-28 00:13:27,532 task Task queue depth is 2
+WARNING 2026-06-28 00:13:27,538 task Task queue depth is 2
+WARNING 2026-06-28 00:13:31,559 task Task queue depth is 1
+WARNING 2026-06-28 00:13:31,574 task Task queue depth is 2
+WARNING 2026-06-28 00:13:31,583 task Task queue depth is 1
+WARNING 2026-06-28 00:13:31,596 task Task queue depth is 1
+WARNING 2026-06-28 00:13:31,605 task Task queue depth is 2
+WARNING 2026-06-28 00:13:31,614 task Task queue depth is 2
+WARNING 2026-06-28 00:13:31,628 task Task queue depth is 3
+WARNING 2026-06-28 00:13:40,154 task Task queue depth is 1
+WARNING 2026-06-28 00:13:40,169 task Task queue depth is 2
+WARNING 2026-06-28 00:13:40,174 task Task queue depth is 2
+WARNING 2026-06-28 00:13:40,180 task Task queue depth is 2
+WARNING 2026-06-28 00:13:40,200 task Task queue depth is 1
+WARNING 2026-06-28 00:13:40,213 task Task queue depth is 1
+WARNING 2026-06-28 00:13:46,465 task Task queue depth is 1
+WARNING 2026-06-28 00:13:46,480 task Task queue depth is 1
+WARNING 2026-06-28 00:13:48,025 task Task queue depth is 1
+WARNING 2026-06-28 00:15:47,863 task Task queue depth is 1
+WARNING 2026-06-28 00:15:47,863 task Task queue depth is 2
+WARNING 2026-06-28 00:16:07,281 task Task queue depth is 1
+WARNING 2026-06-28 00:16:47,717 task Task queue depth is 1
+WARNING 2026-06-28 00:16:47,717 task Task queue depth is 2
+WARNING 2026-06-28 00:16:47,732 task Task queue depth is 3
+WARNING 2026-06-28 00:17:47,619 task Task queue depth is 1
+WARNING 2026-06-28 00:18:07,099 task Task queue depth is 1
+WARNING 2026-06-28 00:18:07,132 task Task queue depth is 2
+WARNING 2026-06-28 00:18:07,134 task Task queue depth is 3
+WARNING 2026-06-28 00:19:07,501 task Task queue depth is 4
+WARNING 2026-06-28 00:19:07,549 task Task queue depth is 5
+WARNING 2026-06-28 00:19:08,009 task Task queue depth is 6
+WARNING 2026-06-28 00:19:08,060 task Task queue depth is 7
+WARNING 2026-06-28 00:19:27,512 task Task queue depth is 8
+WARNING 2026-06-28 00:19:47,989 task Task queue depth is 9
+WARNING 2026-06-28 00:19:47,989 task Task queue depth is 10
+WARNING 2026-06-28 00:20:07,910 task Task queue depth is 11
+WARNING 2026-06-28 00:20:07,910 task Task queue depth is 12
+WARNING 2026-06-28 00:20:07,962 task Task queue depth is 13
+WARNING 2026-06-28 00:20:08,965 task Task queue depth is 14
+WARNING 2026-06-28 00:20:34,056 task Task queue depth is 15
+WARNING 2026-06-28 00:20:47,890 task Task queue depth is 16
+WARNING 2026-06-28 00:20:47,890 task Task queue depth is 17
+WARNING 2026-06-28 00:20:47,890 task Task queue depth is 18
+WARNING 2026-06-28 00:21:07,848 task Task queue depth is 19
+WARNING 2026-06-28 00:21:08,867 task Task queue depth is 20
+WARNING 2026-06-28 00:21:28,456 task Task queue depth is 21
+WARNING 2026-06-28 00:21:28,456 task Task queue depth is 22
+WARNING 2026-06-28 00:22:07,752 task Task queue depth is 23
+WARNING 2026-06-28 00:22:07,768 task Task queue depth is 24
+WARNING 2026-06-28 00:22:10,775 task Task queue depth is 25
+WARNING 2026-06-28 00:22:28,722 task Task queue depth is 26
+WARNING 2026-06-28 00:22:28,722 task Task queue depth is 27
+WARNING 2026-06-28 00:22:48,440 task Task queue depth is 28
+WARNING 2026-06-28 00:22:54,354 task Task queue depth is 29
+WARNING 2026-06-28 00:23:05,110 task Task queue depth is 30
+WARNING 2026-06-28 00:23:08,165 task Task queue depth is 31
+WARNING 2026-06-28 00:23:28,237 task Task queue depth is 32
+WARNING 2026-06-28 00:23:28,237 task Task queue depth is 33
+WARNING 2026-06-28 00:23:28,303 task Task queue depth is 34
+WARNING 2026-06-28 00:23:28,307 task Task queue depth is 35
+WARNING 2026-06-28 00:23:28,308 task Task queue depth is 36
+WARNING 2026-06-28 00:23:28,309 task Task queue depth is 37
+WARNING 2026-06-28 00:23:28,310 task Task queue depth is 38
+WARNING 2026-06-28 00:23:31,258 task Task queue depth is 39
+WARNING 2026-06-28 00:23:37,981 task Task queue depth is 40
+WARNING 2026-06-28 00:23:48,013 task Task queue depth is 41
+WARNING 2026-06-28 00:23:48,103 task Task queue depth is 42
+WARNING 2026-06-28 00:23:48,118 task Task queue depth is 43
+WARNING 2026-06-28 00:23:53,743 task Task queue depth is 44
+WARNING 2026-06-28 00:24:02,168 task Task queue depth is 45
+WARNING 2026-06-28 00:24:02,184 task Task queue depth is 46
+WARNING 2026-06-28 00:24:05,321 task Task queue depth is 47
+WARNING 2026-06-28 00:24:08,073 task Task queue depth is 48
+WARNING 2026-06-28 00:24:08,089 task Task queue depth is 49
+WARNING 2026-06-28 00:24:12,181 task Task queue depth is 50
+WARNING 2026-06-28 00:24:25,671 task Task queue depth is 51
+WARNING 2026-06-28 00:24:29,385 task Task queue depth is 52
+WARNING 2026-06-28 00:24:41,434 task Task queue depth is 53
+WARNING 2026-06-28 00:24:48,025 task Task queue depth is 54
+WARNING 2026-06-28 00:24:54,166 task Task queue depth is 55
+WARNING 2026-06-28 00:24:58,683 task Task queue depth is 56
+WARNING 2026-06-28 00:25:07,915 task Task queue depth is 57
+WARNING 2026-06-28 00:25:07,986 task Task queue depth is 58
+WARNING 2026-06-28 00:25:08,989 task Task queue depth is 59
+WARNING 2026-06-28 00:25:22,999 task Task queue depth is 60
+WARNING 2026-06-28 00:25:36,141 task Task queue depth is 61
+WARNING 2026-06-28 00:25:47,924 task Task queue depth is 62
+WARNING 2026-06-28 00:25:47,924 task Task queue depth is 63
+WARNING 2026-06-28 00:25:54,777 task Task queue depth is 64
+WARNING 2026-06-28 00:25:57,977 task Task queue depth is 65
+WARNING 2026-06-28 00:26:07,887 task Task queue depth is 66
+WARNING 2026-06-28 00:26:07,887 task Task queue depth is 67
+WARNING 2026-06-28 00:26:08,898 task Task queue depth is 68

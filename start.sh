@@ -44,8 +44,9 @@ except ImportError:
         pass
 
 # ── En iyi Waitress parametreleri ────────────────────────────────────────────
-# Threads: I/O-bound Django icin cpu*2, en az 4, en fazla 48
-threads = max(4, min(cpu * 2, 48))
+# Threads: Django I/O-bound oldugu icin cpu*8, en az 16, en fazla 64
+# (cpu*2 cok az! Her yavas istek thread tutar, 6 thread aninda tikaniyor)
+threads = max(16, min(cpu * 8, 64))
 
 # connection-limit: RAM'e gore — her baglanti ~5-10 MB overhead
 # 1 GB RAM → 200, 2 GB → 350, 4 GB → 600, 8 GB → 1000, 16 GB → 1600 (max 2000)
@@ -53,7 +54,7 @@ ram_gb = ram_mb / 1024
 conn = int(min(max(100 + ram_gb * 120, 200), 2000))
 
 # channel-timeout: video akisi icin yeterli sure
-timeout = 180
+timeout = 120
 
 print(f"THREADS={threads}")
 print(f"CONNECTIONS={conn}")
@@ -83,7 +84,7 @@ PYEOF
 
     echo ""
     echo "  Donanim  : ${CPU_CORES:-?} CPU cekirdek${RAM_GB_DISP:+, $RAM_GB_DISP}"
-    echo "  Threads  : $THREADS  (cpu_core x2, min=4, max=48)"
+    echo "  Threads  : $THREADS  (cpu_core x8, min=16, max=64)"
     echo "  Conn Lmt : $CONNECTIONS  (RAM'e gore otomatik)"
     echo "  Timeout  : $TIMEOUT s"
     echo ""
