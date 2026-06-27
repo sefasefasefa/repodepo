@@ -45,6 +45,7 @@ echo "[4/6] Frontend derleniyor..."
 if command -v pnpm &>/dev/null; then
     cd backend
     pnpm install --no-frozen-lockfile
+    pnpm rebuild esbuild 2>/dev/null || true
     pnpm --filter @workspace/streamvid run build
     cd ..
     echo "   Statik dosyalar kopyalaniyor..."
