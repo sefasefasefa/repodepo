@@ -190,6 +190,9 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
 
+# localhost'ta HTTPS yok; SSL redirect'i localhost icin devre disi birak
+SECURE_SSL_REDIRECT = not DEBUG and 'localhost' not in os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024 * 1024  # 10 GB
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB form data
