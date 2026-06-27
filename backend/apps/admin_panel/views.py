@@ -1,5 +1,6 @@
 from django.db.models import Sum, Count, Q
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -356,8 +357,11 @@ def process_creator_application(request, app_id):
 @api_view(['GET'])
 @permission_classes([])
 def public_site_config(request):
+    cached = cache.get('site_config:public')
+    if cached is not None:
+        return Response(cached)
     s, _ = SiteSettings.objects.get_or_create(id=1)
-    return Response({
+    result = {
         'siteName': s.site_name,
         'siteDescription': s.site_description,
         'logoUrl': s.logo_url,
@@ -365,7 +369,9 @@ def public_site_config(request):
         'primaryColor': s.primary_color,
         'registrationEnabled': s.registration_enabled,
         'maintenanceMode': s.maintenance_mode,
-    })
+    }
+    cache.set('site_config:public', result, 120)
+    return Response(result)
 
 
 @api_view(['GET'])
@@ -401,6 +407,7 @@ def update_site_settings(request):
     s.creator_application_enabled = data.get('creatorApplicationEnabled', s.creator_application_enabled)
     s.contact_email = data.get('contactEmail', s.contact_email)
     s.save()
+    cache.delete('site_config:public')
     return Response({'message': 'Settings updated'})
 
 

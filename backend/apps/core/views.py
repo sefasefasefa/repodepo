@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -58,6 +59,9 @@ def ensure_defaults():
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_features(request):
+    cached = cache.get('features:all')
+    if cached is not None:
+        return Response(cached)
     ensure_defaults()
     flags = FeatureFlag.objects.all()
     flag_map = {f.key: f.state for f in flags}
@@ -70,7 +74,9 @@ def list_features(request):
             'description': f.description or defaults.get('description', ''),
             'group': defaults.get('group', 'Diğer'),
         })
-    return Response({'flags': flag_map, 'details': details})
+    result = {'flags': flag_map, 'details': details}
+    cache.set('features:all', result, 120)
+    return Response(result)
 
 
 @api_view(['PATCH'])
@@ -94,6 +100,7 @@ def update_feature(request, key):
     if not flag.description:
         flag.description = defaults.get('description', '')
     flag.save()
+    cache.delete('features:all')
     return Response({'key': flag.key, 'state': flag.state, 'label': flag.label})
 
 
@@ -109,5 +116,14 @@ def recommendations(request):
     from apps.videos.models import Video
     from apps.videos.views import enrich_videos_bulk
     limit = min(int(request.query_params.get('limit', 20)), 50)
+    if not request.user.is_authenticated:
+        ck = f'recommendations:{limit}'
+        cached = cache.get(ck)
+        if cached is not None:
+            return Response(cached)
+        videos = list(Video.objects.filter(is_published=True).select_related('creator', 'category').order_by('-view_count', '-like_count')[:limit])
+        result = {'videos': enrich_videos_bulk(videos, None)}
+        cache.set(ck, result, 120)
+        return Response(result)
     videos = list(Video.objects.filter(is_published=True).select_related('creator', 'category').order_by('-view_count', '-like_count')[:limit])
     return Response({'videos': enrich_videos_bulk(videos, request.user)})

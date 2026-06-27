@@ -71,6 +71,12 @@ class Video(models.Model):
     class Meta:
         db_table = 'videos'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['is_published', '-created_at'], name='video_pub_date_idx'),
+            models.Index(fields=['is_published', '-view_count'], name='video_pub_views_idx'),
+            models.Index(fields=['is_published', 'type', '-created_at'], name='video_pub_type_idx'),
+            models.Index(fields=['creator', 'is_published'], name='video_creator_pub_idx'),
+        ]
 
     def __str__(self):
         return self.title

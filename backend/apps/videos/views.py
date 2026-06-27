@@ -157,6 +157,17 @@ def get_feed(request):
     page = int(request.query_params.get('page', 1))
     limit = min(int(request.query_params.get('limit', 20)), 50)
     offset = (page - 1) * limit
+    if not request.user.is_authenticated and page == 1:
+        ck = f'feed:{limit}'
+        cached = cache.get(ck)
+        if cached is not None:
+            return Response(cached)
+        qs = Video.objects.filter(is_published=True, type='video').select_related('creator', 'category').order_by('-created_at')
+        total = qs.count()
+        videos = list(qs[:limit])
+        result = {'videos': enrich_videos_bulk(videos, None), 'total': total, 'page': 1, 'limit': limit}
+        cache.set(ck, result, 90)
+        return Response(result)
     qs = Video.objects.filter(is_published=True, type='video').select_related('creator', 'category').order_by('-created_at')
     total = qs.count()
     videos = list(qs[offset:offset + limit])
@@ -190,6 +201,17 @@ def get_shorts(request):
     page = int(request.query_params.get('page', 1))
     limit = min(int(request.query_params.get('limit', 20)), 50)
     offset = (page - 1) * limit
+    if not request.user.is_authenticated and page == 1:
+        ck = f'shorts:{limit}'
+        cached = cache.get(ck)
+        if cached is not None:
+            return Response(cached)
+        qs = Video.objects.filter(is_published=True, type='short').select_related('creator', 'category').order_by('-created_at')
+        total = qs.count()
+        videos = list(qs[:limit])
+        result = {'videos': enrich_videos_bulk(videos, None), 'total': total}
+        cache.set(ck, result, 90)
+        return Response(result)
     qs = Video.objects.filter(is_published=True, type='short').select_related('creator', 'category').order_by('-created_at')
     total = qs.count()
     videos = list(qs[offset:offset + limit])
