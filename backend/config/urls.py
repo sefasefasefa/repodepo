@@ -56,16 +56,18 @@ from django.http import FileResponse, HttpResponse, Http404
 
 
 def _serve_from_static(request, path):
-    """Serve files referenced at root (e.g. /assets/*, /favicon.svg, /mining-worker.js)
-    directly from STATIC_ROOT, since the React bundle uses base '/'."""
-    root = settings.STATIC_ROOT
-    full = os.path.normpath(os.path.join(root, path))
-    if not full.startswith(str(root)):
-        raise Http404
-    if not os.path.exists(full) or not os.path.isfile(full):
-        raise Http404
-    content_type, _ = mimetypes.guess_type(full)
-    return FileResponse(open(full, 'rb'), content_type=content_type or 'application/octet-stream')
+    """Serve files referenced at root (e.g. /assets/*, /favicon.svg, /mining-worker.js).
+    Checks STATICFILES_DIRS first (original Vite build filenames), then STATIC_ROOT."""
+    candidates = list(settings.STATICFILES_DIRS) + [settings.STATIC_ROOT]
+    for root in candidates:
+        root = str(root)
+        full = os.path.normpath(os.path.join(root, path))
+        if not full.startswith(root):
+            continue
+        if os.path.exists(full) and os.path.isfile(full):
+            content_type, _ = mimetypes.guess_type(full)
+            return FileResponse(open(full, 'rb'), content_type=content_type or 'application/octet-stream')
+    raise Http404
 
 
 def spa_index(request, *args, **kwargs):
