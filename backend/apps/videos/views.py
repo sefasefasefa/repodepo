@@ -834,34 +834,16 @@ def upload_video(request):
             dest.write(chunk)
 
     local_url = f'/media/uploads/{filename}'
-    title = request.data.get('title', file.name.rsplit('.', 1)[0])
     is_hls = ext in {'.m3u8', '.m3u'}
 
-    video = Video.objects.create(
-        title=title,
-        description=request.data.get('description'),
-        video_url=None if is_hls else local_url,
-        hls_url=local_url if is_hls else None,
-        creator=user,
-        category_id=request.data.get('categoryId') or None,
-        is_published=request.data.get('isPublic', 'true').lower() != 'false',
-    )
-    from django.db.models import F
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    User.objects.filter(id=user.id).update(video_count=F('video_count') + 1)
-
-    # Auto-distribute to active providers in background
-    try:
-        _distribute_video_background(video.id)
-    except Exception:
-        pass
-
+    # Return the URL only — the caller (create_video / admin form) will create the Video record.
+    # We intentionally do NOT create a Video here to avoid duplicate records.
     return Response({
-        'message': 'Yüklendi',
-        'videoId': video.id,
+        'message': 'Dosya yüklendi',
         'url': local_url,
+        'hlsUrl': local_url if is_hls else None,
         'filename': filename,
+        'isHls': is_hls,
     }, status=201)
 
 
@@ -1034,7 +1016,9 @@ def _distribute_video_background(video_id):
             # Make absolute URL if relative
             if video_url.startswith('/'):
                 from django.conf import settings as _s
-                host = getattr(_s, 'SITE_URL', 'http://localhost:8000')
+                host = getattr(_s, 'SITE_URL', None) or os.environ.get('REPLIT_DEV_DOMAIN', 'http://localhost:8000')
+                if host and not host.startswith('http'):
+                    host = 'https://' + host
                 video_url = host.rstrip('/') + video_url
 
             active = IntegrationConfig.objects.filter(is_active=True, auto_upload=True)

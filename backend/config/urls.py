@@ -30,7 +30,20 @@ urlpatterns = [
     path('api/healthz', include('apps.core.health_urls')),
 ]
 
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+def _serve_media(request, path):
+    """Serve media files with graceful 404 (no Django debug page)."""
+    import mimetypes
+    full = os.path.normpath(os.path.join(settings.MEDIA_ROOT, path))
+    if not str(full).startswith(str(settings.MEDIA_ROOT)):
+        from django.http import JsonResponse
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+    if not os.path.exists(full) or not os.path.isfile(full):
+        from django.http import JsonResponse
+        return JsonResponse({'error': 'Medya dosyası bulunamadı', 'path': path}, status=404)
+    content_type, _ = mimetypes.guess_type(full)
+    return FileResponse(open(full, 'rb'), content_type=content_type or 'application/octet-stream')
+
+urlpatterns += [re_path(r'^media/(?P<path>.*)$', _serve_media)]
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

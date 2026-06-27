@@ -173,3 +173,11 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# Public site URL for distribution and absolute URLs
+SITE_URL = os.environ.get(
+    'REPLIT_DEV_DOMAIN',
+    os.environ.get('SITE_URL', 'http://localhost:8000')
+)
+if SITE_URL and not SITE_URL.startswith('http'):
+    SITE_URL = 'https://' + SITE_URL
