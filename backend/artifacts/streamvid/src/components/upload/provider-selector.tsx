@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { Check, Plus, Settings, Globe, AlertTriangle, Loader2 } from "lucide-react";
+import { Check, Plus, Settings, Globe, AlertTriangle, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Provider {
@@ -185,11 +185,141 @@ function AddSiteModal({
   );
 }
 
+function EditSiteModal({
+  provider, token, onClose, onSaved, onDeleted,
+}: {
+  provider: Provider; token: string; onClose: () => void; onSaved: () => void; onDeleted: () => void;
+}) {
+  const creds = PROVIDER_CREDENTIALS[provider.key] ?? DEFAULT_CREDS;
+  const [form, setForm] = useState({ username: "", apiKey: "", password: "" });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSave = async () => {
+    setSaving(true); setError("");
+    try {
+      const body: any = {};
+      if (form.username.trim()) body.username = form.username.trim();
+      if (form.apiKey.trim())   body.apiKey   = form.apiKey.trim();
+      if (form.password.trim()) body.password  = form.password.trim();
+
+      const res = await fetch(`/api/cross-post/sites/${provider.siteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? "Kaydedilemedi"); return; }
+      onSaved();
+    } catch { setError("Sunucu hatası"); } finally { setSaving(false); }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true); setError("");
+    try {
+      const res = await fetch(`/api/cross-post/sites/${provider.siteId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token ?? ""}` },
+      });
+      if (!res.ok) { setError("Silinemedi"); return; }
+      onDeleted();
+    } catch { setError("Sunucu hatası"); } finally { setDeleting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md bg-[#111] border border-[#2a2a2a] rounded-2xl p-6 space-y-4 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0" style={{ backgroundColor: provider.color }}>
+            {provider.letter}
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-white">{provider.name} Hesabını Düzenle</p>
+            <p className="text-xs text-[#555]">Boş bırakılan alanlar değiştirilmez</p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-[#1e1e1e] text-[#555] hover:text-white transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {creds.needsUsername && (
+            <div className="space-y-1.5">
+              <label className="text-xs text-[#888]">{creds.userLabel ?? "Kullanıcı Adı"} <span className="text-[#444]">(yeni değer)</span></label>
+              <input
+                className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                value={form.username}
+                onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+                placeholder={creds.userPlaceholder ?? ""}
+              />
+            </div>
+          )}
+          {creds.needsPassword && (
+            <div className="space-y-1.5">
+              <label className="text-xs text-[#888]">Şifre <span className="text-[#444]">(yeni değer)</span></label>
+              <input
+                type="password"
+                className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="••••••••"
+              />
+            </div>
+          )}
+          {creds.needsApiKey && (
+            <div className="space-y-1.5">
+              <label className="text-xs text-[#888]">{creds.apiKeyLabel ?? "API Anahtarı"} <span className="text-[#444]">(yeni değer)</span></label>
+              <input
+                className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary font-mono"
+                value={form.apiKey}
+                onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))}
+                placeholder={creds.apiKeyPlaceholder ?? ""}
+              />
+            </div>
+          )}
+        </div>
+
+        {error && <p className="text-xs text-red-400 flex items-center gap-1"><AlertTriangle className="h-3 w-3 shrink-0" /> {error}</p>}
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-lg py-2 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60 transition-colors"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Kaydet
+          </button>
+          {!confirmDelete ? (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="px-4 border border-red-900/40 text-red-400 hover:bg-red-900/20 rounded-lg py-2 text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-4 bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 rounded-lg py-2 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60 transition-colors"
+            >
+              {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Sil?"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProviderSelector({ isAdult, selectedIds, onChange }: Props) {
   const { token } = useAuth() as any;
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingProvider, setAddingProvider] = useState<Provider | null>(null);
+  const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [filter, setFilter] = useState<"all" | "adult" | "general">("all");
 
   const fetchProviders = async () => {
@@ -309,68 +439,80 @@ export function ProviderSelector({ isAdult, selectedIds, onChange }: Props) {
           const isGrayedOut = !isAdult && provider.acceptsAdult && provider.configured;
 
           return (
-            <button
-              key={provider.key}
-              onClick={() => !isGrayedOut && toggle(provider)}
-              title={
-                !provider.configured
-                  ? `${provider.name} hesabı ekle`
-                  : isGrayedOut
-                  ? `${provider.name} yalnızca +18 içerik kabul eder`
-                  : provider.name
-              }
-              className={cn(
-                "relative flex flex-col items-center gap-1.5 rounded-xl p-2.5 border text-center transition-all group",
-                isSelected
-                  ? "border-primary bg-primary/10 shadow-sm shadow-primary/20"
-                  : provider.configured
-                  ? isGrayedOut
-                    ? "border-[#1e1e1e] bg-[#111] opacity-40 cursor-not-allowed"
-                    : "border-[#2a2a2a] bg-[#111] hover:border-[#444] hover:bg-[#161616] cursor-pointer"
-                  : "border-[#1e1e1e] bg-[#0d0d0d] hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
-              )}
-            >
-              {/* Logo badge */}
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-xs shrink-0 transition-transform group-hover:scale-105"
-                style={{
-                  backgroundColor: isSelected
-                    ? provider.color
-                    : provider.configured
-                    ? provider.color + "cc"
-                    : "#1f1f1f",
-                  color: provider.configured ? "#fff" : "#666",
-                }}
-              >
-                {provider.configured ? provider.letter : <Plus className="h-3.5 w-3.5" />}
-              </div>
-
-              <p
+            <div key={provider.key} className="relative group/card">
+              <button
+                onClick={() => !isGrayedOut && toggle(provider)}
+                title={
+                  !provider.configured
+                    ? `${provider.name} hesabı ekle`
+                    : isGrayedOut
+                    ? `${provider.name} yalnızca +18 içerik kabul eder`
+                    : provider.name
+                }
                 className={cn(
-                  "text-[10px] leading-tight font-medium w-full truncate",
-                  isSelected ? "text-white" : provider.configured ? "text-[#aaa]" : "text-[#555]"
+                  "relative w-full flex flex-col items-center gap-1.5 rounded-xl p-2.5 border text-center transition-all group",
+                  isSelected
+                    ? "border-primary bg-primary/10 shadow-sm shadow-primary/20"
+                    : provider.configured
+                    ? isGrayedOut
+                      ? "border-[#1e1e1e] bg-[#111] opacity-40 cursor-not-allowed"
+                      : "border-[#2a2a2a] bg-[#111] hover:border-[#444] hover:bg-[#161616] cursor-pointer"
+                    : "border-[#1e1e1e] bg-[#0d0d0d] hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
                 )}
               >
-                {provider.name}
-              </p>
+                {/* Logo badge */}
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-xs shrink-0 transition-transform group-hover:scale-105"
+                  style={{
+                    backgroundColor: isSelected
+                      ? provider.color
+                      : provider.configured
+                      ? provider.color + "cc"
+                      : "#1f1f1f",
+                    color: provider.configured ? "#fff" : "#666",
+                  }}
+                >
+                  {provider.configured ? provider.letter : <Plus className="h-3.5 w-3.5" />}
+                </div>
 
-              {/* Badges */}
-              {provider.acceptsAdult && (
-                <span className="absolute top-1 right-1 text-[8px] font-bold text-red-400/70 leading-none">
-                  18+
-                </span>
+                <p
+                  className={cn(
+                    "text-[10px] leading-tight font-medium w-full truncate",
+                    isSelected ? "text-white" : provider.configured ? "text-[#aaa]" : "text-[#555]"
+                  )}
+                >
+                  {provider.name}
+                </p>
+
+                {/* Badges */}
+                {provider.acceptsAdult && (
+                  <span className="absolute top-1 right-1 text-[8px] font-bold text-red-400/70 leading-none">
+                    18+
+                  </span>
+                )}
+                {isSelected && (
+                  <span className="absolute top-1 left-1 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="h-2 w-2 text-white" strokeWidth={3} />
+                  </span>
+                )}
+                {provider.configured && !isSelected && (
+                  <span className="absolute bottom-1 right-1">
+                    <Globe className="h-2.5 w-2.5 text-[#444]" />
+                  </span>
+                )}
+              </button>
+
+              {/* Edit button — only for configured providers */}
+              {provider.configured && (
+                <button
+                  onClick={e => { e.stopPropagation(); setEditingProvider(provider); }}
+                  title="Düzenle / Sil"
+                  className="absolute -top-1.5 -left-1.5 z-10 w-5 h-5 rounded-full bg-[#222] border border-[#333] text-[#666] hover:text-white hover:bg-primary hover:border-primary flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all"
+                >
+                  <Pencil className="h-2.5 w-2.5" />
+                </button>
               )}
-              {isSelected && (
-                <span className="absolute top-1 left-1 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center">
-                  <Check className="h-2 w-2 text-white" strokeWidth={3} />
-                </span>
-              )}
-              {provider.configured && !isSelected && (
-                <span className="absolute bottom-1 right-1">
-                  <Globe className="h-2.5 w-2.5 text-[#444]" />
-                </span>
-              )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -384,6 +526,20 @@ export function ProviderSelector({ isAdult, selectedIds, onChange }: Props) {
           provider={addingProvider}
           onClose={() => setAddingProvider(null)}
           onAdded={handleAdded}
+        />
+      )}
+
+      {editingProvider && (
+        <EditSiteModal
+          provider={editingProvider}
+          token={token}
+          onClose={() => setEditingProvider(null)}
+          onSaved={() => { setEditingProvider(null); fetchProviders(); }}
+          onDeleted={() => {
+            setEditingProvider(null);
+            fetchProviders();
+            if (editingProvider.siteId) onChange(selectedIds.filter(id => id !== editingProvider.siteId));
+          }}
         />
       )}
     </div>
