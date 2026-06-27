@@ -18,14 +18,16 @@ const API_BASE = "/api";
 function GeneralTab() {
   const { reload } = usePublicSiteSettings();
   const { token } = useAuth() as any;
-  const [form, setForm] = useState<any>({});
+  const [form, setForm] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) { setLoading(false); return; }
     fetch("/api/admin/settings", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(d => setForm({
         siteName: d.siteName ?? "",
         siteDescription: d.siteDescription ?? "",
@@ -38,14 +40,17 @@ function GeneralTab() {
       .catch(() => setForm({
         siteName: "", siteDescription: "", logoUrl: "", faviconUrl: "",
         primaryColor: "#7c3aed", registrationEnabled: true, maintenanceMode: false,
-      }));
+      }))
+      .finally(() => setLoading(false));
   }, [token]);
 
   const save = async () => {
-    if (!token || !form) return;
+    if (!token) { setError("Oturum bulunamadı, lütfen yeniden giriş yapın."); return; }
+    if (!form) return;
     setSaving(true);
+    setError(null);
     try {
-      await fetch("/api/admin/settings/update", {
+      const r = await fetch("/api/admin/settings/update", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -58,27 +63,44 @@ function GeneralTab() {
           maintenanceMode: form.maintenanceMode,
         }),
       });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setError(d.error ?? `Kayıt başarısız (${r.status})`);
+        return;
+      }
       await reload();
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setError("Sunucuya bağlanılamadı, lütfen tekrar deneyin.");
     } finally {
       setSaving(false);
     }
   };
 
 
+  if (loading) return <div className="py-10 text-center text-[#555] text-sm">Yükleniyor...</div>;
+  if (!form) return <div className="py-10 text-center text-[#555] text-sm">Ayarlar yüklenemedi.</div>;
+
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+          <p className="text-xs text-red-400">{error}</p>
+          <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400"><X className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
       <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
         <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Site Kimliği</p>
         <div>
           <label className="text-xs text-[#666] block mb-1.5">Site Adı</label>
-          <input value={form.siteName} onChange={e => setForm((f: any) => ({ ...f, siteName: e.target.value }))}
+          <input value={form.siteName ?? ""} onChange={e => setForm((f: any) => ({ ...f, siteName: e.target.value }))}
             placeholder="Prnhbbbb" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
         </div>
         <div>
           <label className="text-xs text-[#666] block mb-1.5">Site Açıklaması</label>
-          <input value={form.siteDescription} onChange={e => setForm((f: any) => ({ ...f, siteDescription: e.target.value }))}
+          <input value={form.siteDescription ?? ""} onChange={e => setForm((f: any) => ({ ...f, siteDescription: e.target.value }))}
             placeholder="Video streaming ve sosyal platform" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
         </div>
       </div>
@@ -86,24 +108,24 @@ function GeneralTab() {
         <p className="text-xs font-bold text-[#666] uppercase tracking-wider">Logo & Favicon</p>
         <div>
           <label className="text-xs text-[#666] block mb-1.5">Logo URL</label>
-          <input value={form.logoUrl} onChange={e => setForm((f: any) => ({ ...f, logoUrl: e.target.value }))}
+          <input value={form.logoUrl ?? ""} onChange={e => setForm((f: any) => ({ ...f, logoUrl: e.target.value }))}
             placeholder="https://example.com/logo.png" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
           {form.logoUrl && <img src={form.logoUrl} alt="logo" className="h-8 mt-2 object-contain bg-[#1a1a1a] rounded p-1 border border-[#2a2a2a]" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />}
         </div>
         <div>
           <label className="text-xs text-[#666] block mb-1.5">Favicon URL</label>
-          <input value={form.faviconUrl} onChange={e => setForm((f: any) => ({ ...f, faviconUrl: e.target.value }))}
+          <input value={form.faviconUrl ?? ""} onChange={e => setForm((f: any) => ({ ...f, faviconUrl: e.target.value }))}
             placeholder="https://example.com/favicon.ico" className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40" />
         </div>
       </div>
       <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
         <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Palette className="h-3.5 w-3.5" /> Ana Renk</p>
         <div className="flex items-center gap-3">
-          <input type="color" value={form.primaryColor} onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
+          <input type="color" value={form.primaryColor ?? "#7c3aed"} onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
             className="w-12 h-10 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] cursor-pointer p-1" />
-          <input value={form.primaryColor} onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
+          <input value={form.primaryColor ?? ""} onChange={e => setForm((f: any) => ({ ...f, primaryColor: e.target.value }))}
             placeholder="#7c3aed" className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/40 font-mono" />
-          <div className="w-10 h-10 rounded-xl border border-[#2a2a2a] shrink-0" style={{ backgroundColor: form.primaryColor }} />
+          <div className="w-10 h-10 rounded-xl border border-[#2a2a2a] shrink-0" style={{ backgroundColor: form.primaryColor ?? "#7c3aed" }} />
         </div>
         <div className="flex flex-wrap gap-2">
           {["#7c3aed","#e11d48","#2563eb","#059669","#d97706","#db2777","#0891b2","#dc2626"].map(c => (
@@ -300,15 +322,31 @@ function WatermarkTab() {
 
   useEffect(() => { load(); }, [load]);
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
   const save = async () => {
+    if (!token) { setSaveError("Oturum bulunamadı, lütfen yeniden giriş yapın."); return; }
     setSaving(true);
-    const r = await fetch("/api/watermark/admin/settings", {
-      method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(form),
-    });
-    const d = await r.json();
-    setSettings(d.settings); setForm(d.settings);
-    setSaving(false);
+    setSaveError(null);
+    try {
+      const r = await fetch("/api/watermark/admin/settings", {
+        method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(form),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setSaveError(d.error ?? `Kayıt başarısız (${r.status})`);
+        return;
+      }
+      const d = await r.json();
+      setSettings(d.settings ?? form); setForm(d.settings ?? form);
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setSaveError("Sunucuya bağlanılamadı, lütfen tekrar deneyin.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleFileUpload = async (file: File) => {
@@ -450,9 +488,17 @@ function WatermarkTab() {
         </div>
       </div>
 
+      {saveError && (
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+          <p className="text-xs text-red-400">{saveError}</p>
+          <button onClick={() => setSaveError(null)} className="ml-auto text-red-400/60 hover:text-red-400"><X className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
       <button onClick={save} disabled={saving}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-medium text-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
-        {saving ? "Kaydediliyor..." : <><Check className="h-4 w-4" /> Ayarları Kaydet</>}
+        className={cn("w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all",
+          saved ? "bg-green-600 text-white" : "bg-primary hover:bg-primary/90 text-white disabled:opacity-50")}>
+        {saving ? "Kaydediliyor..." : saved ? <><Check className="h-4 w-4" /> Kaydedildi!</> : <><Check className="h-4 w-4" /> Ayarları Kaydet</>}
       </button>
     </div>
   );
@@ -475,13 +521,28 @@ function SeoTab() {
       .catch(() => {});
   }, [token]);
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const save = async () => {
+    if (!token) { setSaveError("Oturum bulunamadı, lütfen yeniden giriş yapın."); return; }
     setSaving(true);
-    await fetch("/api/seo/admin/settings", {
-      method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(settings),
-    });
-    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2500);
+    setSaveError(null);
+    try {
+      const r = await fetch("/api/seo/admin/settings", {
+        method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(settings),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setSaveError(d.error ?? `Kayıt başarısız (${r.status})`);
+        return;
+      }
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setSaveError("Sunucuya bağlanılamadı, lütfen tekrar deneyin.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const copyMeta = () => {
@@ -680,6 +741,13 @@ function SeoTab() {
         </div>
       )}
 
+      {saveError && (
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+          <p className="text-xs text-red-400">{saveError}</p>
+          <button onClick={() => setSaveError(null)} className="ml-auto text-red-400/60 hover:text-red-400"><X className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
       <button onClick={save} disabled={saving}
         className={cn("w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all",
           saved ? "bg-green-600 text-white" : "bg-primary hover:bg-primary/90 text-white disabled:opacity-50")}>
