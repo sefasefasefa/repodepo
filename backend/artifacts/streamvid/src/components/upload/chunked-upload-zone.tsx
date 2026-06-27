@@ -65,7 +65,8 @@ function extractFrame(file: File, timeSec: number): Promise<Blob | null> {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function ChunkedUploadZone({ onDone }: Props) {
-  const { token } = useAuth() as any;
+  const { token, user } = useAuth() as any;
+  const isAdmin = user?.role === "admin";
   const { state, start, pause, resume, cancel, reset } = useChunkedUpload();
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -536,45 +537,47 @@ export function ChunkedUploadZone({ onDone }: Props) {
               )}
             </div>
 
-            {/* Sağlayıcı seçimi */}
-            <div className="border border-[#1e1e1e] rounded-xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-                <Share2 className="h-4 w-4 text-[#666]" />
-                <span className="text-sm text-[#aaa] font-medium">Çapraz Yayın (Cross-post)</span>
-              </div>
-              <div className="flex gap-2 px-4 pb-3">
-                {(["all", "select", "none"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setMeta((m) => ({ ...m, crosspostMode: mode }))}
-                    className={cn(
-                      "flex-1 text-xs py-2 rounded-lg border transition-all font-medium",
-                      (meta.crosspostMode ?? "all") === mode
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-[#aaa]"
-                    )}
-                  >
-                    {mode === "all" ? "🔁 Tüme At" : mode === "select" ? "☑ Seç" : "✕ Gönderme"}
-                  </button>
-                ))}
-              </div>
-              {(meta.crosspostMode ?? "all") === "all" && (
-                <p className="text-xs text-[#555] px-4 pb-3">Tüm aktif sağlayıcılara otomatik gönderilir.</p>
-              )}
-              {(meta.crosspostMode ?? "all") === "select" && (
-                <div className="p-4 border-t border-[#1e1e1e] bg-[#0d0d0d]">
-                  <ProviderSelector
-                    isAdult={meta.isAdult ?? false}
-                    selectedIds={meta.crosspostSiteIds ?? []}
-                    onChange={(ids) => setMeta((m) => ({ ...m, crosspostSiteIds: ids }))}
-                  />
+            {/* Sağlayıcı seçimi — sadece admin */}
+            {isAdmin ? (
+              <div className="border border-[#1e1e1e] rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+                  <Share2 className="h-4 w-4 text-[#666]" />
+                  <span className="text-sm text-[#aaa] font-medium">Çapraz Yayın (Cross-post)</span>
                 </div>
-              )}
-              {(meta.crosspostMode ?? "all") === "none" && (
-                <p className="text-xs text-[#555] px-4 pb-3">Bu video hiçbir sağlayıcıya gönderilmez.</p>
-              )}
-            </div>
+                <div className="flex gap-2 px-4 pb-3">
+                  {(["all", "select", "none"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setMeta((m) => ({ ...m, crosspostMode: mode }))}
+                      className={cn(
+                        "flex-1 text-xs py-2 rounded-lg border transition-all font-medium",
+                        (meta.crosspostMode ?? "all") === mode
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-[#aaa]"
+                      )}
+                    >
+                      {mode === "all" ? "🔁 Tüme At" : mode === "select" ? "☑ Seç" : "✕ Gönderme"}
+                    </button>
+                  ))}
+                </div>
+                {(meta.crosspostMode ?? "all") === "all" && (
+                  <p className="text-xs text-[#555] px-4 pb-3">Tüm aktif sağlayıcılara otomatik gönderilir.</p>
+                )}
+                {(meta.crosspostMode ?? "all") === "select" && (
+                  <div className="p-4 border-t border-[#1e1e1e] bg-[#0d0d0d]">
+                    <ProviderSelector
+                      isAdult={meta.isAdult ?? false}
+                      selectedIds={meta.crosspostSiteIds ?? []}
+                      onChange={(ids) => setMeta((m) => ({ ...m, crosspostSiteIds: ids }))}
+                    />
+                  </div>
+                )}
+                {(meta.crosspostMode ?? "all") === "none" && (
+                  <p className="text-xs text-[#555] px-4 pb-3">Bu video hiçbir sağlayıcıya gönderilmez.</p>
+                )}
+              </div>
+            ) : null}
 
             <Button
               onClick={handleStart}

@@ -68,7 +68,8 @@ function timeAgo(iso: string) {
 }
 
 export default function CrosspostJobsPage() {
-  const { token } = useAuth() as any;
+  const { token, user } = useAuth() as any;
+  const isAdmin = user?.role === "admin";
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState<number | null>(null);
@@ -127,6 +128,19 @@ export default function CrosspostJobsPage() {
     { key: "failed",  label: `✕ Başarısız (${counts.failed ?? 0})` },
     { key: "skipped", label: `– Atlandı (${counts.skipped ?? 0})` },
   ];
+
+  if (user && !isAdmin) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center h-96 gap-4">
+          <Share2 className="h-12 w-12 text-[#333]" />
+          <p className="text-lg font-semibold">Erişim Yok</p>
+          <p className="text-[#888] text-sm">Bu sayfa yalnızca adminlere açıktır.</p>
+          <Link href="/" className="text-primary hover:underline text-sm">Ana sayfaya dön</Link>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
