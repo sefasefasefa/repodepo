@@ -274,10 +274,11 @@ def create_video(request):
     # Optional cross-posting
     try:
         site_ids = data.get('crossPostSiteIds')
-        auto_flag = data.get('autoCrossPost', True)
+        auto_flag = data.get('autoCrossPost', False)
+        send_all = auto_flag and not site_ids
         if site_ids or auto_flag:
             from apps.crosspost.dispatcher import dispatch_for_video
-            dispatch_for_video(video, user, site_ids)
+            dispatch_for_video(video, user, site_ids, send_all=send_all)
     except Exception:
         pass
 

@@ -79,11 +79,12 @@ export function ChunkedUploadZone({ onDone }: Props) {
     categoryId: undefined,
     scheduledPublishAt: null,
     crosspostSiteIds: [],
+    crosspostMode: "all" as "all" | "select" | "none",
   });
 
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleValue, setScheduleValue] = useState("");
-  const [showProviders, setShowProviders] = useState(false);
+
 
   // ── Thumbnail state ──────────────────────────────────────────────────────
   const [thumbBlob, setThumbBlob] = useState<Blob | null>(null);
@@ -537,30 +538,31 @@ export function ChunkedUploadZone({ onDone }: Props) {
 
             {/* Sağlayıcı seçimi */}
             <div className="border border-[#1e1e1e] rounded-xl overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowProviders((v) => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#161616] transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Share2 className="h-4 w-4 text-[#666]" />
-                  <div>
-                    <span className="text-sm text-[#aaa] font-medium">
-                      Sağlayıcılara Paylaş
-                    </span>
-                    {(meta.crosspostSiteIds?.length ?? 0) > 0 && (
-                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full bg-primary/20 text-primary text-[10px] font-bold">
-                        {meta.crosspostSiteIds!.length} seçili
-                      </span>
+              <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+                <Share2 className="h-4 w-4 text-[#666]" />
+                <span className="text-sm text-[#aaa] font-medium">Çapraz Yayın (Cross-post)</span>
+              </div>
+              <div className="flex gap-2 px-4 pb-3">
+                {(["all", "select", "none"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setMeta((m) => ({ ...m, crosspostMode: mode }))}
+                    className={cn(
+                      "flex-1 text-xs py-2 rounded-lg border transition-all font-medium",
+                      (meta.crosspostMode ?? "all") === mode
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-[#aaa]"
                     )}
-                  </div>
-                </div>
-                <span className={cn("text-[#444] text-xs transition-transform", showProviders && "rotate-180")}>
-                  ▼
-                </span>
-              </button>
-
-              {showProviders && (
+                  >
+                    {mode === "all" ? "🔁 Tüme At" : mode === "select" ? "☑ Seç" : "✕ Gönderme"}
+                  </button>
+                ))}
+              </div>
+              {(meta.crosspostMode ?? "all") === "all" && (
+                <p className="text-xs text-[#555] px-4 pb-3">Tüm aktif sağlayıcılara otomatik gönderilir.</p>
+              )}
+              {(meta.crosspostMode ?? "all") === "select" && (
                 <div className="p-4 border-t border-[#1e1e1e] bg-[#0d0d0d]">
                   <ProviderSelector
                     isAdult={meta.isAdult ?? false}
@@ -568,6 +570,9 @@ export function ChunkedUploadZone({ onDone }: Props) {
                     onChange={(ids) => setMeta((m) => ({ ...m, crosspostSiteIds: ids }))}
                   />
                 </div>
+              )}
+              {(meta.crosspostMode ?? "all") === "none" && (
+                <p className="text-xs text-[#555] px-4 pb-3">Bu video hiçbir sağlayıcıya gönderilmez.</p>
               )}
             </div>
 

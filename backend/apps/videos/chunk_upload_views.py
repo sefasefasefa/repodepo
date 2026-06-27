@@ -206,18 +206,22 @@ def chunk_complete(request):
     )
     User.objects.filter(id=request.user.id).update(video_count=F('video_count') + 1)
 
-    # Seçili sağlayıcılara dağıt
+    # Crosspost dağıtımı
     crosspost_site_ids_raw = request.data.get('crosspostSiteIds')
+    auto_cross = request.data.get('autoCrossPost', False)
     dispatched_jobs = []
-    if crosspost_site_ids_raw:
-        try:
+    try:
+        from apps.crosspost.dispatcher import dispatch_for_video
+        if crosspost_site_ids_raw:
             site_ids = [int(x) for x in crosspost_site_ids_raw if str(x).strip().isdigit()]
             if site_ids:
-                from apps.crosspost.dispatcher import dispatch_for_video
                 jobs = dispatch_for_video(video, request.user, site_ids)
                 dispatched_jobs = [j.to_dict() for j in jobs]
-        except Exception:
-            pass
+        elif auto_cross:
+            jobs = dispatch_for_video(video, request.user, send_all=True)
+            dispatched_jobs = [j.to_dict() for j in jobs]
+    except Exception:
+        pass
 
     try:
         shutil.rmtree(session_dir)

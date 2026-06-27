@@ -306,7 +306,6 @@ export function Sidebar() {
               <SectionDivider label={sec("section-creator").label} />
               {nav("upload").enabled && <Row icon={PlusCircle} label={nav("upload").label} href="/upload" onClick={onClose} featureKey="upload" />}
               {nav("creator-dash").enabled && <Row icon={LayoutDashboard} label={nav("creator-dash").label} href="/creator/dashboard" onClick={onClose} featureKey="creator_dashboard" />}
-              <Row icon={Share2} label="Crosspost Görevleri" href="/crosspost-jobs" onClick={onClose} badge={crosspostBadge} />
             </>
           )}
 
@@ -315,6 +314,7 @@ export function Sidebar() {
             <>
               <SectionDivider label={sec("section-admin").label} />
               {nav("admin-panel").enabled && <Row icon={ShieldAlert} label={nav("admin-panel").label} href="/admin" onClick={onClose} />}
+              <Row icon={Share2} label="Crosspost Görevleri" href="/crosspost-jobs" onClick={onClose} badge={crosspostBadge} />
             </>
           )}
 

@@ -34,12 +34,18 @@ def _local_path(video) -> str | None:
     return None
 
 
-def dispatch_for_video(video, user, site_ids: Iterable[int] | None = None):
+def dispatch_for_video(video, user, site_ids: Iterable[int] | None = None, send_all: bool = False):
+    """Dispatch crosspost jobs.
+
+    site_ids=None + send_all=True  → tüm enabled sitelere gönder
+    site_ids=None + send_all=False → auto_post=True sitelere gönder (eski davranış)
+    site_ids=[…]                   → yalnızca belirtilen sitelere gönder
+    """
     qs = CrossPostSite.objects.filter(user=user, enabled=True)
     if site_ids is not None:
         site_ids = [int(s) for s in site_ids if str(s).isdigit()]
         qs = qs.filter(id__in=site_ids)
-    else:
+    elif not send_all:
         qs = qs.filter(auto_post=True)
 
     jobs = []

@@ -251,7 +251,8 @@ export function useChunkedUpload() {
             isAdult: meta.isAdult ?? false,
             type: meta.type ?? "video",
             scheduledPublishAt: meta.scheduledPublishAt ?? null,
-            crosspostSiteIds: meta.crosspostSiteIds ?? [],
+            crosspostSiteIds: (meta.crosspostMode ?? "all") === "select" ? (meta.crosspostSiteIds ?? []) : undefined,
+            autoCrossPost: (meta.crosspostMode ?? "all") === "all",
           }),
         });
         if (!res.ok) {

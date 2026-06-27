@@ -97,7 +97,8 @@ export default function UploadPage() {
   const [bulkMsg, setBulkMsg] = useState("");
   const createVideoMutation = useCreateVideo();
 
-  // URL formu için cross-post sağlayıcı seçimi
+  // URL formu için cross-post: 'all' → tüm aktif sitelere, 'select' → seçili, 'none' → yok
+  const [crosspostMode, setCrosspostMode] = useState<"all" | "select" | "none">("all");
   const [urlCrosspostSiteIds, setUrlCrosspostSiteIds] = useState<number[]>([]);
 
   // URL formu için lokal thumbnail seçici
@@ -259,21 +260,11 @@ export default function UploadPage() {
         ppvPrice: values.isPPV && values.ppvPrice ? parseFloat(values.ppvPrice) : undefined,
         categoryId: values.categoryId ? Number(values.categoryId) : undefined,
         scheduledPublishAt: scheduleEnabled && scheduleValue ? new Date(scheduleValue).toISOString() : null,
+        crossPostSiteIds: crosspostMode === "select" ? urlCrosspostSiteIds : undefined,
+        autoCrossPost: crosspostMode === "all",
       };
       const res = await createVideoMutation.mutateAsync({ data: payload });
       if (res) {
-        // Cross-post seçili sağlayıcılara gönder
-        if (urlCrosspostSiteIds.length > 0) {
-          try {
-            await fetch("/api/cross-post/dispatch", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ videoId: res.id, siteIds: urlCrosspostSiteIds }),
-            });
-          } catch (_e) {
-            // crosspost hatası video yüklemeyi engellemesin
-          }
-        }
         setLocation(`/videos/${res.id}`);
       }
     } catch (e) {
@@ -1091,12 +1082,35 @@ export default function UploadPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <Share2 className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">Çapraz Yayın (Cross-post)</span>
-                  <span className="text-xs text-muted-foreground">— Video yüklenince seçili sitelere de gönderilir</span>
                 </div>
-                <ProviderSelector
-                  selectedIds={urlCrosspostSiteIds}
-                  onChange={setUrlCrosspostSiteIds}
-                />
+                <div className="flex gap-2 mb-3">
+                  {(["all", "select", "none"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setCrosspostMode(mode)}
+                      className={`flex-1 text-xs py-2 rounded-lg border transition-all font-medium ${
+                        crosspostMode === mode
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-[#aaa]"
+                      }`}
+                    >
+                      {mode === "all" ? "🔁 Tüme At" : mode === "select" ? "☑ Seç" : "✕ Gönderme"}
+                    </button>
+                  ))}
+                </div>
+                {crosspostMode === "all" && (
+                  <p className="text-xs text-[#666]">Video oluşturulunca tüm aktif sağlayıcılara otomatik gönderilir.</p>
+                )}
+                {crosspostMode === "select" && (
+                  <ProviderSelector
+                    selectedIds={urlCrosspostSiteIds}
+                    onChange={setUrlCrosspostSiteIds}
+                  />
+                )}
+                {crosspostMode === "none" && (
+                  <p className="text-xs text-[#666]">Bu video hiçbir sağlayıcıya gönderilmez.</p>
+                )}
               </div>
 
               <div className="pt-4 border-t border-border flex justify-end">
@@ -1107,7 +1121,9 @@ export default function UploadPage() {
                     ? "Admin Onayı Gerekli"
                     : scheduleEnabled && scheduleValue
                     ? "Zamanla"
-                    : urlCrosspostSiteIds.length > 0
+                    : crosspostMode === "all"
+                    ? "Yayınla + Tüme Crosspost"
+                    : crosspostMode === "select" && urlCrosspostSiteIds.length > 0
                     ? `Yayınla + ${urlCrosspostSiteIds.length} Siteye Cross-post`
                     : "Videoyu Yayınla"}
                 </Button>
