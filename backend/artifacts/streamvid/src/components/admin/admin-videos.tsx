@@ -197,9 +197,186 @@ const EMPTY_EDIT = {
   isPublished: true, type: "video",
 };
 
+// ── Distribution tab sub-component ──────────────────────────────────────────
+function DistributionTab({ videoId }: { videoId: number }) {
+  const [sites, setSites] = useState<any[]>([]);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [dispatching, setDispatching] = useState(false);
+  const [result, setResult] = useState<any[] | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    fetch("/api/cross-post/sites", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.json())
+      .then(d => {
+        const list = d.sites ?? [];
+        setSites(list);
+        setSelected(new Set(list.filter((s: any) => s.enabled).map((s: any) => s.id)));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const toggle = (id: number) =>
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const dispatch = async () => {
+    if (selected.size === 0) return;
+    setDispatching(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/cross-post/dispatch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ videoId, siteIds: [...selected] }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error ?? "Gönderilemedi"); return; }
+      setResult(d.jobs ?? []);
+    } catch {
+      setError("Sunucu hatası");
+    } finally {
+      setDispatching(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-10 text-[#555]">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" /><span className="text-sm">Sağlayıcılar yükleniyor...</span>
+      </div>
+    );
+  }
+
+  if (sites.length === 0) {
+    return (
+      <div className="text-center py-8 space-y-2">
+        <Share2 className="h-8 w-8 mx-auto text-[#333]" />
+        <p className="text-sm text-[#555]">Henüz crosspost sitesi eklenmemiş.</p>
+        <p className="text-xs text-[#444]">Video yükleme sayfasından sağlayıcı ekleyebilirsin.</p>
+      </div>
+    );
+  }
+
+  if (result) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium text-white">{result.length} siteye gönderildi</p>
+        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+          {result.map((job: any) => (
+            <div key={job.id} className="flex items-center justify-between bg-[#111] border border-[#222] rounded-lg px-3 py-2 text-sm">
+              <span className="text-[#bbb] truncate">{job.siteName ?? job.site_name}</span>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                job.status === "success" ? "bg-green-400/10 text-green-400" :
+                job.status === "failed"  ? "bg-red-400/10 text-red-400" :
+                "bg-primary/10 text-primary"
+              }`}>
+                {job.status === "success" ? "✓ Başarılı" : job.status === "failed" ? "✕ Başarısız" : "⟳ Kuyrukta"}
+              </span>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => setResult(null)}
+          className="w-full py-2 rounded-lg bg-[#222] border border-[#333] text-sm text-[#888] hover:text-white transition-colors"
+        >
+          Tekrar Dağıt
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Select all / clear */}
+      <div className="flex items-center justify-between text-xs text-[#555]">
+        <span>{selected.size} / {sites.length} sağlayıcı seçili</span>
+        <div className="flex gap-3">
+          <button onClick={() => setSelected(new Set(sites.map((s: any) => s.id)))} className="hover:text-white transition-colors">Tümünü Seç</button>
+          <span>·</span>
+          <button onClick={() => setSelected(new Set())} className="hover:text-red-400 transition-colors">Temizle</button>
+        </div>
+      </div>
+
+      {/* Site list */}
+      <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+        {sites.map((site: any) => {
+          const isSelected = selected.has(site.id);
+          return (
+            <button
+              key={site.id}
+              onClick={() => toggle(site.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${
+                isSelected
+                  ? "bg-primary/8 border-primary/30"
+                  : "bg-[#161616] border-[#222] hover:border-[#333]"
+              }`}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs shrink-0"
+                style={{ backgroundColor: site.providerColor ?? site.provider_color ?? "#555" }}
+              >
+                {(site.providerLetter ?? site.provider_letter ?? site.name?.substring(0, 2).toUpperCase())}
+              </div>
+              <span className={`flex-1 text-sm font-medium ${isSelected ? "text-white" : "text-[#aaa]"}`}>
+                {site.name}
+              </span>
+              {!site.enabled && (
+                <span className="text-[10px] text-[#555] border border-[#2a2a2a] px-1.5 py-0.5 rounded">Devre dışı</span>
+              )}
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                isSelected ? "bg-primary border-primary" : "border-[#444] bg-transparent"
+              }`}>
+                {isSelected && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {selected.size === 0 && (
+        <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+          <AlertCircle className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+          <p className="text-xs text-yellow-300/80">Hiçbir sağlayıcı seçili değil — dağıtım yapılmaz.</p>
+        </div>
+      )}
+
+      {error && (
+        <p className="flex items-center gap-1.5 text-xs text-red-400">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {error}
+        </p>
+      )}
+
+      <button
+        onClick={dispatch}
+        disabled={dispatching || selected.size === 0}
+        className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-colors"
+      >
+        {dispatching
+          ? <><Loader2 className="h-4 w-4 animate-spin" /> Gönderiliyor…</>
+          : <><Share2 className="h-4 w-4" /> {selected.size} Sağlayıcıya Dağıt</>}
+      </button>
+    </div>
+  );
+}
+
+// ── Edit panel with tabs ──────────────────────────────────────────────────────
 function EditVideoPanel({ video, categories, onClose, onSave }: {
   video: any; categories: any[]; onClose: () => void; onSave: (data: any) => void;
 }) {
+  const [activeTab, setActiveTab] = useState<"edit" | "distribution">("edit");
   const [form, setForm] = useState({
     title: video.title || "", description: video.description || "",
     videoUrl: video.videoUrl || "", hlsUrl: video.hlsUrl || "",
@@ -226,90 +403,122 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
   };
 
   return (
-    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-4 space-y-3">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-semibold text-white flex items-center gap-1.5"><Edit2 className="h-3.5 w-3.5 text-primary" /> Düzenle</span>
-        <button onClick={onClose} className="p-1 rounded hover:bg-[#2a2a2a] text-[#555] hover:text-white"><X className="h-3.5 w-3.5" /></button>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="sm:col-span-2">
-          <label className="text-[11px] text-[#666] mb-1 block">Başlık</label>
-          <input value={form.title} onChange={e => set("title", e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className="text-[11px] text-[#666] mb-1 block">Açıklama</label>
-          <textarea value={form.description} onChange={e => set("description", e.target.value)} rows={2} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary resize-none" />
-        </div>
-
-        <div>
-          <label className="text-[11px] text-[#666] mb-1 block">Video URL</label>
-          <input value={form.videoUrl} onChange={e => set("videoUrl", e.target.value)} placeholder="https://..." className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
-        </div>
-
-        <div>
-          <label className="text-[11px] text-[#666] mb-1 block">HLS URL</label>
-          <input value={form.hlsUrl} onChange={e => set("hlsUrl", e.target.value)} placeholder="https://...m3u8" className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className="text-[11px] text-[#666] mb-1 block">Thumbnail URL</label>
-          <div className="flex gap-2">
-            <input value={form.thumbnailUrl} onChange={e => set("thumbnailUrl", e.target.value)} placeholder="https://...jpg" className="flex-1 bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
-            <label className="flex items-center gap-1 px-2.5 py-2 rounded-lg border border-[#333] text-[#666] hover:text-white text-xs cursor-pointer shrink-0">
-              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Image className="h-3.5 w-3.5" />}
-              <input type="file" accept="image/*" className="hidden" onChange={handleThumbUpload} disabled={uploading} />
-            </label>
-          </div>
-          {form.thumbnailUrl && <img src={form.thumbnailUrl} className="mt-1.5 h-12 w-20 object-cover rounded border border-[#333]" onError={e => (e.currentTarget.style.display = "none")} />}
-        </div>
-
-        <div>
-          <label className="text-[11px] text-[#666] mb-1 block">Kategori</label>
-          <select value={form.categoryId} onChange={e => set("categoryId", e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
-            <option value="">—</option>
-            {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-
-        <div>
-          <label className="text-[11px] text-[#666] mb-1 block">Tür</label>
-          <select value={form.type} onChange={e => set("type", e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
-            <option value="video">Video</option>
-            <option value="short">Short</option>
-            <option value="live">Live VOD</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-4 py-1">
-        {[["isPublished","Yayında"],["isPremium","Premium"],["isPPV","PPV"]].map(([key, label]) => (
-          <label key={key} className="flex items-center gap-2 text-sm text-[#aaa] cursor-pointer select-none">
-            <input type="checkbox" checked={(form as any)[key]} onChange={e => set(key, e.target.checked)} className="accent-primary w-3.5 h-3.5" />{label}
-          </label>
-        ))}
-        {form.isPPV && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[#666]">Fiyat ($)</span>
-            <input type="number" min="0" step="0.01" value={form.ppvPrice} onChange={e => set("ppvPrice", e.target.value)} className="w-20 bg-[#252525] border border-[#333] rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-primary" />
-          </div>
-        )}
-      </div>
-
-      <div className="flex gap-2 pt-1">
-        <button onClick={onClose} className="flex-1 py-2 rounded-lg bg-[#252525] text-[#888] text-sm hover:bg-[#2a2a2a]">İptal</button>
-        <button onClick={() => onSave({
-          title: form.title, description: form.description,
-          videoUrl: form.videoUrl || undefined, hlsUrl: form.hlsUrl || undefined,
-          thumbnailUrl: form.thumbnailUrl || undefined,
-          categoryId: form.categoryId ? Number(form.categoryId) : null,
-          isPremium: form.isPremium, isPPV: form.isPPV,
-          ppvPrice: form.isPPV && form.ppvPrice ? Number(form.ppvPrice) : undefined,
-          isPublished: form.isPublished, type: form.type,
-        })} className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90">
-          Kaydet
+    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden">
+      {/* Tab header */}
+      <div className="flex items-center border-b border-[#2a2a2a]">
+        <button
+          onClick={() => setActiveTab("edit")}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
+            activeTab === "edit"
+              ? "border-primary text-primary bg-primary/5"
+              : "border-transparent text-[#666] hover:text-[#aaa]"
+          }`}
+        >
+          <Edit2 className="h-3 w-3" /> Düzenle
         </button>
+        <button
+          onClick={() => setActiveTab("distribution")}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
+            activeTab === "distribution"
+              ? "border-primary text-primary bg-primary/5"
+              : "border-transparent text-[#666] hover:text-[#aaa]"
+          }`}
+        >
+          <Share2 className="h-3 w-3" /> Dağıtım
+        </button>
+        <div className="flex-1" />
+        <button onClick={onClose} className="p-2 mr-1 rounded hover:bg-[#2a2a2a] text-[#555] hover:text-white transition-colors">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Tab content */}
+      <div className="p-4">
+        {activeTab === "edit" ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className="text-[11px] text-[#666] mb-1 block">Başlık</label>
+                <input value={form.title} onChange={e => set("title", e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[11px] text-[#666] mb-1 block">Açıklama</label>
+                <textarea value={form.description} onChange={e => set("description", e.target.value)} rows={2} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary resize-none" />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-[#666] mb-1 block">Video URL</label>
+                <input value={form.videoUrl} onChange={e => set("videoUrl", e.target.value)} placeholder="https://..." className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-[#666] mb-1 block">HLS URL</label>
+                <input value={form.hlsUrl} onChange={e => set("hlsUrl", e.target.value)} placeholder="https://...m3u8" className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[11px] text-[#666] mb-1 block">Thumbnail URL</label>
+                <div className="flex gap-2">
+                  <input value={form.thumbnailUrl} onChange={e => set("thumbnailUrl", e.target.value)} placeholder="https://...jpg" className="flex-1 bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
+                  <label className="flex items-center gap-1 px-2.5 py-2 rounded-lg border border-[#333] text-[#666] hover:text-white text-xs cursor-pointer shrink-0">
+                    {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Image className="h-3.5 w-3.5" />}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleThumbUpload} disabled={uploading} />
+                  </label>
+                </div>
+                {form.thumbnailUrl && <img src={form.thumbnailUrl} className="mt-1.5 h-12 w-20 object-cover rounded border border-[#333]" onError={e => (e.currentTarget.style.display = "none")} />}
+              </div>
+
+              <div>
+                <label className="text-[11px] text-[#666] mb-1 block">Kategori</label>
+                <select value={form.categoryId} onChange={e => set("categoryId", e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
+                  <option value="">—</option>
+                  {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] text-[#666] mb-1 block">Tür</label>
+                <select value={form.type} onChange={e => set("type", e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
+                  <option value="video">Video</option>
+                  <option value="short">Short</option>
+                  <option value="live">Live VOD</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 py-1">
+              {[["isPublished","Yayında"],["isPremium","Premium"],["isPPV","PPV"]].map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-sm text-[#aaa] cursor-pointer select-none">
+                  <input type="checkbox" checked={(form as any)[key]} onChange={e => set(key, e.target.checked)} className="accent-primary w-3.5 h-3.5" />{label}
+                </label>
+              ))}
+              {form.isPPV && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#666]">Fiyat ($)</span>
+                  <input type="number" min="0" step="0.01" value={form.ppvPrice} onChange={e => set("ppvPrice", e.target.value)} className="w-20 bg-[#252525] border border-[#333] rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-primary" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={onClose} className="flex-1 py-2 rounded-lg bg-[#252525] text-[#888] text-sm hover:bg-[#2a2a2a]">İptal</button>
+              <button onClick={() => onSave({
+                title: form.title, description: form.description,
+                videoUrl: form.videoUrl || undefined, hlsUrl: form.hlsUrl || undefined,
+                thumbnailUrl: form.thumbnailUrl || undefined,
+                categoryId: form.categoryId ? Number(form.categoryId) : null,
+                isPremium: form.isPremium, isPPV: form.isPPV,
+                ppvPrice: form.isPPV && form.ppvPrice ? Number(form.ppvPrice) : undefined,
+                isPublished: form.isPublished, type: form.type,
+              })} className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90">
+                Kaydet
+              </button>
+            </div>
+          </div>
+        ) : (
+          <DistributionTab videoId={video.id} />
+        )}
       </div>
     </div>
   );
