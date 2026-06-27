@@ -30,7 +30,7 @@ git stash pop 2>/dev/null || true
 
 # ── 3. Python bağımlılıkları güncelle ────────────────────────────────────────
 echo "[3/5] Python paketleri güncelleniyor..."
-python -m pip install -r backend/requirements.txt -q
+python -m pip install -r backend/requirements.txt -q || pip install -r backend/requirements.txt -q
 
 # ── 4. Veritabanı migrate ─────────────────────────────────────────────────────
 echo "[4/5] Veritabanı migrate ediliyor..."
