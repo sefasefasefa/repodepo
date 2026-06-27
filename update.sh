@@ -3,10 +3,23 @@ set -e
 
 echo "=== Hotpulse Güncelleme ==="
 
+# ── İşletim sistemi tespiti ───────────────────────────────────────────────────
+case "$(uname -s)" in
+    Linux*)   OS="linux" ;;
+    Darwin*)  OS="mac" ;;
+    MINGW*|MSYS*|CYGWIN*) OS="windows" ;;
+    *)        OS="unknown" ;;
+esac
+
 # ── 1. Çalışan sunucuyu durdur ───────────────────────────────────────────────
 echo "[1/5] Sunucu durduruluyor..."
-pkill -f "gunicorn" 2>/dev/null || true
-pkill -f "waitress" 2>/dev/null || true
+if [ "$OS" = "windows" ]; then
+    taskkill //F //IM python.exe 2>/dev/null || true
+    taskkill //F //IM waitress-serve.exe 2>/dev/null || true
+else
+    pkill -f "gunicorn" 2>/dev/null || true
+    pkill -f "waitress" 2>/dev/null || true
+fi
 sleep 1
 
 # ── 2. Kodu çek ──────────────────────────────────────────────────────────────
