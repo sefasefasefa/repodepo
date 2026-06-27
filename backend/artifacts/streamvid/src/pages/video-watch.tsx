@@ -287,81 +287,8 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
           }}
         />
       )}
-      <ScreenProtectionOverlay className="aspect-video rounded-xl overflow-hidden">
-        <div className="w-full h-full bg-black relative group">
-          {activeSource?.embedCode ? (
-            <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: activeSource.embedCode.replace(/width=\"[^\"]*\"/g, 'width=\"100%\"').replace(/height=\"[^\"]*\"/g, 'height=\"100%\"').replace(/<iframe/g, '<iframe style=\"width:100%;height:100%;border:0;pointer-events:all\" allow=\"autoplay;fullscreen\" allowfullscreen') }} />
-          ) : activeSource?.directUrl ? (
-            <video ref={videoRef} key={activeSource.directUrl} src={activeSource.directUrl} className="w-full h-full object-contain" controls autoPlay={false} poster={video.thumbnailUrl || undefined} controlsList="nodownload noremoteplayback" disablePictureInPicture {...videoProps} />
-          ) : null}
-          {isDirectVideo && (
-            <div ref={overlayControlsRef} className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-start gap-1 sm:gap-2">
-              {/* CC */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => { setSubtitleOpen(v => !v); setQualityOpen(false); setSpeedOpen(false); }}
-                  className={cn(
-                    "flex items-center gap-1 rounded-full backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold border touch-manipulation",
-                    subtitleOpen ? "bg-primary/20 text-primary border-primary/30" : "bg-black/70 text-white border-white/10 hover:bg-black/80"
-                  )}
-                >
-                  <Languages className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  <span className="hidden sm:inline">CC</span>
-                </button>
-                {subtitleOpen && hasSubtitles && (
-                  <div className="absolute right-0 mt-1.5 w-36 sm:w-44 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
-                    <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-white touch-manipulation">Kapalı</button>
-                    <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-primary touch-manipulation">Türkçe</button>
-                    <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-white touch-manipulation">English</button>
-                  </div>
-                )}
-              </div>
-              {/* Quality */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => { setQualityOpen(v => !v); setSubtitleOpen(false); setSpeedOpen(false); }}
-                  className="flex items-center gap-1 rounded-full bg-black/70 backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80 touch-manipulation"
-                >
-                  <SlidersHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  <span className="hidden sm:inline">{activeQuality === "auto" ? "Otomatik" : activeQuality}</span>
-                </button>
-                {qualityOpen && (
-                  <div className="absolute right-0 mt-1.5 w-36 sm:w-40 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
-                    <button type="button" onClick={() => { setActiveQuality("auto"); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", activeQuality === "auto" ? "text-primary" : "text-white")}>Otomatik</button>
-                    {qualities.map(q => (
-                      <button key={q} type="button" onClick={() => { setActiveQuality(q); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", activeQuality === q ? "text-primary" : "text-white")}>{q}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* Speed */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => { setSpeedOpen(v => !v); setSubtitleOpen(false); setQualityOpen(false); }}
-                  className="flex items-center rounded-full bg-black/70 backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80 touch-manipulation min-w-[28px] justify-center"
-                >
-                  {playbackSpeed}x
-                </button>
-                {speedOpen && (
-                  <div className="absolute right-0 mt-1.5 w-28 sm:w-32 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
-                    {speeds.map(speed => (
-                      <button key={speed} type="button" onClick={() => { setPlaybackSpeed(speed); setSpeedOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", playbackSpeed === speed ? "text-primary" : "text-white")}>
-                        {speed}x
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          <WatermarkOverlay videoWatermarkEnabled={showWatermark} />
-          {isDirectVideo && <SubtitleOverlay videoId={video.id} videoRef={videoRef} />}
-        </div>
-      </ScreenProtectionOverlay>
-      {allSources.length > 0 && (
+      {/* Sağlayıcılar — videonun ÜSTÜNDE */}
+      {allSources.length > 1 && (
         <div className="bg-[#161616] border border-[#252525] rounded-xl p-3">
           <p className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-2">Sağlayıcılar</p>
           <div className="flex items-center gap-2 flex-wrap">
@@ -389,6 +316,83 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
           </div>
         </div>
       )}
+      {/* Video oynatıcı — sabit 16:9 oranı, max genişlik sınırlı */}
+      <div className="w-full max-w-[960px] mx-auto rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
+        <ScreenProtectionOverlay className="w-full h-full">
+          <div className="w-full h-full bg-black relative group">
+            {activeSource?.embedCode ? (
+              <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: activeSource.embedCode.replace(/width=\"[^\"]*\"/g, 'width=\"100%\"').replace(/height=\"[^\"]*\"/g, 'height=\"100%\"').replace(/<iframe/g, '<iframe style=\"width:100%;height:100%;border:0;pointer-events:all\" allow=\"autoplay;fullscreen\" allowfullscreen') }} />
+            ) : activeSource?.directUrl ? (
+              <video ref={videoRef} key={activeSource.directUrl} src={activeSource.directUrl} className="w-full h-full object-contain" controls autoPlay={false} poster={video.thumbnailUrl || undefined} controlsList="nodownload noremoteplayback" disablePictureInPicture {...videoProps} />
+            ) : null}
+            {isDirectVideo && (
+              <div ref={overlayControlsRef} className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-start gap-1 sm:gap-2">
+                {/* CC */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => { setSubtitleOpen(v => !v); setQualityOpen(false); setSpeedOpen(false); }}
+                    className={cn(
+                      "flex items-center gap-1 rounded-full backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold border touch-manipulation",
+                      subtitleOpen ? "bg-primary/20 text-primary border-primary/30" : "bg-black/70 text-white border-white/10 hover:bg-black/80"
+                    )}
+                  >
+                    <Languages className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">CC</span>
+                  </button>
+                  {subtitleOpen && hasSubtitles && (
+                    <div className="absolute right-0 mt-1.5 w-36 sm:w-44 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
+                      <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-white touch-manipulation">Kapalı</button>
+                      <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-primary touch-manipulation">Türkçe</button>
+                      <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-white touch-manipulation">English</button>
+                    </div>
+                  )}
+                </div>
+                {/* Quality */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => { setQualityOpen(v => !v); setSubtitleOpen(false); setSpeedOpen(false); }}
+                    className="flex items-center gap-1 rounded-full bg-black/70 backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80 touch-manipulation"
+                  >
+                    <SlidersHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{activeQuality === "auto" ? "Otomatik" : activeQuality}</span>
+                  </button>
+                  {qualityOpen && (
+                    <div className="absolute right-0 mt-1.5 w-36 sm:w-40 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
+                      <button type="button" onClick={() => { setActiveQuality("auto"); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", activeQuality === "auto" ? "text-primary" : "text-white")}>Otomatik</button>
+                      {qualities.map(q => (
+                        <button key={q} type="button" onClick={() => { setActiveQuality(q); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", activeQuality === q ? "text-primary" : "text-white")}>{q}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Speed */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => { setSpeedOpen(v => !v); setSubtitleOpen(false); setQualityOpen(false); }}
+                    className="flex items-center rounded-full bg-black/70 backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80 touch-manipulation min-w-[28px] justify-center"
+                  >
+                    {playbackSpeed}x
+                  </button>
+                  {speedOpen && (
+                    <div className="absolute right-0 mt-1.5 w-28 sm:w-32 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
+                      {speeds.map(speed => (
+                        <button key={speed} type="button" onClick={() => { setPlaybackSpeed(speed); setSpeedOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", playbackSpeed === speed ? "text-primary" : "text-white")}>
+                          {speed}x
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            <WatermarkOverlay videoWatermarkEnabled={showWatermark} />
+            {isDirectVideo && <SubtitleOverlay videoId={video.id} videoRef={videoRef} />}
+          </div>
+        </ScreenProtectionOverlay>
+      </div>
     </div>
   );
 }
