@@ -131,28 +131,23 @@ export function CrosspostDispatchModal({
     } catch { /* ignore */ }
   }, [token]);
 
-  /* Aktif job varsa 3 saniyede bir polling */
+  /* Tek polling useEffect — phase=tracking iken başlar, tüm işler bitince durur */
   useEffect(() => {
     if (phase !== "tracking") return;
+    if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
     fetchJobs();
-    const hasActive = jobs.some(j => j.status === "pending" || j.status === "running");
-    if (hasActive) {
-      pollTimer.current = setInterval(fetchJobs, 3000);
-    }
-    return () => { if (pollTimer.current) clearInterval(pollTimer.current); };
-  }, [phase, jobs.map(j => j.status).join(","), fetchJobs]);
+    pollTimer.current = setInterval(fetchJobs, 3500);
+    return () => {
+      if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
+    };
+  }, [phase, fetchJobs]);
 
-  /* jobs değişince timer'ı yeniden kur */
+  /* Tüm işler tamamlanınca polling'i durdur */
   useEffect(() => {
-    if (phase !== "tracking") return;
-    const hasActive = jobs.some(j => j.status === "pending" || j.status === "running");
-    if (!hasActive && pollTimer.current) {
-      clearInterval(pollTimer.current);
-      pollTimer.current = null;
-    } else if (hasActive && !pollTimer.current) {
-      pollTimer.current = setInterval(fetchJobs, 3000);
-    }
-  }, [jobs, phase, fetchJobs]);
+    if (phase !== "tracking" || !pollTimer.current) return;
+    const allDoneNow = jobs.length > 0 && jobs.every(j => j.status === "success" || j.status === "failed" || j.status === "skipped");
+    if (allDoneNow) { clearInterval(pollTimer.current); pollTimer.current = null; }
+  }, [jobs, phase]);
 
   const toggle = (id: number) => setSelected(prev => {
     const next = new Set(prev);

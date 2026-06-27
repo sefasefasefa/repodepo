@@ -153,6 +153,11 @@ export default function MessagesPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const incomingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const conversationsRef = useRef<any[]>([]);
+  const activeCallRef = useRef<any>(null);
+
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+  useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
 
   useEffect(() => { if (flags.dm_messages === "disabled") setLocation("/"); }, [flags.dm_messages]);
 
@@ -162,7 +167,25 @@ export default function MessagesPage() {
   useEffect(() => { loadConversations(); }, [loadConversations]);
   useEffect(() => { if (!activeConvId) return; loadMessages(activeConvId); if (pollRef.current) clearInterval(pollRef.current); pollRef.current = setInterval(() => loadMessages(activeConvId), 3000); return () => { if (pollRef.current) clearInterval(pollRef.current); }; }, [activeConvId, loadMessages]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-  useEffect(() => { if (!user || (flags.audio_calls === "disabled" && flags.video_calls === "disabled")) return; const checkIncoming = async () => { if (activeCall) return; try { const d = await apiFetch("/calls/incoming"); if (d.call) { const call = d.call; if (call.callType === "audio" && flags.audio_calls === "disabled") return; if (call.callType === "video" && flags.video_calls === "disabled") return; const conv = conversations.find(c => c.id === call.conversationId); const peer: CallPeer = call.caller || conv?.other || { id: call.callerId, username: "Kullanıcı" }; setActiveCall({ peer, convId: call.conversationId, callType: call.callType, mode: "incoming", callId: call.id, sdpOffer: call.sdpOffer }); } } catch {} }; incomingPollRef.current = setInterval(checkIncoming, 3000); return () => { if (incomingPollRef.current) clearInterval(incomingPollRef.current); }; }, [user, activeCall, conversations, flags.audio_calls, flags.video_calls]);
+  useEffect(() => {
+    if (!user || (flags.audio_calls === "disabled" && flags.video_calls === "disabled")) return;
+    const checkIncoming = async () => {
+      if (activeCallRef.current) return;
+      try {
+        const d = await apiFetch("/calls/incoming");
+        if (d.call) {
+          const call = d.call;
+          if (call.callType === "audio" && flags.audio_calls === "disabled") return;
+          if (call.callType === "video" && flags.video_calls === "disabled") return;
+          const conv = conversationsRef.current.find((c: any) => c.id === call.conversationId);
+          const peer: CallPeer = call.caller || conv?.other || { id: call.callerId, username: "Kullanıcı" };
+          setActiveCall({ peer, convId: call.conversationId, callType: call.callType, mode: "incoming", callId: call.id, sdpOffer: call.sdpOffer });
+        }
+      } catch {}
+    };
+    incomingPollRef.current = setInterval(checkIncoming, 4000);
+    return () => { if (incomingPollRef.current) clearInterval(incomingPollRef.current); };
+  }, [user, flags.audio_calls, flags.video_calls]);
 
   const activeConv = conversations.find(c => c.id === activeConvId);
   const sendMessage = async (e: React.FormEvent) => { e.preventDefault(); if (!text.trim() || !activeConvId || sending) return; setSending(true); const content = text.trim(); setText(""); try { const d = await apiFetch(`/conversations/${activeConvId}/messages`, { method: "POST", body: JSON.stringify({ content }) }); setMessages(prev => [...prev, d.message]); } catch { setText(content); } setSending(false); };

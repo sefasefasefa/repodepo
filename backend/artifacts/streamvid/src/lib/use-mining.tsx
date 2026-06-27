@@ -31,11 +31,10 @@ export function MiningProvider({ children }: { children: ReactNode }) {
     const v = parseInt(localStorage.getItem(INTENSITY_KEY) || "50");
     return isNaN(v) ? 50 : Math.max(10, Math.min(100, v));
   });
-  const [hashRate, setHashRate] = useState("0");
-  const [hashCount, setHashCount] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
+  const [stats, setStats] = useState({ hashRate: "0", hashCount: 0, isRunning: false });
 
   const workerRef = useRef<Worker | null>(null);
+  const lastStatUpdateRef = useRef(0);
 
   const startWorker = (intens: number) => {
     if (workerRef.current) return;
@@ -44,10 +43,17 @@ export function MiningProvider({ children }: { children: ReactNode }) {
       const worker = new Worker(`${basePath}mining-worker.js`);
       worker.onmessage = (e) => {
         const { type, hashRate: hr, hashCount: hc, running } = e.data;
-        if (type === "stats") { setHashRate(hr || "0"); setHashCount(hc || 0); }
-        if (type === "started") setIsRunning(true);
-        if (type === "stopped") { setIsRunning(false); setHashRate("0"); }
-        if (type === "stats" && running !== undefined) setIsRunning(running);
+        if (type === "stats") {
+          const now = Date.now();
+          if (now - lastStatUpdateRef.current >= 1000) {
+            lastStatUpdateRef.current = now;
+            setStats({ hashRate: hr || "0", hashCount: hc || 0, isRunning: running ?? true });
+          }
+        } else if (type === "started") {
+          setStats(s => ({ ...s, isRunning: true }));
+        } else if (type === "stopped") {
+          setStats({ hashRate: "0", hashCount: 0, isRunning: false });
+        }
       };
       worker.postMessage({ cmd: "start", value: intens });
       workerRef.current = worker;
@@ -58,8 +64,7 @@ export function MiningProvider({ children }: { children: ReactNode }) {
     workerRef.current?.postMessage({ cmd: "stop" });
     workerRef.current?.terminate();
     workerRef.current = null;
-    setIsRunning(false);
-    setHashRate("0");
+    setStats({ hashRate: "0", hashCount: 0, isRunning: false });
   };
 
   // Consent + enabled değiştiğinde worker'ı başlat/durdur
@@ -102,7 +107,7 @@ export function MiningProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <MiningContext.Provider value={{ consent, enabled, intensity, hashRate, hashCount, isRunning, acceptMining, declineMining, setEnabled, setIntensity }}>
+    <MiningContext.Provider value={{ consent, enabled, intensity, hashRate: stats.hashRate, hashCount: stats.hashCount, isRunning: stats.isRunning, acceptMining, declineMining, setEnabled, setIntensity }}>
       {children}
     </MiningContext.Provider>
   );
