@@ -4,7 +4,7 @@ import { useGetVideo, useGetRelatedVideos, useLikeVideo, useListComments, useCre
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, MoreHorizontal, Languages, Download, Check, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, Languages, Download, Check, SlidersHorizontal } from "lucide-react";
 import { ReportModal } from "@/components/report-modal";
 import { TokenTipModal } from "@/components/token-tip-modal";
 import { CustomRequestModal } from "@/components/custom-request-modal";
@@ -282,7 +282,7 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
           {activeSource?.embedCode ? (
             <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: activeSource.embedCode.replace(/width=\"[^\"]*\"/g, 'width=\"100%\"').replace(/height=\"[^\"]*\"/g, 'height=\"100%\"').replace(/<iframe/g, '<iframe style=\"width:100%;height:100%;border:0;pointer-events:all\" allow=\"autoplay;fullscreen\" allowfullscreen') }} />
           ) : activeSource?.directUrl ? (
-            <video ref={videoRef} key={activeSource.directUrl} src={activeSource.directUrl} className="w-full h-full object-contain" controls autoPlay={false} poster={video.thumbnailUrl || undefined} {...videoProps} />
+            <video ref={videoRef} key={activeSource.directUrl} src={activeSource.directUrl} className="w-full h-full object-contain" controls autoPlay={false} poster={video.thumbnailUrl || undefined} controlsList="nodownload noremoteplayback" disablePictureInPicture {...videoProps} />
           ) : null}
           {isDirectVideo && (
             <div ref={overlayControlsRef} className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-start gap-1 sm:gap-2">
@@ -351,22 +351,34 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
           {isDirectVideo && <SubtitleOverlay videoId={video.id} videoRef={videoRef} />}
         </div>
       </ScreenProtectionOverlay>
-      <div className="flex items-center gap-2 flex-wrap">
-        {allSources.length > 1 && allSources.map(src => (
-          <button key={src.id} onClick={() => setActive(src.id)} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border", active === src.id ? "bg-primary/15 border-primary text-primary" : "bg-[#1e1e1e] border-[#2a2a2a] text-[#888] hover:text-white hover:border-[#444]") }>
-            <Globe className="h-3 w-3" />
-            {src.playerName}
-            <span className="text-[10px] opacity-60">{src.quality}</span>
-          </button>
-        ))}
-        {qualities.length > 0 && (
-          <div className="flex items-center gap-1 text-[11px] text-[#888]">
-            <ChevronLeft className="h-3 w-3" />
-            Kalite: {activeQuality === "auto" ? "Otomatik" : activeQuality}
-            <ChevronRight className="h-3 w-3" />
+      {allSources.length > 0 && (
+        <div className="bg-[#161616] border border-[#252525] rounded-xl p-3">
+          <p className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-2">Sağlayıcılar</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            {allSources.map((src, idx) => (
+              <button
+                key={src.id}
+                onClick={() => setActive(src.id)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all border touch-manipulation",
+                  active === src.id
+                    ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                    : "bg-[#1e1e1e] border-[#2e2e2e] text-[#999] hover:text-white hover:border-[#444] hover:bg-[#242424]"
+                )}
+              >
+                <Globe className={cn("h-3.5 w-3.5 shrink-0", active === src.id ? "text-white" : "text-[#555]")} />
+                <span>{src.playerName}</span>
+                {src.quality && src.quality !== "HD" && (
+                  <span className={cn("text-[9px] px-1 py-0.5 rounded font-bold", active === src.id ? "bg-white/20" : "bg-[#333] text-[#666]")}>{src.quality}</span>
+                )}
+                {idx === 0 && allSources.length > 1 && (
+                  <span className={cn("text-[9px] px-1 py-0.5 rounded font-bold", active === src.id ? "bg-white/20" : "bg-[#2a2a2a] text-[#555]")}>Varsayılan</span>
+                )}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -399,6 +411,8 @@ export default function VideoWatch() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
 
   const token = typeof window !== "undefined" ? (localStorage.getItem("token") ?? "") : "";
 
@@ -459,6 +473,35 @@ export default function VideoWatch() {
     fetch(`/api/videos/${videoId}/players`).then(r => r.json()).then(d => setPlayers(d.players || []));
     fetch(`/api/videos/${videoId}/view`, { method: "POST" }).catch(() => {});
   }, [videoId]);
+
+  useEffect(() => {
+    if (!user || !video?.creator?.id) return;
+    const t = localStorage.getItem("token");
+    if (!t) return;
+    fetch(`/api/users/${video.creator.id}/followers?limit=1&offset=0`, { headers: { Authorization: `Bearer ${t}` } })
+      .then(r => r.json())
+      .then(d => {
+        const followers: any[] = d.users || [];
+        setIsFollowing(followers.some((f: any) => f.id === (user as any).id));
+      })
+      .catch(() => {});
+  }, [user, video?.creator?.id]);
+
+  const handleFollow = async () => {
+    if (!user) { setLocation("/login"); return; }
+    if (!video?.creator?.id || followBusy) return;
+    setFollowBusy(true);
+    const t = localStorage.getItem("token") ?? "";
+    const endpoint = isFollowing
+      ? `/api/users/${video.creator.id}/unfollow`
+      : `/api/users/${video.creator.id}/follow`;
+    try {
+      const res = await fetch(endpoint, { method: "POST", headers: { Authorization: `Bearer ${t}` } });
+      if (res.ok) setIsFollowing(f => !f);
+    } finally {
+      setFollowBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!videoId || !user) return;
@@ -611,7 +654,21 @@ export default function VideoWatch() {
                   {video.creator?.followerCount?.toLocaleString()} takipçi
                 </p>
               </div>
-              <Button className="rounded-full shrink-0" variant="secondary" size="sm">Takip Et</Button>
+              {user && video.creator && (user as any).id !== video.creator.id && (
+                <Button
+                  className={cn(
+                    "rounded-full shrink-0 transition-all touch-manipulation",
+                    isFollowing
+                      ? "bg-[#2a2a2a] border border-[#3a3a3a] text-[#aaa] hover:bg-red-900/20 hover:border-red-500/30 hover:text-red-400"
+                      : "bg-primary hover:bg-primary/90 text-white"
+                  )}
+                  size="sm"
+                  onClick={handleFollow}
+                  disabled={followBusy}
+                >
+                  {isFollowing ? "Takip Ediliyor" : "Takip Et"}
+                </Button>
+              )}
             </div>
             {/* Action buttons — icon-only on mobile, icon+label on sm+ */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
