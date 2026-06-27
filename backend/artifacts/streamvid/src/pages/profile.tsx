@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VideoCard } from "@/components/video/video-card";
-import { Settings, Edit3, Phone, CheckCircle2, ShieldCheck, Store, ExternalLink, Lock, Sparkles, Trash2, AlertTriangle } from "lucide-react";
+import { Settings, Edit3, Phone, CheckCircle2, ShieldCheck, Store, ExternalLink, Lock, Sparkles, Trash2, AlertTriangle, Camera, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
 import { useMining } from "@/lib/use-mining";
 import { PresenceDot, CreatorTag, CreatorStoreTag } from "@/components/friends/friend-badges";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getPresence, setPresence } from "@/lib/presence";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -189,6 +189,42 @@ export default function Profile() {
   const { toast } = useToast();
   const [presence, setPresenceState] = useState(getPresence());
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Anlık önizleme
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+
+    setAvatarUploading(true);
+    try {
+      const token = localStorage.getItem("token") || "";
+      const form = new FormData();
+      form.append("avatar", file);
+      const res = await fetch("/api/auth/upload-avatar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Yükleme başarısız");
+      // Auth cache'i yenile
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      toast({ title: "Profil fotoğrafı güncellendi" });
+    } catch (err: any) {
+      setAvatarPreview(null);
+      toast({ title: "Hata", description: err.message, variant: "destructive" });
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
 
   const { data: stats, isLoading: statsLoading } = useGetUserStats(user?.id || 0, { queryKey: ["userStats", user?.id || 0], enabled: !!user } as any);
   const { data: videosData, isLoading: videosLoading } = useGetUserVideos(user?.id || 0, { enabled: !!user } as any);
@@ -273,10 +309,35 @@ export default function Profile() {
       <div className="container mx-auto px-3 sm:px-4 md:px-6 pb-8 max-w-7xl">
         {/* Profile header */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end -mt-12 sm:-mt-16 mb-6 relative z-10">
-          <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background bg-muted shrink-0">
-            <AvatarImage src={user.avatarUrl || ""} />
-            <AvatarFallback className="text-2xl sm:text-4xl">{user.username.substring(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
+          {/* Tıklanabilir Avatar */}
+          <div className="relative group shrink-0">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={avatarUploading}
+              className="relative block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              title="Profil fotoğrafını değiştir"
+            >
+              <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background bg-muted">
+                <AvatarImage src={avatarPreview || user.avatarUrl || ""} />
+                <AvatarFallback className="text-2xl sm:text-4xl">{user.username.substring(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              {/* Hover overlay */}
+              <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {avatarUploading
+                  ? <Loader2 className="h-7 w-7 text-white animate-spin" />
+                  : <Camera className="h-7 w-7 text-white" />
+                }
+              </div>
+            </button>
+          </div>
           <div className="flex-1 space-y-1.5 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl sm:text-3xl font-bold truncate">{user.displayName || user.username}</h1>

@@ -11,6 +11,7 @@ urlpatterns = [
     path('auth/refresh', TokenRefreshView.as_view()),
     path('auth/me', views.me),
     path('auth/update-profile', views.update_profile),
+    path('auth/upload-avatar', views.upload_avatar),
     path('auth/change-password', views.change_password),
     # SMS / phone verification
     path('auth/sms/send', phone_views.sms_send),

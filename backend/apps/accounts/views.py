@@ -159,6 +159,39 @@ def update_profile(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def upload_avatar(request):
+    import os, uuid
+    from django.conf import settings
+
+    file = request.FILES.get('avatar')
+    if not file:
+        return Response({'error': 'Dosya gönderilmedi'}, status=400)
+
+    allowed = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+    if file.content_type not in allowed:
+        return Response({'error': 'Sadece JPEG, PNG, WebP veya GIF desteklenir'}, status=400)
+
+    if file.size > 5 * 1024 * 1024:
+        return Response({'error': 'Dosya boyutu 5 MB\'ı geçemez'}, status=400)
+
+    ext = os.path.splitext(file.name)[1].lower() or '.jpg'
+    filename = f"avatars/{uuid.uuid4().hex}{ext}"
+    save_path = os.path.join(settings.MEDIA_ROOT, filename)
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    with open(save_path, 'wb') as f:
+        for chunk in file.chunks():
+            f.write(chunk)
+
+    avatar_url = f"{settings.MEDIA_URL}{filename}"
+    request.user.avatar_url = avatar_url
+    request.user.save(update_fields=['avatar_url'])
+
+    return Response({'avatarUrl': avatar_url, 'user': format_user(request.user)})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def change_password(request):
     user = request.user
     current = request.data.get('currentPassword', request.data.get('current_password', ''))
