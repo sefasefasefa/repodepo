@@ -1,0 +1,43 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ ./update.sh
+=== Hotpulse Guncelleme ===
+[1/5] Sunucu durduruluyor...
+[2/5] Git pull...
+remote: Enumerating objects: 65, done.
+remote: Counting objects: 100% (65/65), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 41 (delta 35), reused 39 (delta 33), pack-reused 0 (from 0)
+Unpacking objects: 100% (41/41), 8.67 KiB | 4.00 KiB/s, done.
+From https://github.com/sefasefasefa/repodepo
+   043cc22..f43f8d0  main       -> origin/main
+Updating 043cc22..f43f8d0
+Fast-forward
+ backend/apps/admin_panel/views.py                  |  11 +-
+ backend/apps/core/views.py                         |  18 ++-
+ .../videos/migrations/0004_add_video_indexes.py    |  31 +++++
+ backend/apps/videos/models.py                      |   6 +
+ backend/apps/videos/views.py                       |  42 ++++++-
+ backend/artifacts/streamvid/src/App.tsx            |   5 +-
+ .../artifacts/streamvid/src/lib/feature-flags.tsx  |  39 +++++-
+ .../streamvid/src/pages/crosspost-jobs.tsx         |  29 +++++
+ backend/artifacts/streamvid/src/pages/upload.tsx   |  45 ++++++-
+ .../artifacts/streamvid/src/pages/video-watch.tsx  | 138 +++++++++++++++++++--
+ backend/artifacts/streamvid/vite.config.ts         |   5 +-
+ backend/config/settings.py                         |  16 ++-
+ 12 files changed, 356 insertions(+), 29 deletions(-)
+ create mode 100644 backend/apps/videos/migrations/0004_add_video_indexes.py
+[3/5] Python paketleri guncelleniyor...
+[4/5] Veritabani migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, tokens, videos
+Running migrations:
+  Applying videos.0004_add_video_indexes... OK
+[5/5] Statik dosyalar toplaniyor...
+
+Guncelleme tamamlandi! Sunucu baslatiliyor...
+
+Windows: Waitress sunucusu başlatılıyor (port 8000)...
+INFO 2026-06-27 23:56:32,231 wasyncore Serving on http://0.0.0.0:8000
+WARNING 2026-06-27 23:57:20,719 log Not Found: /favicon.ico
+WARNING 2026-06-27
