@@ -167,6 +167,35 @@ export default function CrosspostJobsPage() {
           </button>
         </div>
 
+        {/* Genel dağıtım ilerleme çubuğu */}
+        {jobs.length > 0 && (() => {
+          const done = (counts.success ?? 0) + (counts.failed ?? 0) + (counts.skipped ?? 0);
+          const pct = Math.round((done / jobs.length) * 100);
+          const successPct = Math.round(((counts.success ?? 0) / jobs.length) * 100);
+          const failPct = Math.round(((counts.failed ?? 0) / jobs.length) * 100);
+          return (
+            <div className="bg-[#0e0e0e] border border-[#1e1e1e] rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium text-white">Dağıtım Durumu</span>
+                <span className="text-[#888]">{done} / {jobs.length} görev tamamlandı — <span className="text-white font-semibold">%{pct}</span></span>
+              </div>
+              <div className="w-full h-2.5 bg-[#1a1a1a] rounded-full overflow-hidden flex">
+                <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${successPct}%` }} />
+                <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${failPct}%` }} />
+                {(counts.running ?? 0) > 0 && (
+                  <div className="h-full bg-blue-500/60 animate-pulse" style={{ width: `${Math.round(((counts.running ?? 0) / jobs.length) * 100)}%` }} />
+                )}
+              </div>
+              <div className="flex gap-4 text-[11px] text-[#666]">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Başarılı: {counts.success ?? 0}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> Çalışıyor: {counts.running ?? 0}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> Bekliyor: {counts.pending ?? 0}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Başarısız: {counts.failed ?? 0}</span>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Özet istatistikler */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {(["success", "running", "failed", "pending"] as const).map(s => {

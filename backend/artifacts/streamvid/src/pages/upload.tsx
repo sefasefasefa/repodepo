@@ -100,6 +100,7 @@ export default function UploadPage() {
   // URL formu için cross-post: 'all' → tüm aktif sitelere, 'select' → seçili, 'none' → yok
   const [crosspostMode, setCrosspostMode] = useState<"all" | "select" | "none">("all");
   const [urlCrosspostSiteIds, setUrlCrosspostSiteIds] = useState<number[]>([]);
+  const [configuredSites, setConfiguredSites] = useState<any[]>([]);
 
   // URL formu için lokal thumbnail seçici
   const thumbFileRef = useRef<HTMLInputElement>(null);
@@ -162,6 +163,15 @@ export default function UploadPage() {
         .then(d => { setLimits(d.limits); setUploadedToday(d.uploadedToday ?? 0); });
     }
   }, [user, isCreator, token]);
+
+  // Admin: yapılandırılmış crosspost sitelerini yükle
+  useEffect(() => {
+    if (!isAdmin || !token) return;
+    fetch("/api/cross-post/sites", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setConfiguredSites(d.sites ?? []); })
+      .catch(() => {});
+  }, [isAdmin, token]);
 
   const uploadForm = useForm<z.infer<typeof uploadSchema>>({
     resolver: zodResolver(uploadSchema),
@@ -1081,9 +1091,14 @@ export default function UploadPage() {
               {/* Cross-post sağlayıcı seçimi — sadece admin */}
               {isAdmin && (
                 <div className="pt-4 border-t border-border">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Share2 className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Çapraz Yayın (Cross-post)</span>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Share2 className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Çapraz Yayın (Cross-post)</span>
+                    </div>
+                    {configuredSites.length > 0 && (
+                      <span className="text-[11px] text-[#666]">{configuredSites.filter(s => s.enabled).length} aktif sağlayıcı</span>
+                    )}
                   </div>
                   <div className="flex gap-2 mb-3">
                     {(["all", "select", "none"] as const).map((mode) => (
@@ -1102,10 +1117,32 @@ export default function UploadPage() {
                     ))}
                   </div>
                   {crosspostMode === "all" && (
-                    <p className="text-xs text-[#666]">Video oluşturulunca tüm aktif sağlayıcılara otomatik gönderilir.</p>
+                    <div className="space-y-2">
+                      {configuredSites.length === 0 ? (
+                        <p className="text-xs text-[#666]">Henüz sağlayıcı eklenmemiş. "☑ Seç" modunda ekleyebilirsin.</p>
+                      ) : (
+                        <>
+                          <p className="text-xs text-[#666]">Video oluşturulunca aşağıdaki aktif sağlayıcılara otomatik gönderilir:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {configuredSites.filter(s => s.enabled).map((site: any) => (
+                              <span key={site.id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium bg-[#1a1a1a] border border-[#2a2a2a] text-[#aaa]">
+                                <span className="w-4 h-4 rounded flex items-center justify-center text-white text-[9px] font-bold shrink-0" style={{ backgroundColor: site.providerColor || '#555' }}>
+                                  {(site.providerLetter || site.name?.substring(0, 2) || '?').substring(0, 2)}
+                                </span>
+                                {site.name}
+                              </span>
+                            ))}
+                            {configuredSites.filter(s => !s.enabled).length > 0 && (
+                              <span className="text-[11px] text-[#444] self-center">+{configuredSites.filter(s => !s.enabled).length} devre dışı</span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                   {crosspostMode === "select" && (
                     <ProviderSelector
+                      isAdult={false}
                       selectedIds={urlCrosspostSiteIds}
                       onChange={setUrlCrosspostSiteIds}
                     />

@@ -34,6 +34,102 @@ interface PlayerSource {
   language: string;
 }
 
+/** Streaming platformu URL'sini embed iframe koduna dönüştürür */
+function resolveEmbedFromUrl(rawUrl: string): string | null {
+  if (!rawUrl) return null;
+  // Doğrudan video dosyası ise embed gerekmez
+  const lower = rawUrl.toLowerCase().split('?')[0];
+  if (/\.(mp4|webm|ogg|ogv|m3u8|mpd|mov|mkv|flv|ts)(\?|$)/.test(lower)) return null;
+  try {
+    const u = new URL(rawUrl);
+    const host = u.hostname.replace(/^www\./, '');
+    const parts = u.pathname.split('/').filter(Boolean);
+    const iframe = (src: string) =>
+      `<iframe src="${src}" width="100%" height="100%" frameborder="0" scrolling="no" allow="autoplay;fullscreen" allowfullscreen style="width:100%;height:100%;border:0;pointer-events:all"></iframe>`;
+
+    // StreamTape: /v/ID/... → /e/ID
+    if (host === 'streamtape.com' || host === 'streamtape.to') {
+      const id = parts[1] || parts[0];
+      return iframe(`https://streamtape.com/e/${id}`);
+    }
+    // DoodStream çeşitleri
+    if (/dood\.(pm|watch|la|sh|ws|re|cx|so|to|stream|wf)/.test(host) || host === 'doodstream.com') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // Mixdrop
+    if (host === 'mixdrop.ag' || host === 'mixdrop.co' || host === 'mixdrop.bz') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // FileMoon
+    if (host === 'filemoon.sx' || host === 'filemoon.to') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // StreamWish
+    if (host === 'streamwish.com' || host === 'streamwish.to') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // VidHide
+    if (host === 'vidhide.com' || host === 'vidhide.to') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // Voe.sx
+    if (host === 'voe.sx') {
+      const id = parts[1] || parts[0];
+      return iframe(`https://voe.sx/e/${id}`);
+    }
+    // Upstream
+    if (host === 'upstream.to') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/embed-${id}.html`);
+    }
+    // Luluvdo
+    if (host === 'luluvdo.com') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // Vidoza
+    if (host === 'vidoza.net') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/embed-${id}.html`);
+    }
+    // Supervideo
+    if (host === 'supervideo.tv' || host === 'supervideo.cc') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // FileLions
+    if (host === 'filelions.com' || host === 'filelions.to') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // VidMoly
+    if (host === 'vidmoly.to' || host === 'vidmoly.me') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // StreamHub
+    if (host === 'streamhub.to' || host === 'streamhub.bz') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // VTube
+    if (host === 'vtube.network' || host === 'vtube.to') {
+      const id = parts[1] || parts[0];
+      return iframe(`${u.origin}/e/${id}`);
+    }
+    // Genel /v/ veya /d/ → /e/ deseni
+    if (parts[0] && ['v', 'd', 'f'].includes(parts[0]) && parts[1]) {
+      return iframe(`${u.origin}/e/${parts[1]}`);
+    }
+  } catch {/* geçersiz URL */}
+  return null;
+}
+
 function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }) {
   const showWatermark: boolean = !!video.watermarkEnabled;
   const screenProt = useScreenProtectionState();
@@ -49,17 +145,21 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
   const resumeSeeked = useRef(false);
   const speeds = [0.75, 1, 1.25, 1.5, 1.75, 2];
 
-  const allSources: PlayerSource[] = [
-    ...(video.hlsUrl || video.videoUrl ? [{
-      id: 0,
-      playerName: "Kendi Oynatıcı",
-      directUrl: video.hlsUrl || video.videoUrl,
-      isDefault: players.length === 0,
-      quality: "HD",
-      language: "TR",
-    }] : []),
-    ...players,
-  ];
+  const allSources: PlayerSource[] = (() => {
+    const rawUrl = video.hlsUrl || video.videoUrl;
+    const ownSource: PlayerSource | null = rawUrl ? (() => {
+      const embedCode = resolveEmbedFromUrl(rawUrl);
+      return {
+        id: 0,
+        playerName: "Kendi Oynatıcı",
+        ...(embedCode ? { embedCode } : { directUrl: rawUrl }),
+        isDefault: players.length === 0,
+        quality: "HD",
+        language: "TR",
+      };
+    })() : null;
+    return [...(ownSource ? [ownSource] : []), ...players];
+  })();
 
   const defaultSource = allSources.find(p => p.isDefault) || allSources[0];
   const [active, setActive] = useState(defaultSource?.id ?? 0);
@@ -82,6 +182,22 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
     const vid = videoRef.current;
     if (vid) vid.playbackRate = playbackSpeed;
   }, [playbackSpeed]);
+
+  // Video yüklenince ve her oynatmada hızı yeniden uygula (bazı tarayıcılar sıfırlar)
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    const applyRate = () => { vid.playbackRate = playbackSpeed; };
+    vid.addEventListener('play', applyRate);
+    vid.addEventListener('loadeddata', applyRate);
+    vid.addEventListener('ratechange', () => {
+      if (vid.playbackRate !== playbackSpeed) vid.playbackRate = playbackSpeed;
+    });
+    return () => {
+      vid.removeEventListener('play', applyRate);
+      vid.removeEventListener('loadeddata', applyRate);
+    };
+  }, [activeSource?.directUrl, playbackSpeed]);
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
