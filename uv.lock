@@ -336,16 +336,16 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dj-database-url", specifier = ">=2.0.0" },
+    { name = "dj-database-url", specifier = "==3.1.2" },
     { name = "django", specifier = "==4.2.16" },
     { name = "django-cors-headers", specifier = "==4.4.0" },
     { name = "djangorestframework", specifier = "==3.15.2" },
     { name = "djangorestframework-simplejwt", specifier = "==5.3.1" },
     { name = "gunicorn", specifier = "==22.0.0" },
     { name = "pillow", specifier = "==10.4.0" },
-    { name = "psycopg2-binary", specifier = ">=2.9.12" },
+    { name = "psycopg2-binary", specifier = "==2.9.12" },
     { name = "python-dotenv", specifier = "==1.0.1" },
-    { name = "requests", specifier = ">=2.28.0" },
+    { name = "requests", specifier = "==2.34.2" },
     { name = "waitress", specifier = "==3.0.1" },
     { name = "whitenoise", specifier = "==6.7.0" },
 ]
