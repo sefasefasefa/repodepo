@@ -38,6 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const handleLogin = async (data: LoginBody) => {
+    localStorage.removeItem("token");
+    setToken(null);
     const res = await loginMutation.mutateAsync({ data });
     const newToken = (res as any).access ?? res.token;
     localStorage.setItem("token", newToken);
@@ -46,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleRegister = async (data: RegisterBody) => {
+    localStorage.removeItem("token");
+    setToken(null);
     const res = await registerMutation.mutateAsync({ data });
     const newToken = (res as any).access ?? res.token;
     localStorage.setItem("token", newToken);
