@@ -4,7 +4,7 @@ import { useGetVideo, useGetRelatedVideos, useLikeVideo, useListComments, useCre
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, Languages, Download, Check, SlidersHorizontal } from "lucide-react";
+import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, Languages, Download, Check, SlidersHorizontal, ExternalLink } from "lucide-react";
 import { ReportModal } from "@/components/report-modal";
 import { TokenTipModal } from "@/components/token-tip-modal";
 import { CustomRequestModal } from "@/components/custom-request-modal";
@@ -53,12 +53,12 @@ function resolveEmbedFromUrl(rawUrl: string): string | null {
     const u = new URL(rawUrl);
     const host = u.hostname.replace(/^www\./, '');
     const parts = u.pathname.split('/').filter(Boolean);
-    const iframe = (src: string) =>
-      `<iframe src="${src}" width="100%" height="100%" frameborder="0" scrolling="no" allow="autoplay;fullscreen" allowfullscreen style="width:100%;height:100%;border:0;pointer-events:all"></iframe>`;
+    const iframe = (src: string, extra = '') =>
+      `<iframe src="${src}" width="100%" height="100%" frameborder="0" scrolling="no" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer" ${extra} style="width:100%;height:100%;border:0;pointer-events:all"></iframe>`;
 
-    // StreamTape: /v/ID/... → /e/ID
-    if (host === 'streamtape.com' || host === 'streamtape.to') {
-      const id = parts[1] || parts[0];
+    // StreamTape: /v/ID/... veya /e/ID → /e/ID
+    if (host === 'streamtape.com' || host === 'streamtape.to' || host === 'streamtape.net' || host === 'streamta.pe') {
+      const id = parts[0] === 'e' ? (parts[1] || parts[0]) : (parts[1] || parts[0]);
       if (!isValidId(id)) return null;
       return iframe(`https://streamtape.com/e/${id}`);
     }
@@ -317,7 +317,8 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
         </div>
       )}
       {/* Video oynatıcı — sabit 16:9 oranı, max genişlik sınırlı */}
-      <div className="w-full max-w-[960px] mx-auto rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
+      <div className="w-full max-w-[960px] mx-auto">
+        <div className="w-full rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
         <ScreenProtectionOverlay className="w-full h-full">
           <div className="w-full h-full bg-black relative group">
             {(() => {
@@ -340,8 +341,7 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
               if (embedHtml) {
                 const safeHtml = embedHtml
                   .replace(/width="[^"]*"/g, 'width="100%"')
-                  .replace(/height="[^"]*"/g, 'height="100%"')
-                  .replace(/<iframe/g, '<iframe style="width:100%;height:100%;border:0;pointer-events:all" allow="autoplay;fullscreen" allowfullscreen');
+                  .replace(/height="[^"]*"/g, 'height="100%"');
                 return <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: safeHtml }} />;
               }
               if (directUrl) {
@@ -416,6 +416,25 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
             {isDirectVideo && <SubtitleOverlay videoId={video.id} videoRef={videoRef} />}
           </div>
         </ScreenProtectionOverlay>
+        </div>
+        {/* Embed kaynak açıldığında — video gelmezse doğrudan açma linki */}
+        {!isDirectVideo && activeSource?.embedCode && (() => {
+          const srcUrl = activeSource.embedCode.trim();
+          if (!srcUrl.startsWith('http')) return null;
+          return (
+            <div className="flex justify-end mt-1.5 px-1">
+              <a
+                href={srcUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Sağlayıcıda aç
+              </a>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
