@@ -3,25 +3,32 @@ set -e
 
 echo "=== Hotpulse Güncelleme ==="
 
-# ── 1. Çalışan waitress'i durdur ─────────────────────────────────────────────
-echo "[1/4] Waitress durduruluyor..."
+# ── 1. Çalışan sunucuyu durdur ───────────────────────────────────────────────
+echo "[1/5] Sunucu durduruluyor..."
+pkill -f "gunicorn" 2>/dev/null || true
 pkill -f "waitress" 2>/dev/null || true
+sleep 1
 
 # ── 2. Kodu çek ──────────────────────────────────────────────────────────────
-echo "[2/4] Git pull..."
+echo "[2/5] Git pull..."
 git pull
 
-# ── 3. Veritabanı migrate ─────────────────────────────────────────────────────
-echo "[3/4] Veritabanı migrate ediliyor..."
+# ── 3. Python bağımlılıkları güncelle ────────────────────────────────────────
+echo "[3/5] Python paketleri güncelleniyor..."
+pip install -r backend/requirements.txt -q
+
+# ── 4. Veritabanı migrate ─────────────────────────────────────────────────────
+echo "[4/5] Veritabanı migrate ediliyor..."
 cd backend
 python manage.py migrate --noinput
 
-# ── 4. Statik dosyaları topla ─────────────────────────────────────────────────
-echo "[4/4] Statik dosyalar toplanıyor..."
+# ── 5. Statik dosyaları topla ─────────────────────────────────────────────────
+echo "[5/5] Statik dosyalar toplanıyor..."
 python manage.py collectstatic --noinput -v 0
+cd ..
 
-# ── Waitress başlat ───────────────────────────────────────────────────────────
 echo ""
 echo "✓ Güncelleme tamamlandı! Sunucu başlatılıyor..."
 echo ""
-python -m waitress --port=8000 --threads=4 config.wsgi:application
+
+exec ./start.sh
