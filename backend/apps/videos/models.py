@@ -157,11 +157,18 @@ class VideoPlayer(models.Model):
 
 
 class VideoSubtitle(models.Model):
+    MODERATION_CHOICES = [
+        ('approved', 'Onaylandı'),
+        ('pending', 'Beklemede'),
+        ('rejected', 'Reddedildi'),
+    ]
+
     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='subtitles')
-    language = models.CharField(max_length=10)
+    language = models.CharField(max_length=50)
     label = models.CharField(max_length=100)
     vtt_content = models.TextField()
     is_auto_generated = models.BooleanField(default=False)
+    moderation_status = models.CharField(max_length=20, choices=MODERATION_CHOICES, default='approved')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
