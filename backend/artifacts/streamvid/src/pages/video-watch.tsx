@@ -726,9 +726,7 @@ export default function VideoWatch() {
                   disabled={downloading}
                   className={cn(
                     "rounded-full px-2.5 sm:px-3 transition-all touch-manipulation",
-                    isDownloaded
-                      ? "bg-green-900/30 border border-green-500/40 text-green-400 hover:bg-green-900/40"
-                      : "hover:bg-primary/15 hover:border-primary/40 hover:text-primary"
+                    isDownloaded && "bg-green-900/30 border border-green-500/40 text-green-400 hover:bg-green-900/40"
                   )}
                 >
                   {downloading
