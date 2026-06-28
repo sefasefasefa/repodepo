@@ -32,7 +32,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend/artifacts/streamvid && PORT=5000 BASE_PATH=/ ./node_modules/.bin/vite --config vite.config.ts --host 0.0.0.0"
+args = "cd backend && PORT=5000 BASE_PATH=/ pnpm --filter @workspace/streamvid run dev"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -50,10 +50,6 @@ waitForPort = 8000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
 
 [[ports]]
 localPort = 22983
