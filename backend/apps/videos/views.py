@@ -493,15 +493,67 @@ def stream_video(request, video_id):
         resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
         return resp
 
-    # cloud.mail.ru URL'lerini backend üzerinden stream eder
+    # Proxy edilecek URL'yi belirle: önce cloud.mail.ru, sonra herhangi bir HTTP URL
     url = None
     for candidate in [v.hls_url, v.video_url]:
         if candidate and 'cloud.mail.ru/public/' in candidate:
             url = candidate
             break
 
+    # cloud.mail.ru değilse — herhangi bir HTTP(S) video URL'sini proxy et
     if not url:
-        return Response({'error': 'Bu video stream proxy gerektirmiyor'}, status=400)
+        for candidate in [v.hls_url, v.video_url]:
+            if candidate and (candidate.startswith('http://') or candidate.startswith('https://')):
+                url = candidate
+                break
+
+    if not url:
+        return Response({'error': 'Stream edilebilir video kaynağı bulunamadı'}, status=400)
+
+    # Doğrudan HTTP URL proxy'si (cloud.mail.ru olmayan)
+    if url and 'cloud.mail.ru/public/' not in url:
+        import mimetypes
+        import urllib.parse as _up
+        _proxy_headers = {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/120.0.0.0 Safari/537.36'
+            ),
+            'Referer': _up.urlparse(url).scheme + '://' + _up.urlparse(url).netloc + '/',
+            'Accept': 'video/webm,video/mp4,video/*;q=0.9,*/*;q=0.5',
+        }
+        range_hdr = request.META.get('HTTP_RANGE')
+        if range_hdr:
+            _proxy_headers['Range'] = range_hdr
+        try:
+            import requests as _rq
+            upstream = _rq.get(url, headers=_proxy_headers, stream=True, timeout=20, allow_redirects=True)
+            # Redirect'leri takip et — son URL'i al
+            final_url = upstream.url
+            ctype = upstream.headers.get('Content-Type', 'video/mp4')
+            if not ctype.startswith('video/') and not ctype.startswith('application/'):
+                # Çözümlenmemiş redirect / HTML sayfası → URL'i doğrudan tarayıcıya yönlendir
+                from django.http import HttpResponseRedirect
+                return HttpResponseRedirect(final_url)
+
+            def _upstream_gen(r):
+                for chunk in r.iter_content(chunk_size=512 * 1024):
+                    if chunk:
+                        yield chunk
+
+            from django.http import StreamingHttpResponse
+            status_code = upstream.status_code if upstream.status_code in (200, 206) else 200
+            resp = StreamingHttpResponse(_upstream_gen(upstream), status=status_code, content_type=ctype)
+            for hdr in ('Content-Length', 'Content-Range', 'Accept-Ranges'):
+                if hdr in upstream.headers:
+                    resp[hdr] = upstream.headers[hdr]
+            resp['Accept-Ranges'] = 'bytes'
+            resp['Access-Control-Allow-Origin'] = '*'
+            resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
+            return resp
+        except Exception as e:
+            return Response({'error': f'Proxy hatası: {str(e)}'}, status=502)
 
     # Önce cache'deki çözümlenmiş URL'i dene
     resolved = _resolve_cloudmail_url(url)
