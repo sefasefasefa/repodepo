@@ -1,7 +1,7 @@
 """
-Server-side SEO: /videos/<slug> isteklerinde Django index.html'e
-OG meta tagları + JSON-LD VideoObject enjekte eder.
-Tüm istemciler (botlar dahil) zengin meta içerikli sayfa alır.
+Server-side SEO:
+- /videos/<slug>  → OG meta + JSON-LD VideoObject enjekte eder
+- Tüm diğer sayfalar → Admin SEO ayarlarından global meta inject eder
 """
 import os
 import json
@@ -43,40 +43,154 @@ def _seconds_to_iso8601(seconds: int | None) -> str | None:
 
 
 def _inject_into_head(html: str, content: str) -> str:
-    """</head> öncesine içerik enjekte eder."""
     if '</head>' in html:
         return html.replace('</head>', content + '\n</head>', 1)
     return html
 
 
+def _get_seo_settings():
+    try:
+        from apps.admin_panel.models import SeoSettings
+        s, _ = SeoSettings.objects.get_or_create(id=1)
+        return s
+    except Exception:
+        return None
+
+
+def _build_global_meta(seo, base_url: str, canonical: str) -> str:
+    """Admin SEO ayarlarından tüm sayfalar için global meta tag bloğu üretir."""
+    if not seo:
+        return ''
+
+    parts = ['  <!-- Global SEO (Django) -->']
+
+    title = seo.site_title or ''
+    desc = seo.site_description or ''
+    keywords = seo.keywords or ''
+
+    if title:
+        parts.append(f'  <title>{xml_escape(title)}</title>')
+    if desc:
+        parts.append(f'  <meta name="description" content="{xml_escape(desc)}" />')
+    if keywords:
+        parts.append(f'  <meta name="keywords" content="{xml_escape(keywords)}" />')
+    if seo.robots:
+        parts.append(f'  <meta name="robots" content="{xml_escape(seo.robots)}" />')
+    if seo.hreflang:
+        parts.append(f'  <meta http-equiv="content-language" content="{xml_escape(seo.hreflang)}" />')
+
+    parts.append(f'  <link rel="canonical" href="{xml_escape(canonical)}" />')
+
+    # Open Graph
+    og_title = seo.og_title or title
+    og_desc = seo.og_description or desc
+    og_image = seo.og_image or ''
+    if og_title:
+        parts.append(f'  <meta property="og:title" content="{xml_escape(og_title)}" />')
+    if og_desc:
+        parts.append(f'  <meta property="og:description" content="{xml_escape(og_desc)}" />')
+    parts.append(f'  <meta property="og:type" content="{xml_escape(seo.og_type or "website")}" />')
+    parts.append(f'  <meta property="og:url" content="{xml_escape(canonical)}" />')
+    parts.append(f'  <meta property="og:site_name" content="{xml_escape(title)}" />')
+    if og_image:
+        parts.append(f'  <meta property="og:image" content="{xml_escape(og_image)}" />')
+        parts.append(f'  <meta property="og:image:width" content="1200" />')
+        parts.append(f'  <meta property="og:image:height" content="630" />')
+
+    # Twitter Card
+    parts.append(f'  <meta name="twitter:card" content="{xml_escape(seo.twitter_card or "summary_large_image")}" />')
+    if og_title:
+        parts.append(f'  <meta name="twitter:title" content="{xml_escape(og_title)}" />')
+    if og_desc:
+        parts.append(f'  <meta name="twitter:description" content="{xml_escape(og_desc)}" />')
+    if og_image:
+        parts.append(f'  <meta name="twitter:image" content="{xml_escape(og_image)}" />')
+    if seo.twitter_site:
+        parts.append(f'  <meta name="twitter:site" content="{xml_escape(seo.twitter_site)}" />')
+
+    # Arama motoru doğrulama kodları
+    if seo.google_search_console:
+        parts.append(f'  <meta name="google-site-verification" content="{xml_escape(seo.google_search_console)}" />')
+    if seo.bing_verification:
+        parts.append(f'  <meta name="msvalidate.01" content="{xml_escape(seo.bing_verification)}" />')
+    if seo.yandex_verification:
+        parts.append(f'  <meta name="yandex-verification" content="{xml_escape(seo.yandex_verification)}" />')
+
+    # Google Analytics (GA4)
+    if seo.google_analytics_id:
+        ga_id = xml_escape(seo.google_analytics_id)
+        parts.append(f'''  <script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{ga_id}');</script>''')
+
+    # JSON-LD Organization/WebSite
+    if seo.structured_data_enabled:
+        ld = {
+            '@context': 'https://schema.org',
+            '@type': seo.schema_org_type or 'Organization',
+            'name': title,
+            'url': base_url,
+        }
+        if og_image:
+            ld['logo'] = og_image
+        if desc:
+            ld['description'] = desc
+        parts.append(
+            '  <script type="application/ld+json">\n'
+            f'  {json.dumps(ld, ensure_ascii=False, separators=(",", ":"))}\n'
+            '  </script>'
+        )
+
+    return '\n'.join(parts)
+
+
+def global_seo_page(request):
+    """
+    Tüm SPA sayfaları için global SEO meta enjekte edilmiş index.html döner.
+    """
+    html = _read_index_html()
+    if not html:
+        return HttpResponse(
+            '<!DOCTYPE html><html><body><p>Frontend build edilmemiş.</p></body></html>',
+            content_type='text/html', status=503,
+        )
+
+    base = _site_base(request)
+    canonical = base + request.path
+    seo = _get_seo_settings()
+    meta = _build_global_meta(seo, base, canonical)
+    if meta:
+        html = _inject_into_head(html, meta)
+
+    return HttpResponse(html, content_type='text/html; charset=utf-8')
+
+
 def video_seo_page(request, slug):
     """
-    /videos/<slug> için server-side OG + JSON-LD enjeksiyonlu index.html.
-    Video bulunamazsa normal index.html döner (SPA devralır).
+    /videos/<slug> için server-side OG + JSON-LD VideoObject enjeksiyonlu index.html.
     """
     html = _read_index_html()
     if not html:
         return HttpResponse(
             '<!DOCTYPE html><html><body><p>Build edilmemiş frontend.</p></body></html>',
-            content_type='text/html',
-            status=503,
+            content_type='text/html', status=503,
         )
 
     base = _site_base(request)
-    site_name = getattr(settings, 'SITE_NAME', 'Hotpulse')
+    page_url = f'{base}/videos/{slug}'
+    seo = _get_seo_settings()
 
+    # Önce global meta enjekte et
+    global_meta = _build_global_meta(seo, base, page_url)
+    if global_meta:
+        html = _inject_into_head(html, global_meta)
+
+    # Sonra video-spesifik meta ile üzerine yaz
     try:
         from apps.videos.models import Video
-
-        # Slug veya sayısal ID ile bul
         qs = Video.objects.select_related('creator').filter(
-            is_published=True,
-            moderation_status='approved',
+            is_published=True, moderation_status='approved',
         )
-        if str(slug).isdigit():
-            video = qs.get(id=int(slug))
-        else:
-            video = qs.get(slug=slug)
+        video = qs.get(id=int(slug)) if str(slug).isdigit() else qs.get(slug=slug)
 
         title = (video.title or 'Video').strip()
         raw_desc = (video.description or '').replace('\n', ' ').strip()
@@ -86,9 +200,8 @@ def video_seo_page(request, slug):
         upload_date = video.created_at.date().isoformat() if video.created_at else ''
         duration_iso = _seconds_to_iso8601(video.duration)
         view_count = video.view_count or 0
-        page_url = f'{base}/videos/{slug}'
+        site_name = getattr(settings, 'SITE_NAME', seo.site_title if seo else 'Soci')
 
-        # ── Open Graph + Twitter Card meta tagları ────────────────────────
         og_image_tags = ''
         if thumb:
             og_image_tags = f'''
@@ -99,7 +212,7 @@ def video_seo_page(request, slug):
   <meta name="twitter:image" content="{xml_escape(thumb)}" />'''
 
         meta_block = f'''
-  <!-- Server-side SEO (Django) -->
+  <!-- Video SEO (Django) -->
   <title>{xml_escape(title)} — {xml_escape(site_name)}</title>
   <meta name="description" content="{xml_escape(desc)}" />
   <link rel="canonical" href="{xml_escape(page_url)}" />
@@ -112,7 +225,6 @@ def video_seo_page(request, slug):
   <meta name="twitter:title" content="{xml_escape(title)}" />
   <meta name="twitter:description" content="{xml_escape(desc)}" />'''
 
-        # ── JSON-LD VideoObject ────────────────────────────────────────────
         ld: dict = {
             '@context': 'https://schema.org',
             '@type': 'VideoObject',
@@ -138,11 +250,9 @@ def video_seo_page(request, slug):
             f'  {json.dumps(ld, ensure_ascii=False, separators=(",", ":"))}\n'
             '  </script>'
         )
-
         html = _inject_into_head(html, meta_block + '\n' + json_ld_block)
 
     except Exception:
-        # Video bulunamadı veya hata — normal SPA sayfası döner
         pass
 
     return HttpResponse(html, content_type='text/html; charset=utf-8')

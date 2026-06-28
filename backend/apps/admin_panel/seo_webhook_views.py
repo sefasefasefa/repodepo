@@ -28,6 +28,8 @@ def _seo_to_dict(s):
         'canonicalUrl': s.canonical_url,
         'googleAnalyticsId': s.google_analytics_id,
         'googleSearchConsole': s.google_search_console,
+        'bingVerification': s.bing_verification,
+        'yandexVerification': s.yandex_verification,
         'structuredDataEnabled': s.structured_data_enabled,
         'sitemapEnabled': s.sitemap_enabled,
         'hreflang': s.hreflang,
@@ -57,6 +59,8 @@ def seo_settings(request):
         s.canonical_url = d.get('canonicalUrl', s.canonical_url)
         s.google_analytics_id = d.get('googleAnalyticsId', s.google_analytics_id)
         s.google_search_console = d.get('googleSearchConsole', s.google_search_console)
+        s.bing_verification = d.get('bingVerification', s.bing_verification)
+        s.yandex_verification = d.get('yandexVerification', s.yandex_verification)
         if 'structuredDataEnabled' in d:
             s.structured_data_enabled = bool(d['structuredDataEnabled'])
         if 'sitemapEnabled' in d:

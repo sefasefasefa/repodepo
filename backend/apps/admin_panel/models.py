@@ -124,6 +124,8 @@ class SeoSettings(models.Model):
     canonical_url = models.TextField(default='')
     google_analytics_id = models.CharField(max_length=50, default='')
     google_search_console = models.CharField(max_length=200, default='')
+    bing_verification = models.CharField(max_length=200, default='')
+    yandex_verification = models.CharField(max_length=200, default='')
     structured_data_enabled = models.BooleanField(default=True)
     sitemap_enabled = models.BooleanField(default=True)
     hreflang = models.CharField(max_length=10, default='tr')

@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import visitor_views
+from . import seo_ping_views
 
 urlpatterns = [
     path('features', views.list_features),
@@ -12,4 +13,7 @@ urlpatterns = [
     # Geo restriction
     path('geo/check', visitor_views.geo_check),
     path('geo/admin/settings', visitor_views.geo_admin_settings),
+    # SEO: Bing/Yandex sitemap ping
+    path('seo/ping-sitemap', seo_ping_views.ping_sitemap),
+    path('seo/ping-status', seo_ping_views.ping_status),
 ]
