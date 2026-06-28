@@ -1147,92 +1147,158 @@ export default function UploadPage() {
                   {/* Video oluşturulduktan sonra: durum paneli */}
                   {crosspostVideoId ? (
                     <div className="space-y-3">
-                      {/* Özet satırı */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {crosspostPolling ? (
-                            <><Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /><span className="text-xs text-[#888]">Platformlara gönderiliyor…</span></>
-                          ) : (
-                            <><CheckCircle className="h-3.5 w-3.5 text-green-400" /><span className="text-xs text-[#888]">Gönderim tamamlandı</span></>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setLocation(createdVideoPath)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
-                        >
-                          <ExternalLink className="h-3 w-3" /> Videoya Git
-                        </button>
-                      </div>
+                      {/* ── Özet satırı ── */}
+                      {(() => {
+                        const total   = crosspostJobs.length;
+                        const success = crosspostJobs.filter(j => j.status === "success").length;
+                        const failed  = crosspostJobs.filter(j => j.status === "failed").length;
+                        const running = crosspostJobs.filter(j => j.status === "running" || j.status === "pending").length;
+                        const done    = !crosspostPolling && total > 0;
+                        return (
+                          <div className="space-y-2">
+                            {/* Başlık + Videoya Git */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                {crosspostPolling
+                                  ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+                                  : failed > 0 && success === 0
+                                    ? <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                                    : failed > 0
+                                      ? <AlertTriangle className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                                      : <CheckCircle className="h-3.5 w-3.5 text-green-400 shrink-0" />
+                                }
+                                <span className="text-xs font-medium text-[#ccc]">
+                                  {crosspostPolling
+                                    ? "Platformlara gönderiliyor…"
+                                    : failed > 0 && success === 0
+                                      ? "Tüm gönderimler başarısız"
+                                      : failed > 0
+                                        ? "Bazı gönderimler başarısız"
+                                        : "Tüm gönderimler tamamlandı"}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLocation(createdVideoPath)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors shrink-0"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Videoya Git
+                              </button>
+                            </div>
 
-                      {/* Platform kartları */}
+                            {/* Progress bar */}
+                            {total > 0 && (
+                              <div className="w-full h-1.5 rounded-full bg-[#222] overflow-hidden">
+                                <div
+                                  className={cn(
+                                    "h-full rounded-full transition-all duration-500",
+                                    failed > 0 && success === 0 ? "bg-red-500" :
+                                    failed > 0 ? "bg-yellow-500" : "bg-green-500"
+                                  )}
+                                  style={{ width: `${Math.round(((success + failed) / total) * 100)}%` }}
+                                />
+                              </div>
+                            )}
+
+                            {/* Sayaçlar */}
+                            {total > 0 && (
+                              <div className="flex items-center gap-3 text-[11px]">
+                                {success > 0 && <span className="flex items-center gap-1 text-green-400"><CheckCircle className="h-3 w-3" />{success} başarılı</span>}
+                                {failed  > 0 && <span className="flex items-center gap-1 text-red-400"><XCircle className="h-3 w-3" />{failed} hata</span>}
+                                {running > 0 && <span className="flex items-center gap-1 text-[#666]"><Clock className="h-3 w-3" />{running} bekliyor</span>}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* ── Job'lar oluşturuluyor ── */}
                       {crosspostJobs.length === 0 && crosspostPolling && (
-                        <div className="flex items-center gap-2 text-xs text-[#555] py-2">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Job'lar oluşturuluyor…
+                        <div className="flex items-center gap-2 text-xs text-[#555] py-1">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Gönderim görevleri oluşturuluyor…
                         </div>
                       )}
-                      <div className="space-y-1.5">
+
+                      {/* ── Platform kartları ── */}
+                      <div className="space-y-2">
                         {crosspostJobs.map((job: any) => {
                           const isPending = job.status === "pending";
                           const isRunning = job.status === "running";
                           const isSuccess = job.status === "success";
-                          const isFailed = job.status === "failed";
+                          const isFailed  = job.status === "failed";
                           const isSkipped = job.status === "skipped";
+                          const errMsg = job.responseText || job.error || "";
                           return (
                             <div key={job.id} className={cn(
-                              "flex items-start gap-2.5 px-3 py-2.5 rounded-xl border text-xs transition-colors",
-                              isSuccess ? "bg-green-900/10 border-green-800/30" :
-                              isFailed ? "bg-red-900/10 border-red-800/30" :
-                              isRunning ? "bg-blue-900/10 border-blue-800/30" :
-                              isSkipped ? "bg-[#1a1a1a] border-[#222]" :
-                              "bg-[#1a1a1a] border-[#2a2a2a]"
+                              "rounded-xl border overflow-hidden text-xs transition-colors",
+                              isSuccess ? "border-green-800/40" :
+                              isFailed  ? "border-red-700/50" :
+                              isRunning ? "border-blue-800/40" :
+                              "border-[#2a2a2a]"
                             )}>
-                              {/* İkon */}
-                              <div className="shrink-0 mt-0.5">
-                                {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" /> :
-                                 isSuccess ? <CheckCircle className="h-3.5 w-3.5 text-green-400" /> :
-                                 isFailed ? <XCircle className="h-3.5 w-3.5 text-red-400" /> :
-                                 isSkipped ? <RefreshCw className="h-3.5 w-3.5 text-[#444]" /> :
-                                 <Clock className="h-3.5 w-3.5 text-[#555]" />}
-                              </div>
-                              {/* İçerik */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={cn(
-                                    "font-semibold",
-                                    isSuccess ? "text-green-300" :
-                                    isFailed ? "text-red-300" :
-                                    isRunning ? "text-blue-300" :
-                                    "text-[#888]"
-                                  )}>{job.siteName}</span>
-                                  <span className={cn(
-                                    "px-1.5 py-0.5 rounded-full text-[10px] font-medium",
-                                    isSuccess ? "bg-green-900/30 text-green-400" :
-                                    isFailed ? "bg-red-900/30 text-red-400" :
-                                    isRunning ? "bg-blue-900/30 text-blue-400" :
-                                    isSkipped ? "bg-[#222] text-[#444]" :
-                                    "bg-[#222] text-[#555]"
-                                  )}>
-                                    {isSuccess ? "✓ Gönderildi" :
-                                     isFailed ? "✗ Hata" :
-                                     isRunning ? "↑ Yükleniyor" :
-                                     isSkipped ? "— Atlandı" :
-                                     "⏳ Bekliyor"}
-                                  </span>
-                                  {isSuccess && job.remoteUrl && (
-                                    <a href={job.remoteUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 text-primary/70 hover:text-primary transition-colors">
-                                      <ExternalLink className="h-2.5 w-2.5" /> Link
-                                    </a>
-                                  )}
+                              {/* Kart başlığı */}
+                              <div className={cn(
+                                "flex items-center gap-2.5 px-3 py-2.5",
+                                isSuccess ? "bg-green-900/10" :
+                                isFailed  ? "bg-red-900/15" :
+                                isRunning ? "bg-blue-900/10" :
+                                "bg-[#1a1a1a]"
+                              )}>
+                                {/* İkon */}
+                                <div className="shrink-0">
+                                  {isRunning ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> :
+                                   isSuccess  ? <CheckCircle className="h-4 w-4 text-green-400" /> :
+                                   isFailed   ? <XCircle className="h-4 w-4 text-red-400" /> :
+                                   isSkipped  ? <RefreshCw className="h-4 w-4 text-[#444]" /> :
+                                   <Clock className="h-4 w-4 text-[#555]" />}
                                 </div>
-                                {/* Hata mesajı */}
-                                {isFailed && job.responseText && (
-                                  <p className="mt-1 text-red-400/80 text-[11px] leading-snug break-words">
-                                    {job.responseText}
-                                  </p>
+                                {/* Platform adı */}
+                                <span className={cn(
+                                  "font-semibold flex-1",
+                                  isSuccess ? "text-green-300" :
+                                  isFailed  ? "text-red-300" :
+                                  isRunning ? "text-blue-300" :
+                                  "text-[#888]"
+                                )}>{job.siteName}</span>
+                                {/* Durum badge */}
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0",
+                                  isSuccess ? "bg-green-900/40 text-green-400" :
+                                  isFailed  ? "bg-red-900/40 text-red-400" :
+                                  isRunning ? "bg-blue-900/40 text-blue-400" :
+                                  isSkipped ? "bg-[#222] text-[#444]" :
+                                  "bg-[#222] text-[#555]"
+                                )}>
+                                  {isSuccess ? "✓ Gönderildi" :
+                                   isFailed  ? "✗ Başarısız" :
+                                   isRunning ? "⟳ Gönderiliyor" :
+                                   isSkipped ? "— Atlandı" :
+                                   "⏳ Bekliyor"}
+                                </span>
+                                {/* Link */}
+                                {isSuccess && job.remoteUrl && (
+                                  <a href={job.remoteUrl} target="_blank" rel="noreferrer"
+                                    className="flex items-center gap-1 text-primary/70 hover:text-primary transition-colors shrink-0 ml-1">
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
                                 )}
-                                {/* Yeniden dene */}
-                                {isFailed && (
+                                {/* Deneme sayısı */}
+                                {job.attempts > 1 && (
+                                  <span className="text-[10px] text-[#444] shrink-0">{job.attempts}. deneme</span>
+                                )}
+                              </div>
+
+                              {/* ── Hata kutusu ── */}
+                              {isFailed && (
+                                <div className="border-t border-red-900/40 bg-red-950/20 px-3 py-2.5 space-y-2">
+                                  {errMsg ? (
+                                    <div className="flex items-start gap-2">
+                                      <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
+                                      <p className="text-[11px] text-red-300 leading-snug break-all">{errMsg}</p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-[11px] text-red-400/70">Bilinmeyen hata oluştu.</p>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={async () => {
@@ -1245,15 +1311,11 @@ export default function UploadPage() {
                                         startCrosspostPolling(crosspostVideoId!);
                                       } catch {}
                                     }}
-                                    className="mt-1.5 flex items-center gap-1 text-[10px] text-red-400/60 hover:text-red-400 transition-colors"
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 hover:text-red-300 text-[11px] font-semibold transition-colors"
                                   >
-                                    <RefreshCw className="h-2.5 w-2.5" /> Yeniden Dene
+                                    <RefreshCw className="h-3 w-3" /> Yeniden Dene
                                   </button>
-                                )}
-                              </div>
-                              {/* Deneme sayısı */}
-                              {job.attempts > 0 && (
-                                <span className="text-[10px] text-[#444] shrink-0">{job.attempts}. deneme</span>
+                                </div>
                               )}
                             </div>
                           );
