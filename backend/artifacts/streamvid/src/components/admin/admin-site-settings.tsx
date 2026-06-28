@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSiteConfig, NAV_DEFAULTS, SECTION_DEFAULTS, MAINTENANCE_DEFAULTS } from "@/lib/use-site-config";
 import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 import { useListCategories } from "@workspace/api-client-react";
@@ -783,6 +784,7 @@ function WebhookTab() {
 // ── CategoryManagerTab ────────────────────────────────────────────────────────
 function CategoryManagerTab() {
   const { token } = useAuth() as any;
+  const queryClient = useQueryClient();
   const { data: categoriesData, refetch } = useListCategories();
   const categories: any[] = (categoriesData as any)?.categories ?? (Array.isArray(categoriesData) ? categoriesData : []);
 
@@ -793,51 +795,91 @@ function CategoryManagerTab() {
   const [addForm, setAddForm] = useState({ name: "", slug: "", iconUrl: "" });
   const [adding, setAdding] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [catError, setCatError] = useState<string | null>(null);
+
+  const invalidateAndRefetch = async () => {
+    await queryClient.invalidateQueries();
+    await refetch();
+  };
 
   const saveCategory = async (id: number) => {
     setSaving(s => ({ ...s, [id]: true }));
+    setCatError(null);
     try {
-      await fetch(`${API_BASE}/categories/${id}/update`, {
+      const res = await fetch(`${API_BASE}/categories/${id}/update`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(editing[id]),
       });
-      await refetch();
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setCatError(d.error || `Güncelleme başarısız (${res.status})`);
+        return;
+      }
+      await invalidateAndRefetch();
       setEditing(e => { const n = { ...e }; delete n[id]; return n; });
-    } catch {}
-    setSaving(s => ({ ...s, [id]: false }));
+    } catch {
+      setCatError("Sunucuya bağlanılamadı.");
+    } finally {
+      setSaving(s => ({ ...s, [id]: false }));
+    }
   };
 
   const deleteCategory = async (id: number) => {
     setDeleting(d => ({ ...d, [id]: true }));
+    setCatError(null);
     try {
-      await fetch(`${API_BASE}/categories/${id}/delete`, {
+      const res = await fetch(`${API_BASE}/categories/${id}/delete`, {
         method: "DELETE", headers: { Authorization: `Bearer ${token}` },
       });
-      await refetch();
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setCatError(d.error || `Silme başarısız (${res.status})`);
+        return;
+      }
+      await invalidateAndRefetch();
       setConfirmDelete(null);
-    } catch {}
-    setDeleting(d => ({ ...d, [id]: false }));
+    } catch {
+      setCatError("Sunucuya bağlanılamadı.");
+    } finally {
+      setDeleting(d => ({ ...d, [id]: false }));
+    }
   };
 
   const addCategory = async () => {
     if (!addForm.name.trim()) return;
     setAdding(true);
+    setCatError(null);
     try {
-      await fetch(`${API_BASE}/categories/create`, {
+      const res = await fetch(`${API_BASE}/categories/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: addForm.name, slug: addForm.slug || addForm.name.toLowerCase().replace(/\s+/g, '-'), iconUrl: addForm.iconUrl }),
       });
-      await refetch();
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setCatError(d.error || `Ekleme başarısız (${res.status})`);
+        return;
+      }
+      await invalidateAndRefetch();
       setAddForm({ name: "", slug: "", iconUrl: "" });
       setShowAdd(false);
-    } catch {}
-    setAdding(false);
+    } catch {
+      setCatError("Sunucuya bağlanılamadı.");
+    } finally {
+      setAdding(false);
+    }
   };
 
   return (
     <div className="space-y-4">
+      {catError && (
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+          <p className="text-xs text-red-400 flex-1">{catError}</p>
+          <button onClick={() => setCatError(null)} className="text-red-400/60 hover:text-red-400"><X className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <p className="text-xs text-[#555]">{categories.length} kategori</p>
         <button onClick={() => setShowAdd(s => !s)}

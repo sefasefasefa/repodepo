@@ -6,6 +6,7 @@
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import F, Sum, Count, Q
+from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -111,6 +112,7 @@ def create_category(request):
     if not name:
         return Response({'error': 'name gerekli'}, status=400)
     cat = Category.objects.create(name=name, slug=slug, icon_url=d.get('iconUrl'))
+    cache.delete('categories:all')
     return Response({
         'id': cat.id, 'name': cat.name, 'slug': cat.slug,
         'iconUrl': cat.icon_url, 'videoCount': cat.video_count,
@@ -136,6 +138,7 @@ def update_category(request, cat_id):
     if 'iconUrl' in d:
         cat.icon_url = d['iconUrl'] or None
     cat.save()
+    cache.delete('categories:all')
     return Response({
         'id': cat.id, 'name': cat.name, 'slug': cat.slug,
         'iconUrl': cat.icon_url, 'videoCount': cat.video_count,
@@ -152,6 +155,7 @@ def delete_category(request, cat_id):
     except Category.DoesNotExist:
         return Response({'error': 'Category not found'}, status=404)
     cat.delete()
+    cache.delete('categories:all')
     return Response({'message': 'Kategori silindi'})
 
 
