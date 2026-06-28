@@ -160,7 +160,7 @@ export default function CreatorDashboard() {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
   const [activeChart, setActiveChart] = useState<"views" | "earnings" | "followers" | "likes">("views");
-  const [activeTab, setActiveTab] = useState<"analytics" | "tokens" | "requests" | "live" | "scheduled">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "tokens" | "requests" | "live" | "scheduled" | "videos">("analytics");
   const [requests, setRequests] = useState<any[]>([]);
   const [scheduledVideos, setScheduledVideos] = useState<any[]>([]);
   const [scheduledLoading, setScheduledLoading] = useState(false);
@@ -177,6 +177,13 @@ export default function CreatorDashboard() {
   const [withdrawDetails, setWithdrawDetails] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawMsg, setWithdrawMsg] = useState("");
+
+  // ── Videolarım sekmesi state'leri ─────────────────────────────────────────
+  const [myVideos, setMyVideos] = useState<any[]>([]);
+  const [myVideosLoading, setMyVideosLoading] = useState(false);
+  const [editingVideoId, setEditingVideoId] = useState<number | null>(null);
+  const [editUrlForm, setEditUrlForm] = useState({ videoUrl: "", hlsUrl: "" });
+  const [savingUrl, setSavingUrl] = useState(false);
 
   useEffect(() => {
     if (user && user.role !== "creator") {
@@ -278,6 +285,39 @@ export default function CreatorDashboard() {
     finally { setWithdrawing(false); }
   };
 
+  // ── Videolarım fonksiyonları ──────────────────────────────────────────────
+  const loadMyVideos = async () => {
+    setMyVideosLoading(true);
+    try {
+      const data = await apiFetch(`/users/${(user as any)?.id}/videos`);
+      setMyVideos(data.videos || []);
+    } catch {}
+    finally { setMyVideosLoading(false); }
+  };
+
+  const startEditUrls = (video: any) => {
+    setEditingVideoId(video.id);
+    setEditUrlForm({ videoUrl: video.videoUrl || "", hlsUrl: video.hlsUrl || "" });
+  };
+
+  const saveVideoUrls = async (videoId: number) => {
+    setSavingUrl(true);
+    try {
+      await apiFetch(`/videos/${videoId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ videoUrl: editUrlForm.videoUrl || null, hlsUrl: editUrlForm.hlsUrl || null }),
+      });
+      setMyVideos(prev => prev.map(v => v.id === videoId
+        ? { ...v, videoUrl: editUrlForm.videoUrl, hlsUrl: editUrlForm.hlsUrl }
+        : v
+      ));
+      setEditingVideoId(null);
+      toast.success("URL'ler güncellendi");
+    } catch (e: any) {
+      toast.error(e.message || "Kaydedilemedi");
+    } finally { setSavingUrl(false); }
+  };
+
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(refresh, 30_000);
@@ -359,6 +399,9 @@ export default function CreatorDashboard() {
                   {scheduledVideos.length > 0 && (
                     <span className="bg-primary/30 text-primary px-1.5 py-0.5 rounded-full text-[10px] font-bold">{scheduledVideos.length}</span>
                   )}
+                </button>
+                <button onClick={() => { setActiveTab("videos"); loadMyVideos(); }} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all", activeTab === "videos" ? "bg-primary/20 text-primary shadow" : "text-[#555] hover:text-[#aaa]")}>
+                  <Video className="h-3.5 w-3.5" /> Videolarım
                 </button>
               </div>
               {activeTab === "analytics" && (
@@ -707,6 +750,133 @@ export default function CreatorDashboard() {
                   Video Yükle
                 </Button>
               </div>
+            </div>
+          )}
+
+          {/* ── VİDEOLARIM PANELİ ────────────────────────────────────── */}
+          {activeTab === "videos" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-white flex items-center gap-2">
+                  <Video className="h-4 w-4 text-primary" /> Videolarım
+                  <span className="text-xs text-[#555]">({myVideos.length})</span>
+                </h3>
+                <button onClick={loadMyVideos} disabled={myVideosLoading}
+                  className="flex items-center gap-1.5 text-xs text-[#555] hover:text-white transition-colors">
+                  <RefreshCw className={cn("h-3.5 w-3.5", myVideosLoading && "animate-spin")} /> Yenile
+                </button>
+              </div>
+
+              {myVideosLoading ? (
+                <div className="py-12 flex items-center justify-center gap-2 text-[#555]">
+                  <Loader2 className="h-5 w-5 animate-spin" /><span className="text-sm">Yükleniyor...</span>
+                </div>
+              ) : myVideos.length === 0 ? (
+                <div className="py-16 flex flex-col items-center gap-3 text-center">
+                  <Video className="h-10 w-10 text-[#333]" />
+                  <p className="text-[#555] text-sm font-medium">Henüz video yok</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {myVideos.map((video: any) => {
+                    const isEditing = editingVideoId === video.id;
+                    return (
+                      <div key={video.id} className="bg-[#161616] border border-[#222] rounded-2xl overflow-hidden">
+                        {/* Video satırı */}
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          {/* Thumbnail */}
+                          <div className="w-16 h-10 rounded-lg overflow-hidden bg-[#111] shrink-0">
+                            {video.thumbnailUrl
+                              ? <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
+                              : <div className="w-full h-full flex items-center justify-center"><Video className="h-4 w-4 text-[#333]" /></div>
+                            }
+                          </div>
+                          {/* Başlık + URL özet */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">{video.title}</p>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              {video.hlsUrl
+                                ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-400 font-semibold">HLS</span>
+                                : video.videoUrl
+                                  ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-900/30 text-green-400 font-semibold">MP4</span>
+                                  : <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 font-semibold">URL YOK</span>
+                              }
+                              <span className="text-[11px] text-[#555] truncate max-w-[200px]">
+                                {video.hlsUrl || video.videoUrl || "—"}
+                              </span>
+                            </div>
+                          </div>
+                          {/* Düzenle butonu */}
+                          <button
+                            onClick={() => isEditing ? setEditingVideoId(null) : startEditUrls(video)}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0",
+                              isEditing
+                                ? "bg-[#222] text-[#888] hover:text-white"
+                                : "bg-primary/15 text-primary hover:bg-primary/25"
+                            )}
+                          >
+                            {isEditing ? <><X className="h-3.5 w-3.5" /> Kapat</> : <><Pencil className="h-3.5 w-3.5" /> URL Düzenle</>}
+                          </button>
+                        </div>
+
+                        {/* URL düzenleme formu */}
+                        {isEditing && (
+                          <div className="border-t border-[#1e1e1e] px-4 py-4 space-y-3 bg-[#111]">
+                            <div>
+                              <label className="text-[11px] text-[#666] mb-1.5 block font-semibold">
+                                Video URL <span className="text-[#444] font-normal">(MP4 / doğrudan oynatılabilir link)</span>
+                              </label>
+                              <input
+                                value={editUrlForm.videoUrl}
+                                onChange={e => setEditUrlForm(f => ({ ...f, videoUrl: e.target.value }))}
+                                placeholder="https://example.com/video.mp4"
+                                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444] focus:outline-none focus:border-primary"
+                              />
+                              {editUrlForm.videoUrl && (
+                                <p className="text-[10px] text-green-400 mt-1 truncate">✓ {editUrlForm.videoUrl}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="text-[11px] text-[#666] mb-1.5 block font-semibold">
+                                HLS URL <span className="text-[#444] font-normal">(.m3u8 — adaptive streaming için önerilen)</span>
+                              </label>
+                              <input
+                                value={editUrlForm.hlsUrl}
+                                onChange={e => setEditUrlForm(f => ({ ...f, hlsUrl: e.target.value }))}
+                                placeholder="https://example.com/stream.m3u8"
+                                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#444] focus:outline-none focus:border-primary"
+                              />
+                              {editUrlForm.hlsUrl && (
+                                <p className="text-[10px] text-blue-400 mt-1 truncate">✓ {editUrlForm.hlsUrl}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                              <p className="flex-1 text-[10px] text-[#555] self-center">
+                                💡 HLS URL varsa önce o kullanılır; yoksa Video URL devreye girer.
+                              </p>
+                              <button
+                                onClick={() => setEditingVideoId(null)}
+                                className="px-3 py-1.5 rounded-lg bg-[#222] text-[#888] text-xs hover:text-white transition-colors"
+                              >
+                                İptal
+                              </button>
+                              <button
+                                onClick={() => saveVideoUrls(video.id)}
+                                disabled={savingUrl}
+                                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                              >
+                                {savingUrl ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                Kaydet
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
