@@ -30,10 +30,11 @@ sleep 1
 
 # ── 2. Kodu cek (conflict varsa remote ustu al) ────────────────────────
 echo "[2/6] Git pull..."
-# Windows'ta gc otomatik calisirken pack dosyalari kilitlenip
-# "Should I try again?" sorusu cikiyor — gc.auto=0 ile engellenir.
+# Windows'ta antivirus yeni pack dosyalarini kilitler; Git "Should I try again?" sorar.
+# yes y | ... komutu her soruya otomatik "y" gonderir, script takilmaz.
 git config gc.auto 0
-git fetch origin
+git config core.fscache true
+yes y | git fetch origin
 if ! git merge --ff-only origin/main 2>/dev/null; then
     echo "   Yerel degisiklikler var, remote ustu aliniyor..."
     git reset --hard origin/main
