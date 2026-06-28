@@ -116,11 +116,6 @@ def _build_global_meta(seo, base_url: str, canonical: str) -> str:
     if seo.yandex_verification:
         parts.append(f'  <meta name="yandex-verification" content="{xml_escape(seo.yandex_verification)}" />')
 
-    # Google Analytics (GA4)
-    if seo.google_analytics_id:
-        ga_id = xml_escape(seo.google_analytics_id)
-        parts.append(f'''  <script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>
-  <script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{ga_id}');</script>''')
 
     # JSON-LD Organization/WebSite
     if seo.structured_data_enabled:
