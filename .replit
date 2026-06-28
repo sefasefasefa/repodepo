@@ -28,16 +28,12 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && python3 manage.py migrate --noinput && python3 manage.py collectstatic --noinput && gunicorn config.wsgi:application --config gunicorn.conf.py"
+args = "cd backend && python3 manage.py migrate --noinput && python3 manage.py collectstatic --noinput --clear && gunicorn config.wsgi:application --config gunicorn.conf.py"
 waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 22983
-externalPort = 3002
 
 [deployment]
 deploymentTarget = "autoscale"
