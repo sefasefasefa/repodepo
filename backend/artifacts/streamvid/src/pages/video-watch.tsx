@@ -253,7 +253,10 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
             >
               <span>{src.playerName}</span>
               {src.quality && (
-                <span className={cn("text-[9px] font-bold", active === src.id ? "text-black/50" : "text-[#444]")}>{src.quality}</span>
+                <span className={cn(
+                  "text-[9px] font-bold px-[5px] py-px rounded border tracking-wide",
+                  active === src.id ? "border-black/20 text-black/55" : "border-[#333] text-[#555]"
+                )}>{src.quality}</span>
               )}
             </button>
           ))}
@@ -686,6 +689,11 @@ export default function VideoWatch() {
             {video.isPremium && <span className="shrink-0 flex items-center gap-1 bg-primary/15 border border-primary/30 text-primary text-xs font-bold px-2.5 py-1 rounded-full mt-1"><Crown className="h-3 w-3" /> Premium</span>}
             {video.isPPV && <span className="shrink-0 flex items-center gap-1 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 text-xs font-bold px-2.5 py-1 rounded-full mt-1">PPV ${Number(video.ppvPrice || 0).toFixed(2)}</span>}
           </div>
+          <p className="text-sm text-[#666]">
+            {(video.viewCount || 0).toLocaleString("tr-TR")} izlenme
+            {" · "}
+            {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
+          </p>
           {/* Creator row */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   Play, Pause, SkipBack, SkipForward,
   Volume2, VolumeX, Maximize2, Minimize2,
-  Captions, Loader2, AlertCircle, RotateCcw, Wifi, WifiOff,
+  Captions, Loader2, AlertCircle, RotateCcw, WifiOff, Settings,
 } from "lucide-react";
 
 interface HlsLevel { height: number; bitrate: number; }
@@ -74,6 +74,8 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
     const [bandwidth, setBandwidth]       = useState(0);          // bps
     const [slowConn, setSlowConn]         = useState(false);
     const [bufferPct, setBufferPct]       = useState(0);
+    const [showSettings, setShowSettings] = useState(false);
+    const [playbackRate, setPlaybackRate] = useState(1);
 
     /* ── Kontrol gizleme zamanlayıcısı ─────────────────────────── */
     const resetHideTimer = useCallback(() => {
@@ -682,6 +684,43 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
               <button className="text-white/50 hover:text-white transition-colors p-1" title="Altyazı" onClick={() => {}}>
                 <Captions className="h-4 w-4" />
               </button>
+
+              {/* Ayarlar — oynatma hızı */}
+              <div className="relative">
+                <button
+                  onClick={() => { setShowSettings(v => !v); setShowQuality(false); setShowVolume(false); }}
+                  className={cn(
+                    "transition-colors p-1",
+                    showSettings ? "text-white" : "text-white/50 hover:text-white"
+                  )}
+                  title="Ayarlar"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+                {showSettings && (
+                  <div className="absolute bottom-8 right-0 bg-[#111] border border-white/10 rounded-xl overflow-hidden shadow-2xl min-w-[140px]">
+                    <div className="px-3 py-1.5 text-[10px] text-white/40 font-semibold border-b border-white/5 tracking-wider">HIZ</div>
+                    {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map(rate => (
+                      <button
+                        key={rate}
+                        onClick={() => {
+                          const vid = videoRef.current;
+                          if (vid) vid.playbackRate = rate;
+                          setPlaybackRate(rate);
+                          setShowSettings(false);
+                        }}
+                        className={cn(
+                          "w-full px-3 py-2 text-left text-xs hover:bg-white/5 transition-colors flex items-center justify-between",
+                          playbackRate === rate ? "text-white font-semibold" : "text-[#aaa]"
+                        )}
+                      >
+                        <span>{rate === 1 ? "Normal" : `${rate}x`}</span>
+                        {playbackRate === rate && <span className="w-1.5 h-1.5 rounded-full bg-green-400" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Tam ekran */}
               <button onClick={toggleFullscreen} className="text-white hover:text-white/80 transition-colors p-1 shrink-0" title="Tam ekran (F)">
