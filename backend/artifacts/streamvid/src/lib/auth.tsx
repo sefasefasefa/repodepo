@@ -29,8 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useGetMe({
     query: {
       enabled: !!token,
-      retry: 2,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+      retry: 1,
+      retryDelay: 2000,
       staleTime: 3 * 60 * 1000,
       gcTime: 10 * 60 * 1000,
     },
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       anyError?.response?.status ??
       anyError?.status ??
       anyError?.statusCode;
-    if (status === 401) {
+    if (status === 401 || status === 403) {
       setToken(null);
     }
   }, [userError]);
@@ -91,14 +91,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isAuthenticated = !!token && (isUserLoading || !!user);
+  const isAuthenticated = !!token;
+  const isLoading = !!token && isUserLoading;
 
   return (
     <AuthContext.Provider
       value={{
         user: user || null,
         token,
-        isLoading: isUserLoading,
+        isLoading,
         login: handleLogin,
         register: handleRegister,
         logout: handleLogout,
