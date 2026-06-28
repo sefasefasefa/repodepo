@@ -442,14 +442,14 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
 
 export default function VideoWatch() {
   const params = useParams();
-  const videoId = parseInt(params.id || "0");
+  const videoId = (params.id || "") as string;
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: video, isLoading, error: videoError } = useGetVideo(videoId, { query: { enabled: !!videoId, queryKey: getGetVideoQueryKey(videoId), retry: 2 } });
-  const { data: relatedVideos } = useGetRelatedVideos(videoId, { queryKey: ["relatedVideos", videoId] as any, enabled: !!videoId } as any);
-  const { data: comments } = useListComments(videoId, { queryKey: getListCommentsQueryKey(videoId) as any, enabled: !!videoId } as any);
+  const { data: video, isLoading, error: videoError } = useGetVideo(videoId as any, { query: { enabled: !!videoId, queryKey: getGetVideoQueryKey(videoId as any), retry: 2 } });
+  const { data: relatedVideos } = useGetRelatedVideos(videoId as any, { queryKey: ["relatedVideos", videoId] as any, enabled: !!videoId } as any);
+  const { data: comments } = useListComments(videoId as any, { queryKey: getListCommentsQueryKey(videoId as any) as any, enabled: !!videoId } as any);
 
   const [players, setPlayers] = useState<PlayerSource[]>([]);
   const [descExpanded, setDescExpanded] = useState(false);

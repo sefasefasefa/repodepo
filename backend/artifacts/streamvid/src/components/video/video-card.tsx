@@ -27,7 +27,7 @@ export function VideoCard({ video }: VideoCardProps) {
 
   return (
     <div className="flex flex-col gap-2 group">
-      <Link href={`/videos/${video.id}`}>
+      <Link href={`/videos/${(video as any).uuid || video.id}`}>
         <div className="relative aspect-video rounded-xl overflow-hidden bg-muted cursor-pointer touch-manipulation">
           {video.thumbnailUrl ? (
             <img
@@ -63,7 +63,7 @@ export function VideoCard({ video }: VideoCardProps) {
           </Avatar>
         </Link>
         <div className="flex flex-col overflow-hidden min-w-0">
-          <Link href={`/videos/${video.id}`}>
+          <Link href={`/videos/${(video as any).uuid || video.id}`}>
             <h3 className="font-semibold text-xs sm:text-sm leading-snug line-clamp-2 hover:text-primary transition-colors cursor-pointer touch-manipulation" title={video.title}>
               {video.title}
             </h3>

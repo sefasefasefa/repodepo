@@ -276,7 +276,7 @@ export default function UploadPage() {
       };
       const res = await createVideoMutation.mutateAsync({ data: payload });
       if (res) {
-        setLocation(`/videos/${res.id}`);
+        setLocation(`/videos/${(res as any).uuid || res.id}`);
       }
     } catch (e) {
       console.error(e);

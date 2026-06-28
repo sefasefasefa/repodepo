@@ -228,7 +228,7 @@ def chunk_complete(request):
     except Exception:
         pass
 
-    return Response({'videoId': video.id, 'url': local_url, 'crosspostJobs': dispatched_jobs}, status=201)
+    return Response({'videoId': str(video.uuid), 'url': local_url, 'crosspostJobs': dispatched_jobs}, status=201)
 
 
 @api_view(['GET'])
@@ -309,7 +309,10 @@ def upload_thumbnail(request):
 
     try:
         from .models import Video
-        video = Video.objects.get(id=int(video_id), creator=user)
+        from .utils import resolve_video
+        video = resolve_video(video_id)
+        if not video or video.creator_id != user.id:
+            raise ValueError('Video bulunamadı veya yetki yok')
         video.thumbnail_url = thumb_url
         video.save(update_fields=['thumbnail_url'])
     except Exception as e:

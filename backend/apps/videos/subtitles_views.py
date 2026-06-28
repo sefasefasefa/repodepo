@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from .models import Video, VideoSubtitle
+from .utils import resolve_video as _resolve_video
 
 
 SUPPORTED_LANGUAGES = {
@@ -21,8 +22,11 @@ def _can_edit(user, video):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_subtitle_lang(request, video_id, lang):
+    video = _resolve_video(video_id)
+    if not video:
+        return Response({'error': 'Altyazı bulunamadı'}, status=404)
     try:
-        sub = VideoSubtitle.objects.get(video_id=video_id, language=lang)
+        sub = VideoSubtitle.objects.get(video_id=video.id, language=lang)
     except VideoSubtitle.DoesNotExist:
         return Response({'error': 'Altyazı bulunamadı'}, status=404)
     return HttpResponse(sub.vtt_content, content_type='text/vtt; charset=utf-8')
@@ -31,9 +35,8 @@ def get_subtitle_lang(request, video_id, lang):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_transcript(request, video_id):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if not _can_edit(request.user, video):
         return Response({'error': 'Yetkisiz'}, status=403)
@@ -44,7 +47,7 @@ def upload_transcript(request, video_id):
     if 'WEBVTT' not in content:
         return Response({'error': 'Geçersiz VTT formatı'}, status=400)
     sub, _ = VideoSubtitle.objects.update_or_create(
-        video_id=video_id, language=lang,
+        video_id=video.id, language=lang,
         defaults={
             'label': lang_name or SUPPORTED_LANGUAGES.get(lang, lang),
             'vtt_content': content,
@@ -57,23 +60,21 @@ def upload_transcript(request, video_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def approve_subtitle(request, video_id, lang):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if not _can_edit(request.user, video):
         return Response({'error': 'Yetkisiz'}, status=403)
     try:
-        sub = VideoSubtitle.objects.get(video_id=video_id, language=lang)
+        sub = VideoSubtitle.objects.get(video_id=video.id, language=lang)
     except VideoSubtitle.DoesNotExist:
         return Response({'error': 'Altyazı bulunamadı'}, status=404)
     return Response({'id': sub.id, 'status': 'ready'})
 
 
 def _ai_stub(request, video_id, action='generate'):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if not _can_edit(request.user, video):
         return Response({'error': 'Yetkisiz'}, status=403)
@@ -81,7 +82,7 @@ def _ai_stub(request, video_id, action='generate'):
     lang = d.get('language', 'tr')
     placeholder = 'WEBVTT\n\n00:00:00.000 --> 00:00:05.000\n[AI altyazı üretimi kuyruğa alındı]\n'
     sub, _ = VideoSubtitle.objects.update_or_create(
-        video_id=video_id, language=lang,
+        video_id=video.id, language=lang,
         defaults={
             'label': SUPPORTED_LANGUAGES.get(lang, lang),
             'vtt_content': placeholder,
@@ -116,9 +117,8 @@ def auto_subtitle(request, video_id):
 @permission_classes([IsAuthenticated])
 def ai_write_transcript(request, video_id):
     """AI writing assistant: takes notes/prompt and returns structured transcript text."""
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if not _can_edit(request.user, video):
         return Response({'error': 'Yetkisiz'}, status=403)
@@ -154,13 +154,12 @@ def ai_write_transcript(request, video_id):
 @permission_classes([IsAuthenticated])
 def list_pending_subtitles(request, video_id):
     """List community-submitted (pending) subtitle tracks for creator review."""
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if not _can_edit(request.user, video):
         return Response({'error': 'Yetkisiz'}, status=403)
-    subs = VideoSubtitle.objects.filter(video_id=video_id, moderation_status='pending')
+    subs = VideoSubtitle.objects.filter(video_id=video.id, moderation_status='pending')
     return Response({'pending': [
         {'language': s.language, 'langName': s.label, 'preview': s.vtt_content[:200]} for s in subs
     ]})
@@ -170,9 +169,8 @@ def list_pending_subtitles(request, video_id):
 @permission_classes([IsAuthenticated])
 def community_submit(request, video_id):
     """Regular users submit a transcript suggestion for creator approval."""
-    try:
-        Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     d = request.data or {}
     lang = d.get('language', 'tr')
@@ -182,7 +180,7 @@ def community_submit(request, video_id):
     if 'WEBVTT' not in content:
         content = 'WEBVTT\n\n' + content
     sub, created = VideoSubtitle.objects.get_or_create(
-        video_id=video_id, language=f'{lang}_pending_{request.user.id}',
+        video_id=video.id, language=f'{lang}_pending_{request.user.id}',
         defaults={
             'label': f'{SUPPORTED_LANGUAGES.get(lang, lang)} (Topluluk)',
             'vtt_content': content,
@@ -200,11 +198,10 @@ def community_submit(request, video_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_subtitle(request, video_id, lang):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if not _can_edit(request.user, video):
         return Response({'error': 'Yetkisiz'}, status=403)
-    VideoSubtitle.objects.filter(video_id=video_id, language=lang).delete()
+    VideoSubtitle.objects.filter(video_id=video.id, language=lang).delete()
     return Response({'ok': True})

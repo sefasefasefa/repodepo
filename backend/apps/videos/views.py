@@ -16,6 +16,18 @@ from .models import (
 from apps.accounts.views import format_user as fmt_user
 
 
+def _resolve_video(video_id, qs=None):
+    """UUID string veya eski integer pk ile Video döner, bulunamazsa None."""
+    base = (qs or Video.objects).select_related('creator', 'category')
+    try:
+        return base.get(uuid=video_id)
+    except (Video.DoesNotExist, Exception):
+        try:
+            return base.get(pk=int(video_id))
+        except (Video.DoesNotExist, ValueError, TypeError):
+            return None
+
+
 def enrich_video(v, user=None):
     liked = False
     bookmarked = False
@@ -28,6 +40,7 @@ def enrich_video(v, user=None):
 
     return {
         'id': v.id,
+        'uuid': str(v.uuid),
         'title': v.title,
         'description': v.description,
         'thumbnailUrl': v.thumbnail_url,
@@ -73,6 +86,7 @@ def enrich_videos_bulk(videos, user=None):
         creator = v.creator
         result.append({
             'id': v.id,
+            'uuid': str(v.uuid),
             'title': v.title,
             'description': v.description,
             'thumbnailUrl': v.thumbnail_url,
@@ -224,9 +238,8 @@ def get_video(request, video_id):
     if request.method in ('PATCH', 'PUT'):
         if not request.user.is_authenticated:
             return Response({'error': 'Authentication required'}, status=401)
-        try:
-            video = Video.objects.get(id=video_id)
-        except Video.DoesNotExist:
+        video = _resolve_video(video_id)
+        if not video:
             return Response({'error': 'Video not found'}, status=404)
         if video.creator != request.user and request.user.role != 'admin':
             return Response({'error': 'Forbidden'}, status=403)
@@ -250,9 +263,8 @@ def get_video(request, video_id):
                 setattr(video, field, value)
         video.save()
         return Response(enrich_video(video, request.user))
-    try:
-        v = Video.objects.select_related('creator', 'category').get(id=video_id)
-    except Video.DoesNotExist:
+    v = _resolve_video(video_id)
+    if not v:
         return Response({'error': 'Video not found'}, status=404)
     return Response(enrich_video(v, request.user))
 
@@ -327,9 +339,8 @@ def create_video(request):
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def update_video(request, video_id):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video not found'}, status=404)
     if video.creator != request.user and request.user.role != 'admin':
         return Response({'error': 'Forbidden'}, status=403)
@@ -397,9 +408,8 @@ def list_scheduled_videos(request):
 @permission_classes([IsAuthenticated])
 def cancel_schedule(request, video_id):
     """Zamanlanmış yayını iptal et — taslak olarak tut."""
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if video.creator != request.user and request.user.role != 'admin':
         return Response({'error': 'Yetkisiz'}, status=403)
@@ -413,9 +423,8 @@ def cancel_schedule(request, video_id):
 @permission_classes([IsAuthenticated])
 def reschedule_video(request, video_id):
     """Zamanlanmış videonun yayın tarihini güncelle."""
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if video.creator != request.user and request.user.role != 'admin':
         return Response({'error': 'Yetkisiz'}, status=403)
@@ -441,9 +450,8 @@ def reschedule_video(request, video_id):
 @permission_classes([IsAuthenticated])
 def publish_now(request, video_id):
     """Zamanlanmış videoyu hemen yayınla."""
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if video.creator != request.user and request.user.role != 'admin':
         return Response({'error': 'Yetkisiz'}, status=403)
@@ -456,9 +464,8 @@ def publish_now(request, video_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_video(request, video_id):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video not found'}, status=404)
     if video.creator != request.user and request.user.role != 'admin':
         return Response({'error': 'Forbidden'}, status=403)
@@ -469,13 +476,12 @@ def delete_video(request, video_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def like_video(request, video_id):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video not found'}, status=404)
     like, created = VideoLike.objects.get_or_create(user=request.user, video=video)
     if created:
-        Video.objects.filter(id=video_id).update(like_count=F('like_count') + 1)
+        Video.objects.filter(id=video.id).update(like_count=F('like_count') + 1)
         try:
             from apps.ai.views import record_event
             record_event('engagement', video=video, user=request.user, payload={'kind': 'likes'})
@@ -487,18 +493,20 @@ def like_video(request, video_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def unlike_video(request, video_id):
-    deleted, _ = VideoLike.objects.filter(user=request.user, video_id=video_id).delete()
+    video = _resolve_video(video_id)
+    if not video:
+        return Response({'isLiked': False})
+    deleted, _ = VideoLike.objects.filter(user=request.user, video=video).delete()
     if deleted:
-        Video.objects.filter(id=video_id).update(like_count=F('like_count') - 1)
+        Video.objects.filter(id=video.id).update(like_count=F('like_count') - 1)
     return Response({'isLiked': False})
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bookmark_video(request, video_id):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video not found'}, status=404)
     VideoBookmark.objects.get_or_create(user=request.user, video=video)
     return Response({'isBookmarked': True})
@@ -507,18 +515,19 @@ def bookmark_video(request, video_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def unbookmark_video(request, video_id):
-    VideoBookmark.objects.filter(user=request.user, video_id=video_id).delete()
+    video = _resolve_video(video_id)
+    if video:
+        VideoBookmark.objects.filter(user=request.user, video=video).delete()
     return Response({'isBookmarked': False})
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def record_view(request, video_id):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video not found'}, status=404)
-    Video.objects.filter(id=video_id).update(view_count=F('view_count') + 1)
+    Video.objects.filter(id=video.id).update(view_count=F('view_count') + 1)
     watch_time = request.data.get('watchTime', request.data.get('watch_time', 0))
     completion_rate = request.data.get('completionRate', request.data.get('completion_rate', 0))
     if request.user.is_authenticated:
@@ -619,7 +628,10 @@ def list_comments(request, video_id):
     page = int(request.query_params.get('page', 1))
     limit = min(int(request.query_params.get('limit', 20)), 50)
     offset = (page - 1) * limit
-    comments = Comment.objects.filter(video_id=video_id, parent=None).select_related('author').order_by('-created_at')
+    video = _resolve_video(video_id)
+    if not video:
+        return Response({'error': 'Video not found'}, status=404)
+    comments = Comment.objects.filter(video_id=video.id, parent=None).select_related('author').order_by('-created_at')
     total = comments.count()
     items = list(comments[offset:offset + limit])
     return Response({
@@ -649,9 +661,8 @@ def _fmt_comment(c, user=None):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_comment(request, video_id):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video not found'}, status=404)
     content = request.data.get('content', '').strip()
     if not content:
@@ -667,7 +678,7 @@ def create_comment(request, video_id):
     comment = Comment.objects.create(
         content=content, video=video, author=request.user, parent=parent
     )
-    Video.objects.filter(id=video_id).update(comment_count=F('comment_count') + 1)
+    Video.objects.filter(id=video.id).update(comment_count=F('comment_count') + 1)
     return Response(_fmt_comment(comment), status=201)
 
 
@@ -932,21 +943,23 @@ def get_custom_page(request, slug):
 @permission_classes([AllowAny])
 def get_related_videos(request, video_id):
     limit = min(int(request.query_params.get('limit', 10)), 20)
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'videos': []})
     qs = Video.objects.filter(
         Q(category=video.category) | Q(creator=video.creator),
         is_published=True
-    ).exclude(id=video_id).select_related('creator', 'category').order_by('-view_count')[:limit]
+    ).exclude(id=video.id).select_related('creator', 'category').order_by('-view_count')[:limit]
     return Response({'videos': enrich_videos_bulk(list(qs), request.user)})
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_video_subtitles(request, video_id):
-    subs = VideoSubtitle.objects.filter(video_id=video_id)
+    video = _resolve_video(video_id)
+    if not video:
+        return Response({'subtitles': []})
+    subs = VideoSubtitle.objects.filter(video_id=video.id)
     return Response({'subtitles': [{
         'id': s.id, 'language': s.language, 'label': s.label, 'isAutoGenerated': s.is_auto_generated
     } for s in subs]})
@@ -955,9 +968,8 @@ def get_video_subtitles(request, video_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_subtitle(request, video_id):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video not found'}, status=404)
     if video.creator != request.user and request.user.role != 'admin':
         return Response({'error': 'Forbidden'}, status=403)
@@ -1131,9 +1143,8 @@ def distribute_video(request, video_id):
     """Manually trigger distribution of a video to all active providers."""
     if request.user.role not in ('admin', 'moderator', 'creator'):
         return Response({'error': 'Forbidden'}, status=403)
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video not found'}, status=404)
     if video.creator != request.user and request.user.role not in ('admin', 'moderator'):
         return Response({'error': 'Forbidden'}, status=403)
@@ -1142,5 +1153,5 @@ def distribute_video(request, video_id):
     active = IntegrationConfig.objects.filter(is_active=True, auto_upload=True)
     count = active.count()
 
-    _distribute_video_background(video_id)
+    _distribute_video_background(video.id)
     return Response({'message': f'{count} sağlayıcıya dağıtım başlatıldı', 'count': count})

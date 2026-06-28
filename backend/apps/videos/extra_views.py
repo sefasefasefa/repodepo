@@ -4,6 +4,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Video, VideoPlayer, AutoCategoryRule, Category
+from .utils import resolve_video as _resolve_video
 
 
 def _score_text(text, keywords):
@@ -133,7 +134,7 @@ def _can_edit_video(user, video):
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def video_players(request, video_id):
-    video = Video.objects.filter(id=video_id).first()
+    video = _resolve_video(video_id)
     if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if request.method == 'GET':
@@ -168,7 +169,7 @@ def video_players(request, video_id):
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def video_player_detail(request, video_id, player_id):
-    video = Video.objects.filter(id=video_id).first()
+    video = _resolve_video(video_id)
     if not video or not _can_edit_video(request.user, video):
         return Response({'error': 'Forbidden'}, status=403)
     p = VideoPlayer.objects.filter(id=player_id, video=video).first()

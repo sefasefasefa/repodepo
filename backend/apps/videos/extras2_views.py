@@ -15,6 +15,7 @@ from .models import (
     Video, VideoReport, WatchHistory, Category, Ad, WatermarkSettings,
     VideoLike,
 )
+from .utils import resolve_video as _resolve_video
 from apps.social.models import Follow
 
 
@@ -30,8 +31,11 @@ def report_video(request, video_id):
     reason = d.get('reason')
     if not reason:
         return Response({'error': 'Şikayet sebebi zorunludur'}, status=400)
+    video = _resolve_video(video_id)
+    if not video:
+        return Response({'error': 'Video bulunamadı'}, status=404)
     VideoReport.objects.create(
-        video_id=video_id, reporter=request.user,
+        video=video, reporter=request.user,
         reason=reason, description=d.get('description', ''),
     )
     return Response({'message': 'Report submitted'})
@@ -85,9 +89,8 @@ def watermark_config(request):
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def video_watermark(request, video_id):
-    try:
-        video = Video.objects.get(id=video_id)
-    except Video.DoesNotExist:
+    video = _resolve_video(video_id)
+    if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     if video.creator_id != request.user.id and not _is_admin(request.user):
         return Response({'error': 'Bu video size ait değil'}, status=403)

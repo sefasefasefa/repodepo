@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from .models import Video, VideoDownload
 from apps.subscriptions.models import UserSubscription
+from .utils import resolve_video as _resolve_video
 
 
 def _has_premium(user):
@@ -44,7 +45,7 @@ def list_downloads(request):
 def add_download(request, video_id):
     if not _has_premium(request.user):
         return Response({'error': 'Bu özellik yalnızca Premium üyelere açıktır'}, status=403)
-    video = Video.objects.filter(id=video_id).first()
+    video = _resolve_video(video_id)
     if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
     quality = request.data.get('quality') or '720p'
@@ -58,7 +59,9 @@ def add_download(request, video_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def remove_download(request, video_id):
-    VideoDownload.objects.filter(user=request.user, video_id=video_id).delete()
+    video = _resolve_video(video_id)
+    if video:
+        VideoDownload.objects.filter(user=request.user, video=video).delete()
     return Response({'ok': True})
 
 
@@ -68,5 +71,6 @@ def check_download(request, video_id):
     if not request.user.is_authenticated:
         return Response({'downloaded': False, 'isPremium': False})
     is_prem = _has_premium(request.user)
-    downloaded = VideoDownload.objects.filter(user=request.user, video_id=video_id).exists()
+    video = _resolve_video(video_id)
+    downloaded = VideoDownload.objects.filter(user=request.user, video=video).exists() if video else False
     return Response({'downloaded': downloaded, 'isPremium': is_prem})

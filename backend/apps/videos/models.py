@@ -1,3 +1,4 @@
+import uuid as _uuid_module
 from django.db import models
 from django.conf import settings
 
@@ -23,6 +24,7 @@ class Video(models.Model):
         ('live_replay', 'Live Replay'),
     ]
 
+    uuid = models.UUIDField(default=_uuid_module.uuid4, unique=True, editable=False, db_index=True)
     title = models.CharField(max_length=500)
     description = models.TextField(null=True, blank=True)
     thumbnail_url = models.TextField(null=True, blank=True)
