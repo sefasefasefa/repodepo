@@ -550,13 +550,11 @@ _API_KEY_HOSTS = {
     "filemoon":     "https://filemoonapi.com/api/upload/server",
     "streamwish":   "https://api.streamwish.com/api/upload/server",
     "voe":          "https://voe.sx/api/upload/server",
-    "upstream":     "https://upstream.to/api/upload/server",
     "vidhide":      "https://vidhide.com/api/upload/server",
     "luluvdo":      "https://luluvdo.com/api/upload/server",
     "uqload":       "https://uqload.io/api/upload/server",
     "streamhide":   "https://streamhide.com/api/upload/server",
     "supervideo":   "https://supervideo.tv/api/upload/server",
-    "dropload":     "https://dropload.io/api/upload/server",
     "embedsito":    "https://embedsito.com/api/upload/server",
     "vidlox":       "https://vidlox.me/api/upload/server",
     "streamlare":   "https://streamlare.com/api/upload/server",
@@ -653,6 +651,159 @@ def _make_api_key_adapter(provider_key: str):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# DROPLOAD — özel adaptör (SSL sertifika uyuşmazlığı bypass)
+# upl01.dropcdn.io geçersiz sertifika kullandığından verify=False gerekiyor.
+# ─────────────────────────────────────────────────────────────────────────────
+def _dropload(job, site, video, r):
+    key = site.api_key or site.password
+    if not key:
+        return _fail(job, "Dropload: API anahtarı gerekli")
+
+    path = _local_path(video)
+    tmp = None
+
+    if not path or not os.path.exists(path):
+        video_src = video.video_url or video.hls_url or ""
+        if not video_src:
+            return _fail(job, "Dropload: Dosya bulunamadı ve video URL yok")
+        path, err = _fetch_to_tempfile(video_src, r)
+        if not path:
+            return _fail(job, f"Dropload: Video indirilemedi — {err}")
+        tmp = path
+
+    try:
+        # 1. Upload sunucu URL'sini al
+        resp = r.get(
+            "https://dropload.io/api/upload/server",
+            params={"key": key},
+            headers={"User-Agent": UA},
+            timeout=30,
+        )
+        d = resp.json()
+        server_url = d.get("result") if isinstance(d.get("result"), str) else ""
+        if not server_url:
+            return _fail(job, f"Dropload upload server alınamadı: {resp.text[:300]}")
+
+        # 2. Dosyayı yükle — SSL verify=False (dropcdn.io sertifika uyuşmazlığı)
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        with open(path, "rb") as f:
+            up = r.post(
+                server_url,
+                files={"file": (os.path.basename(path), f, "video/mp4")},
+                headers={"User-Agent": UA},
+                timeout=3600,
+                verify=False,
+            )
+        job.response_code = up.status_code
+        if 200 <= up.status_code < 300:
+            try:
+                ud = up.json()
+                remote = _extract_url(ud)
+            except Exception:
+                remote = ""
+            _success(job, remote, up.text)
+        else:
+            _fail(job, f"Dropload yükleme hatası: {up.text[:500]}")
+    except Exception as exc:
+        _fail(job, f"Dropload: {type(exc).__name__}: {exc}")
+    finally:
+        if tmp:
+            try: os.unlink(tmp)
+            except: pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UPSTREAM — özel adaptör (bağlantı sıfırlama ve header sorunları)
+# upstream.to bazen bağlantıyı koparıyor; session + browser header + retry ile çözülür.
+# ─────────────────────────────────────────────────────────────────────────────
+def _upstream(job, site, video, r):
+    key = site.api_key or site.password
+    if not key:
+        return _fail(job, "Upstream: API anahtarı gerekli")
+
+    path = _local_path(video)
+    tmp = None
+
+    if not path or not os.path.exists(path):
+        video_src = video.video_url or video.hls_url or ""
+        if not video_src:
+            return _fail(job, "Upstream: Dosya bulunamadı ve video URL yok")
+        path, err = _fetch_to_tempfile(video_src, r)
+        if not path:
+            return _fail(job, f"Upstream: Video indirilemedi — {err}")
+        tmp = path
+
+    # Browser benzeri header'lar — upstream.to bağlantıyı koparmaması için
+    hdrs = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Origin": "https://upstream.to",
+        "Referer": "https://upstream.to/",
+    }
+
+    try:
+        # 1. Upload server URL al — retry ile
+        server_url = None
+        last_err = ""
+        for attempt in range(3):
+            try:
+                resp = r.get(
+                    "https://upstream.to/api/upload/server",
+                    params={"key": key},
+                    headers=hdrs,
+                    timeout=30,
+                )
+                d = resp.json()
+                server_url = d.get("result") if isinstance(d.get("result"), str) else ""
+                if server_url:
+                    break
+                last_err = f"HTTP {resp.status_code}: {resp.text[:200]}"
+            except Exception as exc:
+                last_err = f"{type(exc).__name__}: {exc}"
+                import time; time.sleep(2 * (attempt + 1))
+
+        if not server_url:
+            return _fail(job, f"Upstream upload server alınamadı (3 deneme): {last_err}")
+
+        # 2. Dosyayı yükle — retry ile
+        last_err = ""
+        for attempt in range(2):
+            try:
+                with open(path, "rb") as f:
+                    up = r.post(
+                        server_url,
+                        files={"file": (os.path.basename(path), f, "video/mp4")},
+                        headers=hdrs,
+                        timeout=3600,
+                    )
+                job.response_code = up.status_code
+                if 200 <= up.status_code < 300:
+                    try:
+                        ud = up.json()
+                        remote = _extract_url(ud)
+                    except Exception:
+                        remote = ""
+                    return _success(job, remote, up.text)
+                last_err = f"HTTP {up.status_code}: {up.text[:300]}"
+                break  # HTTP hata = tekrar deneme anlamsız
+            except Exception as exc:
+                last_err = f"{type(exc).__name__}: {exc}"
+                import time; time.sleep(3)
+
+        _fail(job, f"Upstream yükleme hatası: {last_err}")
+    except Exception as exc:
+        _fail(job, f"Upstream: {type(exc).__name__}: {exc}")
+    finally:
+        if tmp:
+            try: os.unlink(tmp)
+            except: pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Adapter tablosu
 # ─────────────────────────────────────────────────────────────────────────────
 _ADAPTERS = {
@@ -660,6 +811,8 @@ _ADAPTERS = {
     "doodstream": _doodstream,
     "mixdrop":    _mixdrop,
     "vidoza":     _vidoza,
+    "dropload":   _dropload,
+    "upstream":   _upstream,
     **{k: _make_api_key_adapter(k) for k in _API_KEY_HOSTS},
 }
 
