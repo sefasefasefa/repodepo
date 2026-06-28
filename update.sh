@@ -36,22 +36,30 @@ git config maintenance.auto false
 git config core.fscache true
 
 if [ "$OS" = "windows" ]; then
-    # Windows'ta antivirus pack dosyalarini kilitler; git gc adiminda
-    # "Should I try again?" sorar ve script takilir.
-    # Cozum: fetch'i arka planda calistir, gc adiminda takilirsaa zorla sonlandir.
-    # Fetch (yeni objeler indirme) onceden tamamlanir; sadece cleanup kesilir.
+    # Kok neden: Windows Defender .git/objects/pack dosyalarini kilitliyor.
+    # Cozum 1 (kalici): .git klasorunu Defender taramasindan cikar.
+    GITDIR="$(cd .git && pwd -W 2>/dev/null || pwd)"
+    echo "   Windows Defender istisna ekleniyor: $GITDIR"
+    powershell.exe -NonInteractive -Command \
+        "Add-MpPreference -ExclusionPath '$GITDIR'" 2>/dev/null || true
 
-    # Onceki kalan git.exe islemleri temizle
+    # Cozum 2: Kilitli kalan eski pack dosyalarini simdiden sil.
+    # (Sunucu durduktan sonra Defender birka? saniyede kilidi birakir.)
+    sleep 2
+    ls -t .git/objects/pack/*.pack 2>/dev/null | tail -n +2 | while read f; do
+        base="${f%.pack}"
+        rm -f "$f" "${base}.idx" "${base}.bitmap" "${base}.rev" 2>/dev/null || true
+    done
+
+    # Kalan git.exe islemleri temizle, maintenance'i kaldir
     taskkill //F //IM git.exe 2>/dev/null || true
     sleep 1
     git maintenance unregister --force 2>/dev/null || true
 
-    # Fetch'i arka planda baslat
+    # Fetch'i arka planda calistir; gc adiminda takilirsaa 90s sonra zorla kes
     git -c gc.auto=0 -c gc.autopacklimit=0 -c maintenance.auto=false \
         -c receive.autogc=false fetch origin &
     GIT_BG=$!
-
-    # En fazla 90 saniye bekle; gc adiminda takilirsaa zorla kes
     ELAPSED=0
     while kill -0 "$GIT_BG" 2>/dev/null; do
         sleep 2
