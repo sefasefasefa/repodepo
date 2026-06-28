@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Video, Trash2, Edit2, Eye, EyeOff, Search, ChevronLeft, ChevronRight,
   Crown, Plus, X, Loader2, Link, Image, Upload, Share2, Check,
-  AlertCircle, PlayCircle, RefreshCw, ExternalLink,
+  AlertCircle, PlayCircle, RefreshCw, ExternalLink, Grid3x3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VideoPlayerManager } from "./video-player-manager";
@@ -662,8 +662,196 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
   );
 }
 
+// ── Categories management tab ────────────────────────────────────────────────
+function CategoriesTab() {
+  const queryClient = useQueryClient();
+  const { data: rawData, isLoading, refetch } = useListCategories();
+  const cats: any[] = Array.isArray(rawData) ? rawData : (rawData as any)?.categories ?? [];
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addSlug, setAddSlug] = useState("");
+  const [addIcon, setAddIcon] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [addErr, setAddErr] = useState("");
+
+  const [editCat, setEditCat] = useState<any | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+  const [editIcon, setEditIcon] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editErr, setEditErr] = useState("");
+
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+    refetch();
+  };
+
+  const handleAdd = async () => {
+    if (!addName.trim()) { setAddErr("İsim zorunludur"); return; }
+    setAdding(true); setAddErr("");
+    try {
+      await apiFetch("/categories/create", {
+        method: "POST",
+        body: JSON.stringify({ name: addName.trim(), slug: addSlug.trim() || undefined, iconUrl: addIcon.trim() || undefined }),
+      });
+      setShowAdd(false); setAddName(""); setAddSlug(""); setAddIcon("");
+      invalidate();
+    } catch (e: any) { setAddErr(e.message); } finally { setAdding(false); }
+  };
+
+  const openEdit = (cat: any) => {
+    setEditCat(cat); setEditName(cat.name); setEditSlug(cat.slug || ""); setEditIcon(cat.iconUrl || ""); setEditErr("");
+  };
+
+  const handleSave = async () => {
+    if (!editName.trim()) { setEditErr("İsim zorunludur"); return; }
+    setSaving(true); setEditErr("");
+    try {
+      await apiFetch(`/categories/${editCat.id}/update`, {
+        method: "PUT",
+        body: JSON.stringify({ name: editName.trim(), slug: editSlug.trim() || undefined, iconUrl: editIcon.trim() || undefined }),
+      });
+      setEditCat(null); invalidate();
+    } catch (e: any) { setEditErr(e.message); } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: number) => {
+    setDeleting(id);
+    try {
+      await apiFetch(`/categories/${id}/delete`, { method: "DELETE" });
+      setDeleteConfirm(null); invalidate();
+    } catch (e: any) {} finally { setDeleting(null); }
+  };
+
+  return (
+    <div className="space-y-4 max-w-5xl">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Grid3x3 className="h-5 w-5 text-primary" /> Kategoriler
+          </h2>
+          <p className="text-xs text-[#555] mt-0.5">{cats.length} kategori</p>
+        </div>
+        <button onClick={() => setShowAdd(v => !v)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors shrink-0">
+          <Plus className="h-3.5 w-3.5" /> Kategori Ekle
+        </button>
+      </div>
+
+      {/* Add form */}
+      {showAdd && (
+        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-white">Yeni Kategori</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[11px] text-[#666] mb-1 block">İsim *</label>
+              <input value={addName} onChange={e => setAddName(e.target.value)} placeholder="Kategori adı" className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555] focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[#666] mb-1 block">Slug <span className="text-[#555]">(opsiyonel)</span></label>
+              <input value={addSlug} onChange={e => setAddSlug(e.target.value)} placeholder="otomatik-olusturulur" className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555] focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="text-[11px] text-[#666] mb-1 block">İkon URL <span className="text-[#555]">(opsiyonel)</span></label>
+              <input value={addIcon} onChange={e => setAddIcon(e.target.value)} placeholder="https://..." className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555] focus:outline-none focus:border-primary" />
+            </div>
+          </div>
+          {addErr && <p className="text-red-400 text-xs">{addErr}</p>}
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => { setShowAdd(false); setAddErr(""); }} className="px-4 py-2 rounded-lg border border-[#333] text-[#888] text-sm hover:bg-[#222]">İptal</button>
+            <button onClick={handleAdd} disabled={adding} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-60 flex items-center gap-1.5">
+              {adding ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Ekleniyor…</> : <><Plus className="h-3.5 w-3.5" />Ekle</>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Category list */}
+      {isLoading ? (
+        <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-16 bg-[#1e1e1e] rounded-xl animate-pulse" />)}</div>
+      ) : cats.length === 0 ? (
+        <div className="py-16 text-center text-[#555] bg-[#1a1a1a] rounded-xl border border-[#2a2a2a]">
+          <Grid3x3 className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          <p className="text-sm">Henüz kategori yok. "Kategori Ekle" ile başlayın.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {cats.map(cat => (
+            <div key={cat.id} className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden hover:border-[#333] transition-colors">
+              {/* Edit form */}
+              {editCat?.id === cat.id && (
+                <div className="p-3 border-b border-[#2a2a2a] space-y-3 bg-[#141414]">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#666] mb-1 block">İsim *</label>
+                      <input value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#666] mb-1 block">Slug</label>
+                      <input value={editSlug} onChange={e => setEditSlug(e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#666] mb-1 block">İkon URL</label>
+                      <input value={editIcon} onChange={e => setEditIcon(e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
+                    </div>
+                  </div>
+                  {editErr && <p className="text-red-400 text-xs">{editErr}</p>}
+                  <div className="flex gap-2 justify-end">
+                    <button onClick={() => setEditCat(null)} className="px-3 py-1.5 rounded-lg border border-[#333] text-[#888] text-xs hover:bg-[#222]">İptal</button>
+                    <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 disabled:opacity-60 flex items-center gap-1">
+                      {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Kaydet
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Row */}
+              <div className="flex items-center gap-3 p-3">
+                {cat.iconUrl ? (
+                  <img src={cat.iconUrl} className="w-10 h-10 rounded-lg object-cover shrink-0" onError={e => (e.currentTarget.style.display = "none")} />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-[#2a2a2a] flex items-center justify-center shrink-0">
+                    <Grid3x3 className="h-4 w-4 text-[#444]" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[#e0e0e0] text-sm">{cat.name}</p>
+                  <p className="text-[11px] text-[#555]">/{cat.slug} · {cat.videoCount ?? 0} video</p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button onClick={() => openEdit(cat)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-[#222] text-[#777] hover:text-white hover:bg-[#2a2a2a] transition-colors">
+                    <Edit2 className="h-3 w-3" /> <span className="hidden sm:inline">Düzenle</span>
+                  </button>
+                  {deleteConfirm === cat.id ? (
+                    <span className="flex items-center gap-1">
+                      <span className="text-[11px] text-red-400">Sil?</span>
+                      <button onClick={() => handleDelete(cat.id)} disabled={deleting === cat.id} className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50">
+                        {deleting === cat.id ? "…" : "Evet"}
+                      </button>
+                      <button onClick={() => setDeleteConfirm(null)} className="px-2.5 py-1.5 rounded-lg text-[11px] bg-[#222] text-[#666] hover:bg-[#2a2a2a]">Hayır</button>
+                    </span>
+                  ) : (
+                    <button onClick={() => setDeleteConfirm(cat.id)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-[#222] text-[#666] hover:text-red-400 hover:bg-red-900/20 transition-colors">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AdminVideos() {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"videos" | "categories">("videos");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
@@ -693,7 +881,7 @@ export function AdminVideos() {
   const videos = data?.videos ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / 20);
-  const categories = catsData?.categories ?? [];
+  const categories = Array.isArray(catsData) ? catsData : (catsData as any)?.categories ?? [];
 
   const refetchAll = () => queryClient.invalidateQueries();
 
@@ -745,6 +933,28 @@ export function AdminVideos() {
       {showAddModal && (
         <AddVideoModal categories={categories} onClose={() => setShowAddModal(false)} onSuccess={refetchAll} />
       )}
+
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-1 w-fit">
+        <button
+          onClick={() => setActiveTab("videos")}
+          className={cn("flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors", activeTab === "videos" ? "bg-primary text-white" : "text-[#666] hover:text-[#aaa]")}
+        >
+          <Video className="h-4 w-4" /> Videolar
+        </button>
+        <button
+          onClick={() => setActiveTab("categories")}
+          className={cn("flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors", activeTab === "categories" ? "bg-primary text-white" : "text-[#666] hover:text-[#aaa]")}
+        >
+          <Grid3x3 className="h-4 w-4" /> Kategoriler
+        </button>
+      </div>
+
+      {/* Categories tab */}
+      {activeTab === "categories" && <CategoriesTab />}
+
+      {/* Video tab content below */}
+      {activeTab === "videos" && <>
 
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -944,6 +1154,7 @@ export function AdminVideos() {
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 }

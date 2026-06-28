@@ -115,7 +115,7 @@ export function Sidebar() {
   const [personalRecs, setPersonalRecs] = useState(true);
 
   const { data: categoriesData } = useListCategories();
-  const categories: any[] = (categoriesData as any)?.categories ?? (Array.isArray(categoriesData) ? categoriesData : []);
+  const categories: any[] = Array.isArray(categoriesData) ? categoriesData : (categoriesData as any)?.categories ?? [];
 
   const isCreator = user?.role === "creator";
   const isAdmin = user?.role === "admin";

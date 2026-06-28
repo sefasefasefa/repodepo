@@ -28,7 +28,8 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 };
 
 export default function Categories() {
-  const { data: categories, isLoading } = useListCategories();
+  const { data: rawData, isLoading } = useListCategories();
+  const categories: any[] = Array.isArray(rawData) ? rawData : (rawData as any)?.categories ?? [];
 
   return (
     <AppLayout>

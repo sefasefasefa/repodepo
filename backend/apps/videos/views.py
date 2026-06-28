@@ -624,15 +624,15 @@ def get_bookmarks(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_categories(request):
-    cached = cache.get('categories:all')
+    cached = cache.get('categories:all_v2')
     if cached is not None:
         return Response(cached)
     cats = Category.objects.all().order_by('name')
-    result = {'categories': [
+    result = [
         {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
         for c in cats
-    ]}
-    cache.set('categories:all', result, 300)
+    ]
+    cache.set('categories:all_v2', result, 300)
     return Response(result)
 
 
