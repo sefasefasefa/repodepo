@@ -55,6 +55,8 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
     const hideTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
     const seekingTouchRef = useRef(false);
     const stallTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const loadTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const proxyTriedRef  = useRef(false);
     const recoveryCount  = useRef(0);
 
     const [playing, setPlaying]           = useState(false);
@@ -179,6 +181,14 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       };
     }, [videoId, src]);
 
+    /* ── Yükleme timeout temizle ────────────────────────────────── */
+    const clearLoadTimer = useCallback(() => {
+      if (loadTimerRef.current) { clearTimeout(loadTimerRef.current); loadTimerRef.current = null; }
+    }, []);
+
+    /* ── URL analizi: format türü tespit ─────────────────────────── */
+    const getUrlExtension = (url: string) => url.split('?')[0].split('#')[0].split('.').pop()?.toLowerCase() ?? '';
+
     /* ── HLS başlatma ───────────────────────────────────────────── */
     useEffect(() => {
       const vid = videoRef.current;
@@ -196,14 +206,32 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       setSlowConn(false);
       setBufferPct(0);
       recoveryCount.current = 0;
+      proxyTriedRef.current = false;
       clearStallTimer();
+      clearLoadTimer();
 
       hlsRef.current?.destroy();
       hlsRef.current = null;
 
-      if (Hls.isSupported()) {
-        // HLS.js destekleniyor — her URL için önce HLS.js dene
-        // (.m3u8 uzantısı olmayan HLS stream'leri de yakalar)
+      const ext = getUrlExtension(src);
+
+      // Tarayıcının natively oynatamayacağı formatlar → stream proxy'e yönlendir
+      const unsupportedFormats = ['mkv', 'avi', 'mov', 'flv', 'wmv', 'mpeg', 'mpg', '3gp', '3g2', 'rm', 'rmvb', 'ts'];
+      const isUnsupportedFormat = unsupportedFormats.includes(ext);
+
+      // HLS stream mi?
+      const isHlsStream = ext === 'm3u8' || src.includes('.m3u8');
+
+      // Doğrudan oynatılabilen format mı?
+      const isBrowserNative = ['mp4', 'webm', 'ogg', 'ogv'].includes(ext);
+
+      if (isUnsupportedFormat && videoId) {
+        // Desteklenmeyen format → backend proxy üzerinden aktar
+        proxyTriedRef.current = true;
+        vid.src = `/api/videos/${videoId}/stream`;
+        vid.load();
+      } else if (Hls.isSupported() && (isHlsStream || !isBrowserNative)) {
+        // HLS.js destekleniyor — HLS stream veya bilinmeyen format → önce HLS.js dene
         const hls = new Hls({
           enableWorker: true,
           lowLatencyMode: false,
@@ -246,6 +274,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
         hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
           setHlsLevels(data.levels.map(l => ({ height: l.height, bitrate: l.bitrate })));
           setLoading(false);
+          clearLoadTimer();
         });
 
         hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => setCurrentLevel(data.level));
@@ -292,20 +321,32 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           }
         });
 
-      } else if (vid.canPlayType("application/vnd.apple.mpegurl")) {
+      } else if (vid.canPlayType("application/vnd.apple.mpegurl") && isHlsStream) {
         // iOS Safari — native HLS
         vid.src = src;
       } else {
-        // Native oynatıcı (MP4 vb.)
+        // Native oynatıcı (MP4, WebM vb.)
         vid.src = src;
       }
 
+      // 25 saniye içinde oynatılmazsa takılı sayılır
+      loadTimerRef.current = setTimeout(() => {
+        const v = videoRef.current;
+        if (!v) return;
+        if (v.readyState === 0 || v.readyState === 1) {
+          // Hiç veri gelmedi — hata göster
+          setLoading(false);
+          setError("Video yüklenemedi. Bağlantınızı kontrol edin.");
+        }
+      }, 25000);
+
       return () => {
         clearStallTimer();
+        clearLoadTimer();
         hlsRef.current?.destroy();
         hlsRef.current = null;
       };
-    }, [src, clearStallTimer]);
+    }, [src, clearStallTimer, clearLoadTimer, videoId]);
 
     /* ── Video olayları ─────────────────────────────────────────── */
     useEffect(() => {
@@ -315,7 +356,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       const onPlay      = () => { setPlaying(true); clearStallTimer(); recoveryCount.current = 0; setSlowConn(false); };
       const onPause     = () => { setPlaying(false); clearStallTimer(); };
       const onWaiting   = () => setLoading(true);
-      const onCanPlay   = () => { setLoading(false); clearStallTimer(); };
+      const onCanPlay   = () => { setLoading(false); clearStallTimer(); clearLoadTimer(); };
       const onLoadStart = () => setLoading(true);
       const onEnded_    = () => {
         setPlaying(false);
@@ -339,7 +380,21 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
 
       const onError = () => {
         const code = vid.error?.code;
+        clearLoadTimer();
+
+        // Kod 4 (MEDIA_ERR_SRC_NOT_SUPPORTED) → stream proxy ile tekrar dene
+        if (code === 4 && videoId && !proxyTriedRef.current) {
+          proxyTriedRef.current = true;
+          hlsRef.current?.destroy();
+          hlsRef.current = null;
+          setLoading(true);
+          vid.src = `/api/videos/${videoId}/stream`;
+          vid.load();
+          return;
+        }
+
         if (code === 4) setError("Bu video formatı desteklenmiyor.");
+        else if (code === 2) setError("Ağ hatası — video yüklenemedi.");
         else            setError("Video oynatılamadı.");
         setLoading(false);
         clearStallTimer();
@@ -407,7 +462,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
         vid.removeEventListener("timeupdate",     onTimeUpdate_);
         vid.removeEventListener("loadedmetadata", onLoadedMetadata_);
       };
-    }, [onEnded, onTimeUpdate, onLoadedMetadata, clearStallTimer, triggerStallRecovery]);
+    }, [onEnded, onTimeUpdate, onLoadedMetadata, clearStallTimer, clearLoadTimer, triggerStallRecovery, videoId]);
 
     /* ── Fullscreen değişim ─────────────────────────────────────── */
     useEffect(() => {

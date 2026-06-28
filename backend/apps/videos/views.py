@@ -388,17 +388,112 @@ def video_hls_status(request, video_id):
 @permission_classes([AllowAny])
 def stream_video(request, video_id):
     """
-    cloud.mail.ru URL'lerini backend üzerinden stream eder.
+    Video dosyasını backend üzerinden stream eder.
+    - Yerel medya dosyaları (media/ klasörü): doğrudan range destekli servis
+    - cloud.mail.ru URL'leri: CDN üzerinden proxy
     Range isteklerini destekler (video seeking için).
     """
     import requests as _rq
-    from django.http import StreamingHttpResponse
+    from django.http import StreamingHttpResponse, FileResponse
+    import mimetypes
+    import os
 
     v = _resolve_video(video_id)
     if not v:
         return Response({'error': 'Video not found'}, status=404)
 
-    # hlsUrl veya videoUrl alanlarından hangisi cloud.mail.ru ise onu kullan
+    # Önce: yerel dosya mı?
+    local_file = None
+    for candidate in [v.hls_url, v.video_url]:
+        if not candidate:
+            continue
+        # /media/ ile başlayan göreli yol veya MEDIA_ROOT altında mı?
+        if candidate.startswith('/media/') or candidate.startswith('media/'):
+            rel = candidate.lstrip('/')  # media/videos/...
+            full_path = os.path.join(settings.BASE_DIR, rel)
+            if os.path.isfile(full_path):
+                local_file = full_path
+                break
+        # Mutlak yol mu?
+        elif os.path.isabs(candidate) and os.path.isfile(candidate):
+            local_file = candidate
+            break
+        # MEDIA_ROOT altında mı kontrol et
+        candidate_basename = candidate.split('/')[-1]
+        for root, _, files in os.walk(settings.MEDIA_ROOT):
+            if candidate_basename in files:
+                full = os.path.join(root, candidate_basename)
+                if os.path.isfile(full):
+                    local_file = full
+                    break
+        if local_file:
+            break
+
+    if local_file:
+        # Yerel dosyayı range destekli olarak sun
+        mime_type, _ = mimetypes.guess_type(local_file)
+        if not mime_type or not mime_type.startswith('video/'):
+            # Uzantıya göre tahmin
+            ext = os.path.splitext(local_file)[1].lower()
+            mime_map = {
+                '.mp4': 'video/mp4', '.webm': 'video/webm',
+                '.ogg': 'video/ogg', '.ogv': 'video/ogg',
+                '.mov': 'video/mp4', '.mkv': 'video/mp4',
+                '.avi': 'video/mp4', '.flv': 'video/mp4',
+                '.wmv': 'video/mp4', '.ts': 'video/mp2t',
+                '.m3u8': 'application/vnd.apple.mpegurl',
+                '.mpg': 'video/mpeg', '.mpeg': 'video/mpeg',
+                '.3gp': 'video/3gpp', '.3g2': 'video/3gpp2',
+            }
+            mime_type = mime_map.get(ext, 'video/mp4')
+
+        file_size = os.path.getsize(local_file)
+        range_header = request.META.get('HTTP_RANGE', '').strip()
+
+        if range_header:
+            # Range request — video seeking için kritik
+            try:
+                range_str = range_header.replace('bytes=', '')
+                range_start, range_end = range_str.split('-')
+                range_start = int(range_start)
+                range_end = int(range_end) if range_end else file_size - 1
+                range_end = min(range_end, file_size - 1)
+                length = range_end - range_start + 1
+
+                def file_iterator(path, start, chunk=512 * 1024):
+                    with open(path, 'rb') as f:
+                        f.seek(start)
+                        remaining = length
+                        while remaining > 0:
+                            data = f.read(min(chunk, remaining))
+                            if not data:
+                                break
+                            remaining -= len(data)
+                            yield data
+
+                resp = StreamingHttpResponse(
+                    file_iterator(local_file, range_start),
+                    status=206,
+                    content_type=mime_type,
+                )
+                resp['Content-Range'] = f'bytes {range_start}-{range_end}/{file_size}'
+                resp['Content-Length'] = str(length)
+                resp['Accept-Ranges'] = 'bytes'
+                resp['Access-Control-Allow-Origin'] = '*'
+                resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
+                return resp
+            except Exception:
+                pass  # Hatalı range → tam dosyayı sun
+
+        # Tam dosya
+        resp = FileResponse(open(local_file, 'rb'), content_type=mime_type)
+        resp['Content-Length'] = str(file_size)
+        resp['Accept-Ranges'] = 'bytes'
+        resp['Access-Control-Allow-Origin'] = '*'
+        resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
+        return resp
+
+    # cloud.mail.ru URL'lerini backend üzerinden stream eder
     url = None
     for candidate in [v.hls_url, v.video_url]:
         if candidate and 'cloud.mail.ru/public/' in candidate:
