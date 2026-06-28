@@ -486,7 +486,7 @@ def stream_video(request, video_id):
     status_code = upstream.status_code
 
     def generate():
-        for chunk in upstream.iter_content(chunk_size=65536):
+        for chunk in upstream.iter_content(chunk_size=524288):  # 512 KB
             if chunk:
                 yield chunk
 
@@ -495,7 +495,11 @@ def stream_video(request, video_id):
     for h in ['Content-Length', 'Content-Range']:
         if h in upstream.headers:
             resp[h] = upstream.headers[h]
-    resp['Cache-Control'] = 'no-cache'
+    resp['Cache-Control'] = 'public, max-age=3600'
+    resp['Access-Control-Allow-Origin'] = '*'
+    resp['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS'
+    resp['Access-Control-Allow-Headers'] = 'Range, Content-Type'
+    resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
     return resp
 
 

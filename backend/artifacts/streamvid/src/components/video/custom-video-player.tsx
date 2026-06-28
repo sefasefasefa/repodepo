@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   Play, Pause, SkipBack, SkipForward,
   Volume2, VolumeX, Maximize2, Minimize2,
-  Settings, Captions, Loader2, AlertCircle, RotateCcw,
+  Captions, Loader2, AlertCircle, RotateCcw, Wifi, WifiOff,
 } from "lucide-react";
 
 interface HlsLevel { height: number; bitrate: number; }
@@ -28,42 +28,98 @@ function formatTime(sec: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function formatBandwidth(bps: number): string {
+  if (bps >= 1_000_000) return `${(bps / 1_000_000).toFixed(1)} Mbps`;
+  if (bps >= 1_000) return `${Math.round(bps / 1000)} kbps`;
+  return `${Math.round(bps)} bps`;
+}
+
+/** Tahmini bant genişliğine göre 0-3 sinyal seviyesi döner */
+function signalLevel(bps: number): 0 | 1 | 2 | 3 {
+  if (bps >= 3_000_000) return 3;
+  if (bps >= 1_000_000) return 2;
+  if (bps >= 300_000)  return 1;
+  return 0;
+}
+
 export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerProps>(
   function CustomVideoPlayer({ src, poster, protected: isProtected, onTimeUpdate, onEnded, onLoadedMetadata, className }, ref) {
     const videoRef = useRef<HTMLVideoElement>(null);
     useImperativeHandle(ref, () => videoRef.current!);
 
-    const hlsRef = useRef<Hls | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const progressRef = useRef<HTMLDivElement>(null);
-    const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hlsRef         = useRef<Hls | null>(null);
+    const containerRef   = useRef<HTMLDivElement>(null);
+    const progressRef    = useRef<HTMLDivElement>(null);
+    const hideTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
     const seekingTouchRef = useRef(false);
+    const stallTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const recoveryCount  = useRef(0);
 
-    const [playing, setPlaying] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [buffered, setBuffered] = useState(0);
-    const [volume, setVolume] = useState(1);
-    const [muted, setMuted] = useState(false);
-    const [fullscreen, setFullscreen] = useState(false);
+    const [playing, setPlaying]           = useState(false);
+    const [currentTime, setCurrentTime]   = useState(0);
+    const [duration, setDuration]         = useState(0);
+    const [buffered, setBuffered]         = useState(0);
+    const [volume, setVolume]             = useState(1);
+    const [muted, setMuted]               = useState(false);
+    const [fullscreen, setFullscreen]     = useState(false);
     const [showControls, setShowControls] = useState(true);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [hlsLevels, setHlsLevels] = useState<HlsLevel[]>([]);
+    const [loading, setLoading]           = useState(true);
+    const [error, setError]               = useState<string | null>(null);
+    const [hlsLevels, setHlsLevels]       = useState<HlsLevel[]>([]);
     const [currentLevel, setCurrentLevel] = useState(-1);
-    const [showQuality, setShowQuality] = useState(false);
-    const [showVolume, setShowVolume] = useState(false);
-    const [seeking, setSeeking] = useState(false);
-    const [centerFlash, setCenterFlash] = useState<"play" | "pause" | null>(null);
+    const [showQuality, setShowQuality]   = useState(false);
+    const [showVolume, setShowVolume]     = useState(false);
+    const [seeking, setSeeking]           = useState(false);
+    const [centerFlash, setCenterFlash]   = useState<"play" | "pause" | null>(null);
+    const [bandwidth, setBandwidth]       = useState(0);          // bps
+    const [slowConn, setSlowConn]         = useState(false);
+    const [bufferPct, setBufferPct]       = useState(0);
 
+    /* ── Kontrol gizleme zamanlayıcısı ─────────────────────────── */
     const resetHideTimer = useCallback(() => {
       setShowControls(true);
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       hideTimerRef.current = setTimeout(() => {
         if (!seeking && !showQuality && !showVolume) setShowControls(false);
-      }, 3000);
+      }, 3500);
     }, [seeking, showQuality, showVolume]);
 
+    /* ── Takılma (stall) kurtarma ───────────────────────────────── */
+    const clearStallTimer = useCallback(() => {
+      if (stallTimerRef.current) { clearTimeout(stallTimerRef.current); stallTimerRef.current = null; }
+    }, []);
+
+    const triggerStallRecovery = useCallback(() => {
+      const vid = videoRef.current;
+      const hls = hlsRef.current;
+      if (!vid || vid.paused || vid.ended) return;
+
+      setSlowConn(true);
+      recoveryCount.current += 1;
+
+      if (hls) {
+        if (recoveryCount.current === 1) {
+          hls.recoverMediaError();
+        } else if (recoveryCount.current === 2) {
+          hls.startLoad(vid.currentTime);
+        } else {
+          // Mevcut zamanı koru, yükü sıfırla
+          const t = vid.currentTime;
+          hls.stopLoad();
+          setTimeout(() => {
+            hls.startLoad(Math.max(0, t - 0.5));
+          }, 300);
+        }
+      } else {
+        // Native HLS (Safari): küçük bir nudge
+        vid.currentTime = Math.max(0, vid.currentTime + 0.1);
+      }
+
+      // 6 saniye sonra hâlâ takılıysa tekrar dene
+      stallTimerRef.current = setTimeout(triggerStallRecovery, 6000);
+    }, []);
+
+    /* ── HLS başlatma ───────────────────────────────────────────── */
     useEffect(() => {
       const vid = videoRef.current;
       if (!vid || !src) return;
@@ -76,6 +132,12 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       setBuffered(0);
       setHlsLevels([]);
       setCurrentLevel(-1);
+      setBandwidth(0);
+      setSlowConn(false);
+      setBufferPct(0);
+      recoveryCount.current = 0;
+      clearStallTimer();
+
       hlsRef.current?.destroy();
       hlsRef.current = null;
 
@@ -86,50 +148,87 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: false,
-            maxBufferLength: 60,
-            maxMaxBufferLength: 120,
-            // Agresif otomatik kurtarma
-            fragLoadingMaxRetry: 6,
-            manifestLoadingMaxRetry: 3,
-            levelLoadingMaxRetry: 4,
+
+            // ── Buffer: en kötü ağda bile biriktir ──────────────────
+            maxBufferLength: 120,            // 2 dakika öne buffer'la
+            maxMaxBufferLength: 600,         // Ağ iyiyse 10 dakikaya kadar
+            maxBufferSize: 300 * 1000 * 1000, // 300 MB bellek tamponu
+            maxBufferHole: 0.5,              // 0.5s'den küçük boşlukları atla
+            backBufferLength: 60,            // Geri gitme için 60s tut
+
+            // ── Takılma kurtarma ────────────────────────────────────
+            highBufferWatchdogPeriod: 2,    // Her 2 saniyede stall kontrol
+            nudgeMaxRetry: 10,              // 10 kez küçük ilerleme dene
+            nudgeOffset: 0.1,              // Çok küçük adımlarla
+
+            // ── ABR: Kaliteyi agresif artır, düşürmeye dirençli ────
+            abrEwmaDefaultEstimate: 2_000_000, // 2Mbps başlangıç tahmini
+            abrBandWidthFactor: 0.95,          // %95 bant genişliği kullan
+            abrBandWidthUpFactor: 0.6,         // Yavaş kalite artır
+            abrEwmaFastHalf: 3.0,              // Düşüş hızlı tespit edilsin
+            abrEwmaSlowHalf: 9.0,              // Artış yavaş tespit edilsin
+            startLevel: -1,                    // Otomatik başlangıç
+            capLevelToPlayerSize: false,       // Oynatıcı boyutuna kısıtlama YOK
+
+            // ── Retry: ağ hatalarında vazgeçme ──────────────────────
+            fragLoadingMaxRetry: 12,
+            fragLoadingRetryDelay: 200,
+            fragLoadingMaxRetryTimeout: 4000,
+            manifestLoadingMaxRetry: 8,
+            manifestLoadingRetryDelay: 200,
+            levelLoadingMaxRetry: 10,
+            levelLoadingRetryDelay: 200,
           });
+
           hlsRef.current = hls;
           hls.loadSource(src);
           hls.attachMedia(vid);
+
           hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
             setHlsLevels(data.levels.map(l => ({ height: l.height, bitrate: l.bitrate })));
             setLoading(false);
           });
+
           hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => setCurrentLevel(data.level));
+
+          // Gerçek zamanlı bant genişliği ölçümü
+          hls.on(Hls.Events.FRAG_LOADED, () => {
+            const bw = hls.bandwidthEstimate;
+            if (bw && isFinite(bw)) {
+              setBandwidth(bw);
+              setSlowConn(bw < 300_000);
+            }
+          });
+
           hls.on(Hls.Events.ERROR, (_, data) => {
             if (data.fatal) {
-              // Fatal hatalarda kurtarma dene
               switch (data.type) {
                 case Hls.ErrorTypes.NETWORK_ERROR:
+                  // Ağ hatası: hemen yeniden yükle
                   hls.startLoad();
                   break;
                 case Hls.ErrorTypes.MEDIA_ERROR:
+                  // Medya hatası: kurtarma dene
                   hls.recoverMediaError();
                   break;
                 default:
-                  // Kurtarılamaz — native fallback dene
-                  hlsRef.current?.destroy();
+                  // Kurtarılamaz: native fallback dene
+                  hls.destroy();
                   hlsRef.current = null;
                   if (vid.canPlayType("application/vnd.apple.mpegurl")) {
                     vid.src = src;
                   } else {
-                    setError("Video yüklenemedi. Lütfen tekrar deneyin.");
+                    setError("Video yüklenemedi. Farklı kaynak seçin.");
                   }
-                  break;
               }
             }
-            // non-fatal hatalar: hls.js kendi kendine kurtarır, bir şey yapma
           });
+
         } else if (vid.canPlayType("application/vnd.apple.mpegurl")) {
           // iOS Safari — native HLS
           vid.src = src;
         } else {
-          setError("Bu tarayıcı HLS video formatını desteklemiyor.");
+          setError("Bu tarayıcı HLS formatını desteklemiyor.");
           setLoading(false);
         }
       } else {
@@ -137,37 +236,49 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       }
 
       return () => {
+        clearStallTimer();
         hlsRef.current?.destroy();
         hlsRef.current = null;
       };
-    }, [src]);
+    }, [src, clearStallTimer]);
 
+    /* ── Video olayları ─────────────────────────────────────────── */
     useEffect(() => {
       const vid = videoRef.current;
       if (!vid) return;
 
-      const onPlay = () => setPlaying(true);
-      const onPause = () => setPlaying(false);
-      const onWaiting = () => setLoading(true);
-      const onCanPlay = () => setLoading(false);
+      const onPlay      = () => { setPlaying(true); clearStallTimer(); recoveryCount.current = 0; setSlowConn(false); };
+      const onPause     = () => { setPlaying(false); clearStallTimer(); };
+      const onWaiting   = () => setLoading(true);
+      const onCanPlay   = () => { setLoading(false); clearStallTimer(); };
       const onLoadStart = () => setLoading(true);
-      const onEnded_ = () => { setPlaying(false); onEnded?.(); };
-      const onError = () => {
-        // Hata kodu 4 = MEDIA_ERR_SRC_NOT_SUPPORTED
-        const code = vid.error?.code;
-        if (code === 4) {
-          setError("Bu video formatı desteklenmiyor.");
-        } else {
-          setError("Video oynatılamadı.");
+      const onEnded_    = () => { setPlaying(false); clearStallTimer(); onEnded?.(); };
+
+      // Takılma tespiti — tarayıcının stalled event'i
+      const onStalled   = () => {
+        if (!vid.paused && !vid.ended) {
+          clearStallTimer();
+          stallTimerRef.current = setTimeout(triggerStallRecovery, 3000);
         }
+      };
+
+      const onError = () => {
+        const code = vid.error?.code;
+        if (code === 4) setError("Bu video formatı desteklenmiyor.");
+        else            setError("Video oynatılamadı.");
         setLoading(false);
+        clearStallTimer();
       };
 
       const onTimeUpdate_ = () => {
         setCurrentTime(vid.currentTime);
         onTimeUpdate?.(vid.currentTime, vid.duration);
-        if (vid.buffered.length > 0) {
-          setBuffered(vid.buffered.end(vid.buffered.length - 1));
+
+        // Buffer yüzdesi güncelle
+        if (vid.buffered.length > 0 && vid.duration > 0) {
+          const end = vid.buffered.end(vid.buffered.length - 1);
+          setBuffered(end);
+          setBufferPct(Math.round((end / vid.duration) * 100));
         }
       };
 
@@ -177,65 +288,70 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
         onLoadedMetadata?.(vid.duration);
       };
 
-      vid.addEventListener("play", onPlay);
-      vid.addEventListener("pause", onPause);
-      vid.addEventListener("waiting", onWaiting);
-      vid.addEventListener("canplay", onCanPlay);
-      vid.addEventListener("canplaythrough", onCanPlay);
-      vid.addEventListener("loadstart", onLoadStart);
-      vid.addEventListener("ended", onEnded_);
-      vid.addEventListener("error", onError);
-      vid.addEventListener("timeupdate", onTimeUpdate_);
-      vid.addEventListener("loadedmetadata", onLoadedMetadata_);
+      vid.addEventListener("play",            onPlay);
+      vid.addEventListener("pause",           onPause);
+      vid.addEventListener("waiting",         onWaiting);
+      vid.addEventListener("canplay",         onCanPlay);
+      vid.addEventListener("canplaythrough",  onCanPlay);
+      vid.addEventListener("loadstart",       onLoadStart);
+      vid.addEventListener("stalled",         onStalled);
+      vid.addEventListener("ended",           onEnded_);
+      vid.addEventListener("error",           onError);
+      vid.addEventListener("timeupdate",      onTimeUpdate_);
+      vid.addEventListener("loadedmetadata",  onLoadedMetadata_);
 
       return () => {
-        vid.removeEventListener("play", onPlay);
-        vid.removeEventListener("pause", onPause);
-        vid.removeEventListener("waiting", onWaiting);
-        vid.removeEventListener("canplay", onCanPlay);
+        vid.removeEventListener("play",           onPlay);
+        vid.removeEventListener("pause",          onPause);
+        vid.removeEventListener("waiting",        onWaiting);
+        vid.removeEventListener("canplay",        onCanPlay);
         vid.removeEventListener("canplaythrough", onCanPlay);
-        vid.removeEventListener("loadstart", onLoadStart);
-        vid.removeEventListener("ended", onEnded_);
-        vid.removeEventListener("error", onError);
-        vid.removeEventListener("timeupdate", onTimeUpdate_);
+        vid.removeEventListener("loadstart",      onLoadStart);
+        vid.removeEventListener("stalled",        onStalled);
+        vid.removeEventListener("ended",          onEnded_);
+        vid.removeEventListener("error",          onError);
+        vid.removeEventListener("timeupdate",     onTimeUpdate_);
         vid.removeEventListener("loadedmetadata", onLoadedMetadata_);
       };
-    }, [onEnded, onTimeUpdate, onLoadedMetadata]);
+    }, [onEnded, onTimeUpdate, onLoadedMetadata, clearStallTimer, triggerStallRecovery]);
 
+    /* ── Fullscreen değişim ─────────────────────────────────────── */
     useEffect(() => {
       const onFsChange = () => setFullscreen(
         !!(document.fullscreenElement ||
           (document as any).webkitFullscreenElement ||
           (document as any).mozFullScreenElement)
       );
-      document.addEventListener("fullscreenchange", onFsChange);
+      document.addEventListener("fullscreenchange",       onFsChange);
       document.addEventListener("webkitfullscreenchange", onFsChange);
-      document.addEventListener("mozfullscreenchange", onFsChange);
+      document.addEventListener("mozfullscreenchange",    onFsChange);
       return () => {
-        document.removeEventListener("fullscreenchange", onFsChange);
+        document.removeEventListener("fullscreenchange",       onFsChange);
         document.removeEventListener("webkitfullscreenchange", onFsChange);
-        document.removeEventListener("mozfullscreenchange", onFsChange);
+        document.removeEventListener("mozfullscreenchange",    onFsChange);
       };
     }, []);
 
+    /* ── Klavye kısayolları ─────────────────────────────────────── */
     useEffect(() => {
       const onKey = (e: KeyboardEvent) => {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA") return;
         const vid = videoRef.current;
         if (!vid) return;
-        if (e.code === "Space") { e.preventDefault(); togglePlay(); }
-        if (e.code === "ArrowRight") { e.preventDefault(); vid.currentTime = Math.min(vid.currentTime + 10, vid.duration); resetHideTimer(); }
-        if (e.code === "ArrowLeft") { e.preventDefault(); vid.currentTime = Math.max(vid.currentTime - 10, 0); resetHideTimer(); }
-        if (e.code === "ArrowUp") { e.preventDefault(); const v = Math.min(vid.volume + 0.1, 1); vid.volume = v; setVolume(v); }
-        if (e.code === "ArrowDown") { e.preventDefault(); const v = Math.max(vid.volume - 0.1, 0); vid.volume = v; setVolume(v); }
-        if (e.code === "KeyF") { e.preventDefault(); toggleFullscreen(); }
-        if (e.code === "KeyM") { e.preventDefault(); toggleMute(); }
+        if (e.code === "Space")       { e.preventDefault(); togglePlay(); }
+        if (e.code === "ArrowRight")  { e.preventDefault(); vid.currentTime = Math.min(vid.currentTime + 10, vid.duration); resetHideTimer(); }
+        if (e.code === "ArrowLeft")   { e.preventDefault(); vid.currentTime = Math.max(vid.currentTime - 10, 0); resetHideTimer(); }
+        if (e.code === "ArrowUp")     { e.preventDefault(); const v = Math.min(vid.volume + 0.1, 1); vid.volume = v; setVolume(v); }
+        if (e.code === "ArrowDown")   { e.preventDefault(); const v = Math.max(vid.volume - 0.1, 0); vid.volume = v; setVolume(v); }
+        if (e.code === "KeyF")        { e.preventDefault(); toggleFullscreen(); }
+        if (e.code === "KeyM")        { e.preventDefault(); toggleMute(); }
       };
       document.addEventListener("keydown", onKey);
       return () => document.removeEventListener("keydown", onKey);
     }, [resetHideTimer]);
 
+    /* ── Oynat/Duraklat ─────────────────────────────────────────── */
     const togglePlay = useCallback(() => {
       const vid = videoRef.current;
       if (!vid) return;
@@ -264,36 +380,26 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       if (!fsEl) {
         (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen)?.call(el);
       } else {
-        (document.exitFullscreen || (document as any).webkitExitFullscreen || (document as any).mozCancelFullScreen)
-          ?.call(document);
+        (document.exitFullscreen || (document as any).webkitExitFullscreen || (document as any).mozCancelFullScreen)?.call(document);
       }
     }, []);
 
-    // Progress bar seek hesaplaması — mouse ve touch için ortak
+    /* ── İlerleme çubuğu — mouse + touch ───────────────────────── */
     const seekToPosition = useCallback((clientX: number) => {
       const vid = videoRef.current;
       const bar = progressRef.current;
       if (!vid || !bar || !duration) return;
-      const rect = bar.getBoundingClientRect();
+      const rect  = bar.getBoundingClientRect();
       const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       vid.currentTime = ratio * duration;
     }, [duration]);
 
-    const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-      seekToPosition(e.clientX);
-    }, [seekToPosition]);
+    const handleProgressClick  = useCallback((e: React.MouseEvent<HTMLDivElement>)  => seekToPosition(e.clientX), [seekToPosition]);
+    const handleProgressDrag   = useCallback((e: React.MouseEvent<HTMLDivElement>)  => { if (e.buttons !== 1) return; seekToPosition(e.clientX); }, [seekToPosition]);
 
-    const handleProgressDrag = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-      if (e.buttons !== 1) return;
-      seekToPosition(e.clientX);
-    }, [seekToPosition]);
-
-    // ─── Touch event'leri (mobil seek) ───────────────────────────────────────
     const handleProgressTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-      seekingTouchRef.current = true;
-      setSeeking(true);
-      seekToPosition(e.touches[0].clientX);
-      resetHideTimer();
+      seekingTouchRef.current = true; setSeeking(true);
+      seekToPosition(e.touches[0].clientX); resetHideTimer();
     }, [seekToPosition, resetHideTimer]);
 
     const handleProgressTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -303,30 +409,32 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
     }, [seekToPosition]);
 
     const handleProgressTouchEnd = useCallback(() => {
-      seekingTouchRef.current = false;
-      setSeeking(false);
+      seekingTouchRef.current = false; setSeeking(false);
     }, []);
 
     const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const vid = videoRef.current;
       if (!vid) return;
       const v = parseFloat(e.target.value);
-      vid.volume = v;
-      vid.muted = v === 0;
-      setVolume(v);
-      setMuted(v === 0);
+      vid.volume = v; vid.muted = v === 0;
+      setVolume(v); setMuted(v === 0);
     }, []);
 
     const setQuality = useCallback((level: number) => {
-      if (!hlsRef.current) return;
-      hlsRef.current.currentLevel = level;
+      const hls = hlsRef.current;
+      if (!hls) return;
+      hls.currentLevel = level;
       setCurrentLevel(level);
       setShowQuality(false);
     }, []);
 
-    const progress = duration > 0 ? currentTime / duration : 0;
-    const bufferProgress = duration > 0 ? buffered / duration : 0;
-    const qualityLabel = currentLevel === -1 ? "AUTO" : hlsLevels[currentLevel] ? `${hlsLevels[currentLevel].height}p` : "AUTO";
+    /* ── Hesaplamalar ───────────────────────────────────────────── */
+    const progress       = duration > 0 ? currentTime / duration : 0;
+    const bufferProgress = duration > 0 ? buffered   / duration : 0;
+    const qualityLabel   = currentLevel === -1
+      ? "AUTO"
+      : (hlsLevels[currentLevel] ? `${hlsLevels[currentLevel].height}p` : "AUTO");
+    const sig            = signalLevel(bandwidth);
 
     return (
       <div
@@ -353,11 +461,21 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           } : {})}
         />
 
-        {/* Yükleniyor */}
+        {/* Yükleniyor spinner */}
         {loading && !error && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="bg-black/60 rounded-full p-4">
               <Loader2 className="h-10 w-10 text-white animate-spin" />
+            </div>
+          </div>
+        )}
+
+        {/* Yavaş bağlantı uyarısı */}
+        {slowConn && playing && !loading && !error && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 pointer-events-none">
+            <div className="flex items-center gap-1.5 bg-black/70 text-yellow-400 text-[11px] font-semibold px-3 py-1 rounded-full border border-yellow-500/30">
+              <WifiOff className="h-3 w-3" />
+              Yavaş bağlantı — kalite düşürüldü
             </div>
           </div>
         )}
@@ -371,8 +489,8 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
               data-controls
               onClick={(e) => {
                 e.stopPropagation();
-                setError(null);
-                setLoading(true);
+                setError(null); setLoading(true);
+                recoveryCount.current = 0;
                 const v = videoRef.current;
                 if (v) { v.load(); v.play().catch(() => {}); }
               }}
@@ -389,13 +507,12 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
             <div className="bg-black/50 rounded-full p-5 animate-in fade-in zoom-in-75 duration-150">
               {centerFlash === "play"
                 ? <Play className="h-10 w-10 text-white fill-white" />
-                : <Pause className="h-10 w-10 text-white fill-white" />
-              }
+                : <Pause className="h-10 w-10 text-white fill-white" />}
             </div>
           </div>
         )}
 
-        {/* Merkez büyük play butonu (duraklatıldığında) */}
+        {/* Büyük play butonu */}
         {!playing && !loading && !error && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-16 h-16 rounded-full bg-black/60 border border-white/20 flex items-center justify-center backdrop-blur-sm">
@@ -404,7 +521,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           </div>
         )}
 
-        {/* ALT KONTROLLER */}
+        {/* ─── ALT KONTROLLER ─────────────────────────────────────── */}
         <div
           data-controls
           className={cn(
@@ -413,14 +530,13 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           )}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Gradient */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none" />
 
           <div className="relative px-3 pb-2 pt-1">
-            {/* Progress Bar — mouse + touch destekli */}
+            {/* İlerleme + Buffer çubuğu */}
             <div
               ref={progressRef}
-              className="w-full h-4 mb-2 flex items-center cursor-pointer relative group/bar touch-none"
+              className="w-full h-5 flex items-center cursor-pointer relative group/bar touch-none mb-1"
               onClick={handleProgressClick}
               onMouseMove={handleProgressDrag}
               onMouseDown={() => setSeeking(true)}
@@ -430,94 +546,95 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
               onTouchMove={handleProgressTouchMove}
               onTouchEnd={handleProgressTouchEnd}
             >
-              <div className="w-full h-1 rounded-full bg-white/20 relative group-hover/bar:h-1.5 transition-all">
-                {/* Buffer */}
+              <div className="w-full h-[3px] group-hover/bar:h-1.5 transition-all rounded-full bg-white/15 relative">
+                {/* Buffer göstergesi */}
                 <div
-                  className="absolute left-0 top-0 h-full rounded-full bg-white/30 transition-none"
+                  className="absolute left-0 top-0 h-full rounded-full bg-white/25 transition-none"
                   style={{ width: `${bufferProgress * 100}%` }}
                 />
-                {/* Progress */}
+                {/* Oynatma ilerlemesi */}
                 <div
                   className="absolute left-0 top-0 h-full rounded-full bg-white transition-none"
                   style={{ width: `${progress * 100}%` }}
                 />
                 {/* Thumb */}
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow opacity-0 group-hover/bar:opacity-100 transition-opacity"
-                  style={{ left: `calc(${progress * 100}% - 6px)` }}
+                  className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow opacity-0 group-hover/bar:opacity-100 transition-opacity"
+                  style={{ left: `calc(${progress * 100}% - 7px)` }}
                 />
               </div>
             </div>
 
-            {/* Controls Row */}
-            <div className="flex items-center gap-2">
-              {/* Play/Pause */}
-              <button
-                onClick={togglePlay}
-                className="text-white hover:text-white/80 transition-colors p-1 shrink-0"
-                title={playing ? "Duraklat (Boşluk)" : "Oynat (Boşluk)"}
-              >
-                {playing
-                  ? <Pause className="h-5 w-5 fill-white" />
-                  : <Play className="h-5 w-5 fill-white" />
-                }
+            {/* Kontrol satırı */}
+            <div className="flex items-center gap-1.5">
+              {/* Oynat/Duraklat */}
+              <button onClick={togglePlay} className="text-white hover:text-white/80 transition-colors p-1 shrink-0">
+                {playing ? <Pause className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
               </button>
 
-              {/* Skip Back */}
-              <button
-                onClick={() => { const v = videoRef.current; if (v) v.currentTime = Math.max(0, v.currentTime - 10); }}
-                className="text-white hover:text-white/80 transition-colors p-1 shrink-0"
-                title="10s geri"
-              >
-                <SkipBack className="h-4.5 w-4.5" style={{ width: "18px", height: "18px" }} />
+              {/* 10s geri */}
+              <button onClick={() => { const v = videoRef.current; if (v) v.currentTime = Math.max(0, v.currentTime - 10); }} className="text-white hover:text-white/80 transition-colors p-1 shrink-0" title="10s geri">
+                <SkipBack style={{ width: 18, height: 18 }} />
               </button>
 
-              {/* Skip Forward */}
-              <button
-                onClick={() => { const v = videoRef.current; if (v) v.currentTime = Math.min(v.duration, v.currentTime + 10); }}
-                className="text-white hover:text-white/80 transition-colors p-1 shrink-0"
-                title="10s ileri"
-              >
-                <SkipForward className="h-4.5 w-4.5" style={{ width: "18px", height: "18px" }} />
+              {/* 10s ileri */}
+              <button onClick={() => { const v = videoRef.current; if (v) v.currentTime = Math.min(v.duration, v.currentTime + 10); }} className="text-white hover:text-white/80 transition-colors p-1 shrink-0" title="10s ileri">
+                <SkipForward style={{ width: 18, height: 18 }} />
               </button>
 
-              {/* Volume */}
+              {/* Ses */}
               <div className="relative flex items-center" onMouseLeave={() => setShowVolume(false)}>
-                <button
-                  onClick={toggleMute}
-                  onMouseEnter={() => setShowVolume(true)}
-                  className="text-white hover:text-white/80 transition-colors p-1 shrink-0"
-                  title="Ses (M)"
-                >
+                <button onClick={toggleMute} onMouseEnter={() => setShowVolume(true)} className="text-white hover:text-white/80 transition-colors p-1 shrink-0">
                   {muted || volume === 0
-                    ? <VolumeX className="h-4.5 w-4.5" style={{ width: "18px", height: "18px" }} />
-                    : <Volume2 className="h-4.5 w-4.5" style={{ width: "18px", height: "18px" }} />
-                  }
+                    ? <VolumeX style={{ width: 18, height: 18 }} />
+                    : <Volume2 style={{ width: 18, height: 18 }} />}
                 </button>
                 {showVolume && (
-                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/80 rounded-lg px-3 py-2 border border-white/10">
+                  <div className="absolute bottom-9 left-1/2 -translate-x-1/2 bg-black/80 rounded-lg px-3 py-2 border border-white/10">
                     <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={muted ? 0 : volume}
-                      onChange={handleVolumeChange}
+                      type="range" min={0} max={1} step={0.05}
+                      value={muted ? 0 : volume} onChange={handleVolumeChange}
                       className="accent-white cursor-pointer"
-                      style={{ writingMode: "vertical-lr", direction: "rtl", height: "72px", width: "4px", appearance: "slider-vertical" } as React.CSSProperties}
+                      style={{ writingMode: "vertical-lr", direction: "rtl", height: 72, width: 4, appearance: "slider-vertical" } as React.CSSProperties}
                     />
                   </div>
                 )}
               </div>
 
-              {/* Time */}
-              <span className="text-white text-xs font-mono tabular-nums shrink-0 ml-1">
+              {/* Süre */}
+              <span className="text-white text-xs font-mono tabular-nums shrink-0">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
 
               <div className="flex-1" />
 
-              {/* Quality */}
+              {/* Ağ kalitesi göstergesi (HLS varsa) */}
+              {bandwidth > 0 && (
+                <div className="flex items-end gap-[2px] px-1.5" title={formatBandwidth(bandwidth)}>
+                  {[0, 1, 2].map(i => (
+                    <div
+                      key={i}
+                      className="rounded-sm transition-colors"
+                      style={{
+                        width: 3,
+                        height: 5 + i * 3,
+                        background: i <= sig - 1
+                          ? (sig === 1 ? "#f87171" : sig === 2 ? "#facc15" : "#4ade80")
+                          : "rgba(255,255,255,0.2)",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Buffer yüzdesi — yalnızca yüklenirken */}
+              {loading && bufferPct > 0 && (
+                <span className="text-white/50 text-[10px] font-mono">
+                  %{bufferPct}
+                </span>
+              )}
+
+              {/* Kalite seçici */}
               {hlsLevels.length > 0 && (
                 <div className="relative">
                   <button
@@ -527,61 +644,48 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
                     {qualityLabel}
                   </button>
                   {showQuality && (
-                    <div className="absolute bottom-8 right-0 bg-[#111] border border-white/10 rounded-xl overflow-hidden shadow-2xl min-w-[100px]">
+                    <div className="absolute bottom-8 right-0 bg-[#111] border border-white/10 rounded-xl overflow-hidden shadow-2xl min-w-[110px]">
+                      <div className="px-3 py-1.5 text-[10px] text-white/40 font-semibold border-b border-white/5 tracking-wider">KALİTE</div>
                       <button
                         onClick={() => setQuality(-1)}
-                        className={cn("w-full px-4 py-2 text-left text-xs hover:bg-white/5 transition-colors", currentLevel === -1 ? "text-white font-semibold" : "text-[#aaa]")}
+                        className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 transition-colors flex items-center justify-between", currentLevel === -1 ? "text-white font-semibold" : "text-[#aaa]")}
                       >
-                        Otomatik
+                        <span>Otomatik</span>
+                        {currentLevel === -1 && <span className="w-1.5 h-1.5 rounded-full bg-green-400" />}
                       </button>
-                      {hlsLevels.map((lvl, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setQuality(i)}
-                          className={cn("w-full px-4 py-2 text-left text-xs hover:bg-white/5 transition-colors", currentLevel === i ? "text-white font-semibold" : "text-[#aaa]")}
-                        >
-                          {lvl.height}p
-                        </button>
-                      ))}
+                      {[...hlsLevels].reverse().map((lvl, ri) => {
+                        const i = hlsLevels.length - 1 - ri;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => setQuality(i)}
+                            className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 transition-colors flex items-center justify-between", currentLevel === i ? "text-white font-semibold" : "text-[#aaa]")}
+                          >
+                            <span>{lvl.height}p</span>
+                            <span className="text-[10px] text-white/30">{Math.round(lvl.bitrate / 1000)}k</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* AUTO badge (non-HLS) */}
+              {/* Otomatik badge (non-HLS) */}
               {hlsLevels.length === 0 && (
-                <span className="text-white text-[11px] font-bold px-2 py-0.5 rounded border border-white/20 bg-white/5">
+                <span className="text-white/50 text-[11px] font-bold px-2 py-0.5 rounded border border-white/10 bg-white/5">
                   AUTO
                 </span>
               )}
 
-              {/* CC placeholder */}
-              <button
-                className="text-white/60 hover:text-white transition-colors p-1"
-                title="Altyazı"
-                onClick={() => {}}
-              >
+              {/* Altyazı */}
+              <button className="text-white/50 hover:text-white transition-colors p-1" title="Altyazı" onClick={() => {}}>
                 <Captions className="h-4 w-4" />
               </button>
 
-              {/* Settings placeholder */}
-              <button
-                className="text-white/60 hover:text-white transition-colors p-1"
-                title="Ayarlar"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-
-              {/* Fullscreen */}
-              <button
-                onClick={toggleFullscreen}
-                className="text-white hover:text-white/80 transition-colors p-1 shrink-0"
-                title="Tam ekran (F)"
-              >
-                {fullscreen
-                  ? <Minimize2 className="h-4 w-4" />
-                  : <Maximize2 className="h-4 w-4" />
-                }
+              {/* Tam ekran */}
+              <button onClick={toggleFullscreen} className="text-white hover:text-white/80 transition-colors p-1 shrink-0" title="Tam ekran (F)">
+                {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </button>
             </div>
           </div>
