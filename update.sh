@@ -31,10 +31,11 @@ sleep 1
 # ── 2. Kodu cek (conflict varsa remote ustu al) ────────────────────────
 echo "[2/6] Git pull..."
 # Windows'ta antivirus yeni pack dosyalarini kilitler; Git "Should I try again?" sorar.
-# yes y | ... komutu her soruya otomatik "y" gonderir, script takilmaz.
+# GIT_TERMINAL_PROMPT=0 → Git interaktif soru soramaz, hata verir; || true ile devam edilir.
+# Fetch'in kendisi (yeni objeler) tamamlanir; sadece cleanup basar — bu kabul edilebilir.
 git config gc.auto 0
 git config core.fscache true
-yes y | git fetch origin
+GIT_TERMINAL_PROMPT=0 git -c gc.auto=0 -c maintenance.auto=false fetch origin 2>&1 || true
 if ! git merge --ff-only origin/main 2>/dev/null; then
     echo "   Yerel degisiklikler var, remote ustu aliniyor..."
     git reset --hard origin/main
