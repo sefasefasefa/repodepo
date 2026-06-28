@@ -149,6 +149,7 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [resumePrompt, setResumePrompt] = useState<{ currentTime: number; progress: number } | null>(null);
   const resumeSeeked = useRef(false);
+  const token = typeof window !== "undefined" ? (localStorage.getItem("token") ?? "") : "";
 
   const allSources: PlayerSource[] = (() => {
     const rawUrl = video.hlsUrl || video.videoUrl;
