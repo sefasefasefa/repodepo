@@ -504,6 +504,57 @@ function WatermarkTab() {
   );
 }
 
+// ── SeoTab yardımcı bileşenleri (SeoTab DIŞINDA — re-mount sorununu önler) ────
+function SeoField({ label, k, placeholder, type = "text", hint, settings, setSettings }: {
+  label: string; k: string; placeholder?: string; type?: string; hint?: string;
+  settings: any; setSettings: (fn: (p: any) => any) => void;
+}) {
+  return (
+    <div>
+      <label className="text-xs text-[#666] block mb-1.5">{label}</label>
+      {type === "textarea"
+        ? <textarea value={settings[k] || ""} onChange={e => setSettings((p: any) => ({ ...p, [k]: e.target.value }))}
+            placeholder={placeholder} rows={3}
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40 resize-none" />
+        : <input value={settings[k] || ""} onChange={e => setSettings((p: any) => ({ ...p, [k]: e.target.value }))}
+            placeholder={placeholder}
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40" />}
+      {hint && <p className="text-[10px] text-[#444] mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+function SeoSelectField({ label, k, options, hint, settings, setSettings }: {
+  label: string; k: string; options: { v: string; l: string }[]; hint?: string;
+  settings: any; setSettings: (fn: (p: any) => any) => void;
+}) {
+  return (
+    <div>
+      <label className="text-xs text-[#666] block mb-1.5">{label}</label>
+      <select value={settings[k] || options[0].v} onChange={e => setSettings((p: any) => ({ ...p, [k]: e.target.value }))}
+        className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40">
+        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+      </select>
+      {hint && <p className="text-[10px] text-[#444] mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+function SeoBoolField({ label, desc, k, settings, setSettings }: {
+  label: string; desc: string; k: string;
+  settings: any; setSettings: (fn: (p: any) => any) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div><p className="text-sm text-white">{label}</p><p className="text-xs text-[#555]">{desc}</p></div>
+      <button onClick={() => setSettings((p: any) => ({ ...p, [k]: !p[k] }))}
+        className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", settings[k] ? "bg-primary" : "bg-[#333]")}>
+        <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", settings[k] ? "left-6" : "left-1")} />
+      </button>
+    </div>
+  );
+}
+
 // ── SeoTab ───────────────────────────────────────────────────────────────────
 function SeoTab() {
   const { token } = useAuth() as any;
@@ -570,40 +621,7 @@ function SeoTab() {
     { id: "advanced", label: "Gelişmiş", icon: Code2 },
   ];
 
-  const Field = ({ label, k, placeholder, type = "text", hint }: { label: string; k: string; placeholder?: string; type?: string; hint?: string }) => (
-    <div>
-      <label className="text-xs text-[#666] block mb-1.5">{label}</label>
-      {type === "textarea"
-        ? <textarea value={settings[k] || ""} onChange={e => setSettings((p: any) => ({ ...p, [k]: e.target.value }))}
-            placeholder={placeholder} rows={3}
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40 resize-none" />
-        : <input value={settings[k] || ""} onChange={e => setSettings((p: any) => ({ ...p, [k]: e.target.value }))}
-            placeholder={placeholder}
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40" />}
-      {hint && <p className="text-[10px] text-[#444] mt-1">{hint}</p>}
-    </div>
-  );
-
-  const SelectField = ({ label, k, options, hint }: { label: string; k: string; options: { v: string; l: string }[]; hint?: string }) => (
-    <div>
-      <label className="text-xs text-[#666] block mb-1.5">{label}</label>
-      <select value={settings[k] || options[0].v} onChange={e => setSettings((p: any) => ({ ...p, [k]: e.target.value }))}
-        className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40">
-        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-      </select>
-      {hint && <p className="text-[10px] text-[#444] mt-1">{hint}</p>}
-    </div>
-  );
-
-  const BoolField = ({ label, desc, k }: { label: string; desc: string; k: string }) => (
-    <div className="flex items-center justify-between">
-      <div><p className="text-sm text-white">{label}</p><p className="text-xs text-[#555]">{desc}</p></div>
-      <button onClick={() => setSettings((p: any) => ({ ...p, [k]: !p[k] }))}
-        className={cn("w-11 h-6 rounded-full transition-all relative shrink-0", settings[k] ? "bg-primary" : "bg-[#333]")}>
-        <span className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", settings[k] ? "left-6" : "left-1")} />
-      </button>
-    </div>
-  );
+  const sp = { settings, setSettings };
 
   return (
     <div className="space-y-4">
@@ -628,48 +646,48 @@ function SeoTab() {
       {activeSection === "basic" && (
         <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
           <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Globe className="h-3.5 w-3.5 text-blue-400" /> Temel SEO</p>
-          <Field label="Site Başlığı" k="siteTitle" placeholder="Prnhbbbb - Video Platform" hint="50-60 karakter ideal. Tarayıcı sekmesi ve Google'da görünür." />
-          <Field label="Site Açıklaması" k="siteDescription" type="textarea" placeholder="Video streaming ve sosyal platform" hint="150-160 karakter ideal. Google snippet olarak kullanılır." />
-          <Field label="Anahtar Kelimeler" k="keywords" placeholder="video, streaming, creator, sosyal" hint="Virgülle ayırın. Modern SEO'da az etkisi var ama yararlı." />
-          <SelectField label="Robots Direktifi" k="robots" hint="index,follow önerilir. Yeni site veya gizli içerik için noindex." options={[
+          <SeoField label="Site Başlığı" k="siteTitle" placeholder="Prnhbbbb - Video Platform" hint="50-60 karakter ideal. Tarayıcı sekmesi ve Google'da görünür." {...sp} />
+          <SeoField label="Site Açıklaması" k="siteDescription" type="textarea" placeholder="Video streaming ve sosyal platform" hint="150-160 karakter ideal. Google snippet olarak kullanılır." {...sp} />
+          <SeoField label="Anahtar Kelimeler" k="keywords" placeholder="video, streaming, creator, sosyal" hint="Virgülle ayırın. Modern SEO'da az etkisi var ama yararlı." {...sp} />
+          <SeoSelectField label="Robots Direktifi" k="robots" hint="index,follow önerilir. Yeni site veya gizli içerik için noindex." options={[
             { v: "index,follow", l: "index,follow (Önerilir — tam indeksleme)" },
             { v: "noindex,follow", l: "noindex,follow — sayfayı indeksleme" },
             { v: "index,nofollow", l: "index,nofollow — linkleri takip etme" },
             { v: "noindex,nofollow", l: "noindex,nofollow — tamamen gizle" },
-          ]} />
-          <Field label="Canonical URL" k="canonicalUrl" placeholder="https://example.com" hint="Duplicate içerik sorununu önler. Sitenizin ana domain'i." />
-          <SelectField label="Sayfa Dili (hreflang)" k="hreflang" options={[
+          ]} {...sp} />
+          <SeoField label="Canonical URL" k="canonicalUrl" placeholder="https://example.com" hint="Duplicate içerik sorununu önler. Sitenizin ana domain'i." {...sp} />
+          <SeoSelectField label="Sayfa Dili (hreflang)" k="hreflang" options={[
             { v: "tr", l: "Türkçe (tr)" }, { v: "en", l: "English (en)" }, { v: "de", l: "Deutsch (de)" },
             { v: "fr", l: "Français (fr)" }, { v: "es", l: "Español (es)" }, { v: "ar", l: "العربية (ar)" },
             { v: "ru", l: "Русский (ru)" }, { v: "ja", l: "日本語 (ja)" },
-          ]} />
+          ]} {...sp} />
         </div>
       )}
 
       {activeSection === "og" && (
         <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
           <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Link2 className="h-3.5 w-3.5 text-blue-400" /> Open Graph (Facebook, LinkedIn, WhatsApp)</p>
-          <Field label="OG Başlık" k="ogTitle" placeholder="Prnhbbbb — Video Platform" hint="Boş bırakılırsa Site Başlığı kullanılır." />
-          <Field label="OG Açıklama" k="ogDescription" type="textarea" placeholder="Video streaming platformu" hint="Sosyal medyada paylaşım önizlemesinde görünür." />
-          <Field label="OG Görsel URL" k="ogImage" placeholder="https://example.com/og-image.jpg" hint="1200x630 piksel PNG/JPG önerilir. Sosyal paylaşım kartında görünür." />
+          <SeoField label="OG Başlık" k="ogTitle" placeholder="Prnhbbbb — Video Platform" hint="Boş bırakılırsa Site Başlığı kullanılır." {...sp} />
+          <SeoField label="OG Açıklama" k="ogDescription" type="textarea" placeholder="Video streaming platformu" hint="Sosyal medyada paylaşım önizlemesinde görünür." {...sp} />
+          <SeoField label="OG Görsel URL" k="ogImage" placeholder="https://example.com/og-image.jpg" hint="1200x630 piksel PNG/JPG önerilir. Sosyal paylaşım kartında görünür." {...sp} />
           {settings.ogImage && <img src={settings.ogImage} alt="og preview" className="w-full max-h-32 object-cover rounded-xl border border-[#2a2a2a]" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />}
-          <SelectField label="OG Type" k="ogType" hint="Genellikle 'website'. Video sayfaları için 'video.other'." options={[
+          <SeoSelectField label="OG Type" k="ogType" hint="Genellikle 'website'. Video sayfaları için 'video.other'." options={[
             { v: "website", l: "website" }, { v: "article", l: "article" },
             { v: "video.other", l: "video.other" }, { v: "profile", l: "profile" },
-          ]} />
+          ]} {...sp} />
         </div>
       )}
 
       {activeSection === "twitter" && (
         <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
           <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><Twitter className="h-3.5 w-3.5 text-blue-400" /> Twitter (X) Kartları</p>
-          <SelectField label="Kart Türü" k="twitterCard" hint="summary_large_image geniş görsel gösterir, daha fazla tıklama getirir." options={[
+          <SeoSelectField label="Kart Türü" k="twitterCard" hint="summary_large_image geniş görsel gösterir, daha fazla tıklama getirir." options={[
             { v: "summary_large_image", l: "summary_large_image (Büyük Görsel)" },
             { v: "summary", l: "summary (Küçük Görsel)" },
             { v: "player", l: "player (Video Oynatıcı)" },
-          ]} />
-          <Field label="Twitter Hesabı (@)" k="twitterSite" placeholder="@hesap_adi" hint="Sitenin resmi Twitter hesabı." />
-          <Field label="İçerik Üreticisi (@)" k="twitterCreator" placeholder="@icerik_uretici" hint="İçerik üreticisinin Twitter hesabı (opsiyonel)." />
+          ]} {...sp} />
+          <SeoField label="Twitter Hesabı (@)" k="twitterSite" placeholder="@hesap_adi" hint="Sitenin resmi Twitter hesabı." {...sp} />
+          <SeoField label="İçerik Üreticisi (@)" k="twitterCreator" placeholder="@icerik_uretici" hint="İçerik üreticisinin Twitter hesabı (opsiyonel)." {...sp} />
           <div className="bg-[#0e0e0e] border border-[#1a1a1a] rounded-xl p-3">
             <p className="text-[10px] text-[#555] mb-2 uppercase tracking-wider">Kart Önizlemesi</p>
             <div className="border border-[#222] rounded-xl overflow-hidden">
@@ -689,14 +707,14 @@ function SeoTab() {
       {activeSection === "analytics" && (
         <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
           <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><BarChart2 className="h-3.5 w-3.5 text-green-400" /> Analytics & Search Console</p>
-          <Field label="Google Analytics ID" k="googleAnalyticsId" placeholder="G-XXXXXXXXXX veya UA-XXXXXXXX-X" hint="Google Analytics 4 Measurement ID. Boş bırakılırsa tracking yapılmaz." />
-          <Field label="Google Search Console Doğrulama" k="googleSearchConsole" placeholder="google1234567890abcdef.html" hint="Search Console'dan alınan doğrulama metası veya dosya adı." />
-          <BoolField label="Sitemap.xml" desc="Arama motorları için XML sitemap oluştur" k="sitemapEnabled" />
-          <BoolField label="Yapısal Veri (Schema.org)" desc="JSON-LD ile zengin snippet desteği" k="structuredDataEnabled" />
-          <SelectField label="Schema.org Türü" k="schemaOrgType" hint="Sitenizi Google'a tanımlayan yapısal veri türü." options={[
+          <SeoField label="Google Analytics ID" k="googleAnalyticsId" placeholder="G-XXXXXXXXXX veya UA-XXXXXXXX-X" hint="Google Analytics 4 Measurement ID. Boş bırakılırsa tracking yapılmaz." {...sp} />
+          <SeoField label="Google Search Console Doğrulama" k="googleSearchConsole" placeholder="google1234567890abcdef.html" hint="Search Console'dan alınan doğrulama metası veya dosya adı." {...sp} />
+          <SeoBoolField label="Sitemap.xml" desc="Arama motorları için XML sitemap oluştur" k="sitemapEnabled" {...sp} />
+          <SeoBoolField label="Yapısal Veri (Schema.org)" desc="JSON-LD ile zengin snippet desteği" k="structuredDataEnabled" {...sp} />
+          <SeoSelectField label="Schema.org Türü" k="schemaOrgType" hint="Sitenizi Google'a tanımlayan yapısal veri türü." options={[
             { v: "Organization", l: "Organization" }, { v: "WebSite", l: "WebSite" },
             { v: "VideoObject", l: "VideoObject" }, { v: "Person", l: "Person" },
-          ]} />
+          ]} {...sp} />
           {settings.googleAnalyticsId && (
             <div className="bg-green-500/5 border border-green-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
               <BarChart2 className="h-3.5 w-3.5 text-green-400 shrink-0" />
