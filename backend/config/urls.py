@@ -1,3 +1,6 @@
+import os
+import re
+import mimetypes
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
@@ -38,17 +41,94 @@ urlpatterns = [
 ]
 
 def _serve_media(request, path):
-    """Serve media files with graceful 404 (no Django debug page)."""
+    """
+    Serve media files with full HTTP Range request support.
+    Range desteği olmadan büyük video dosyaları seek yapılamaz ve
+    bir süre sonra oynatma durur. Bu fonksiyon 206 Partial Content
+    döndürerek seek ve progressive buffering'i destekler.
+    """
     import mimetypes
-    full = os.path.normpath(os.path.join(settings.MEDIA_ROOT, path))
-    if not str(full).startswith(str(settings.MEDIA_ROOT)):
-        from django.http import JsonResponse
+    from django.http import StreamingHttpResponse, JsonResponse, HttpResponse
+
+    media_root = str(settings.MEDIA_ROOT)
+    full = os.path.normpath(os.path.join(media_root, path))
+
+    if not full.startswith(media_root):
         return JsonResponse({'error': 'Forbidden'}, status=403)
     if not os.path.exists(full) or not os.path.isfile(full):
-        from django.http import JsonResponse
         return JsonResponse({'error': 'Medya dosyası bulunamadı', 'path': path}, status=404)
+
     content_type, _ = mimetypes.guess_type(full)
-    return FileResponse(open(full, 'rb'), content_type=content_type or 'application/octet-stream')
+    content_type = content_type or 'application/octet-stream'
+    file_size = os.path.getsize(full)
+
+    range_header = request.META.get('HTTP_RANGE', '').strip()
+
+    if range_header:
+        # Parse Range: bytes=start-end
+        try:
+            range_match = re.match(r'bytes=(\d*)-(\d*)', range_header)
+            if not range_match:
+                resp = HttpResponse(status=416)
+                resp['Content-Range'] = f'bytes */{file_size}'
+                return resp
+
+            range_start_str, range_end_str = range_match.group(1), range_match.group(2)
+            range_start = int(range_start_str) if range_start_str else 0
+            range_end = int(range_end_str) if range_end_str else file_size - 1
+
+            if range_end >= file_size:
+                range_end = file_size - 1
+            if range_start > range_end:
+                resp = HttpResponse(status=416)
+                resp['Content-Range'] = f'bytes */{file_size}'
+                return resp
+
+            chunk_size = 65536  # 64 KB
+
+            def file_iterator(filepath, start, end):
+                with open(filepath, 'rb') as f:
+                    f.seek(start)
+                    remaining = end - start + 1
+                    while remaining > 0:
+                        data = f.read(min(chunk_size, remaining))
+                        if not data:
+                            break
+                        remaining -= len(data)
+                        yield data
+
+            content_length = range_end - range_start + 1
+            resp = StreamingHttpResponse(
+                file_iterator(full, range_start, range_end),
+                status=206,
+                content_type=content_type,
+            )
+            resp['Content-Length'] = content_length
+            resp['Content-Range'] = f'bytes {range_start}-{range_end}/{file_size}'
+            resp['Accept-Ranges'] = 'bytes'
+            resp['Cache-Control'] = 'no-cache'
+            return resp
+
+        except Exception:
+            pass
+
+    # Range header yoksa dosyanın tamamını dön (ama Accept-Ranges bildir)
+    def full_file_iterator(filepath):
+        with open(filepath, 'rb') as f:
+            while True:
+                data = f.read(65536)
+                if not data:
+                    break
+                yield data
+
+    resp = StreamingHttpResponse(
+        full_file_iterator(full),
+        content_type=content_type,
+    )
+    resp['Content-Length'] = file_size
+    resp['Accept-Ranges'] = 'bytes'
+    resp['Cache-Control'] = 'no-cache'
+    return resp
 
 urlpatterns += [re_path(r'^media/(?P<path>.*)$', _serve_media)]
 
@@ -57,8 +137,6 @@ if settings.DEBUG:
 
 # SPA catch-all: serve React index.html for all non-API, non-admin, non-static paths.
 # This must come LAST so it doesn't shadow API or admin routes.
-import os
-import mimetypes
 from django.http import FileResponse, HttpResponse, Http404
 
 
