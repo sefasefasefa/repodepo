@@ -18,3 +18,9 @@ id = "edU4xEpIQzEpWQ8QRMwTq"
 uri = "file://static_assets.zip"
 type = "unspecified"
 title = "Frontend Build Dosyaları (static_assets.zip)"
+
+[[outputs]]
+id = "YcHVox60L-1rBIlPOZ_eK"
+uri = "file://SEO_REHBERI.md"
+type = "text"
+title = "SEO Ayarları Rehberi"
