@@ -154,16 +154,40 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
   const allSources: PlayerSource[] = (() => {
     const rawUrl = video.hlsUrl || video.videoUrl;
     const ownSource: PlayerSource | null = rawUrl ? (() => {
-      // cloud.mail.ru linkleri tarayıcıda doğrudan oynatılamaz (CORS/redirect).
-      // Backend stream proxy endpoint'ini kullan: /api/videos/<id>/stream
+      const isExternal = rawUrl.startsWith('http://') || rawUrl.startsWith('https://');
       const isCloudMail = rawUrl.includes('cloud.mail.ru/public/');
-      const proxyUrl = isCloudMail ? `/api/videos/${video.id}/stream` : null;
-      const embedCode = proxyUrl ? null : resolveEmbedFromUrl(rawUrl);
-      const directUrl = proxyUrl || rawUrl;
+
+      if (isExternal && !isCloudMail) {
+        // Tanınan embed platformu ise → iframe embed oluştur
+        const embedCode = resolveEmbedFromUrl(rawUrl);
+        if (embedCode) {
+          return {
+            id: 0,
+            playerName: "Kendi Oynatıcı",
+            embedCode,
+            isDefault: players.length === 0,
+            quality: "HD",
+            language: "TR",
+          };
+        }
+        // Tanınmayan harici URL veya doğrudan video dosyası → backend proxy üzerinden oynat
+        // (CORS sorununu önler, tarayıcı hata almaz)
+        return {
+          id: 0,
+          playerName: "Kendi Oynatıcı",
+          directUrl: `/api/videos/${video.id}/stream`,
+          isDefault: players.length === 0,
+          quality: "HD",
+          language: "TR",
+        };
+      }
+
+      // cloud.mail.ru → özel proxy; yerel /media/ dosyası → doğrudan sun
+      const directUrl = isCloudMail ? `/api/videos/${video.id}/stream` : rawUrl;
       return {
         id: 0,
         playerName: "Kendi Oynatıcı",
-        ...(embedCode ? { embedCode } : { directUrl }),
+        directUrl,
         isDefault: players.length === 0,
         quality: "HD",
         language: "TR",
@@ -174,14 +198,6 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
 
   const defaultSource = allSources.find(p => p.isDefault) || allSources[0];
   const [active, setActive] = useState(defaultSource?.id ?? 0);
-
-  const handlePlayerError = useCallback(() => {
-    const currentIdx = allSources.findIndex(s => s.id === active);
-    const nextSource = allSources[currentIdx + 1];
-    if (nextSource) {
-      setActive(nextSource.id);
-    }
-  }, [allSources, active]);
   const activeSource = allSources.find(p => p.id === active) || allSources[0];
 
   useEffect(() => {
@@ -314,7 +330,6 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
                       onTimeUpdate={handleTimeUpdate}
                       onLoadedMetadata={handleLoadedMetadata}
                       onEnded={handleEnded}
-                      onError={handlePlayerError}
                       className="w-full h-full"
                       videoId={video.id}
                       token={token}
