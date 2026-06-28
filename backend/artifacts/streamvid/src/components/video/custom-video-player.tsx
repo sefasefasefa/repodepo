@@ -175,8 +175,8 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           fragLoadingMaxRetry: 12,
           fragLoadingRetryDelay: 200,
           fragLoadingMaxRetryTimeout: 4000,
-          manifestLoadingMaxRetry: 3,
-          manifestLoadingRetryDelay: 200,
+          manifestLoadingMaxRetry: 1,
+          manifestLoadingRetryDelay: 100,
           levelLoadingMaxRetry: 10,
           levelLoadingRetryDelay: 200,
         });
@@ -203,6 +203,20 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
 
         hls.on(Hls.Events.ERROR, (_, data) => {
           if (data.fatal) {
+            // Manifest yüklenemedi/parse edilemedi → bu URL HLS değil, native'e düş
+            const isManifestError =
+              data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
+              data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT ||
+              data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR;
+
+            if (isManifestError) {
+              hls.destroy();
+              hlsRef.current = null;
+              vid.src = src;
+              vid.load();
+              return;
+            }
+
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
                 hls.startLoad();
@@ -211,10 +225,11 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
                 hls.recoverMediaError();
                 break;
               default:
-                // HLS değil veya kurtarılamaz — native oynatmaya düş
+                // Kurtarılamaz — native oynatmaya düş
                 hls.destroy();
                 hlsRef.current = null;
                 vid.src = src;
+                vid.load();
             }
           }
         });
