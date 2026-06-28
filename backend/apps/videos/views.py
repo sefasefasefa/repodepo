@@ -524,6 +524,47 @@ def stream_video(request, video_id):
         _clean = url.split('?')[0].split('#')[0].rstrip('/')
         _is_direct_file = bool(_re.search(r'\.(mp4|m3u8|webm|ogg|ogv|mov|ts|mkv|avi|flv|wmv|mpg|mpeg)$', _clean, _re.I))
         if _is_direct_file:
+            # Akıllı strateji:
+            # 1) Sunucu tarafından doğru Referer ile fetch dene (hotlink korumalı siteler için)
+            # 2) Sunucu başarılı olursa → proxy stream et
+            # 3) Sunucu başarısız olursa (IP-locked token, rate limit vb.) → tarayıcıyı direkt yönlendir
+            import urllib.parse as _up
+            _referer = _up.urlparse(url).scheme + '://' + _up.urlparse(url).netloc + '/'
+            _headers = {
+                'User-Agent': (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/120.0.0.0 Safari/537.36'
+                ),
+                'Referer': _referer,
+                'Accept': 'video/webm,video/mp4,video/*;q=0.9,*/*;q=0.5',
+            }
+            range_hdr = request.META.get('HTTP_RANGE')
+            if range_hdr:
+                _headers['Range'] = range_hdr
+            try:
+                upstream = _rq.get(url, headers=_headers, stream=True, timeout=15, allow_redirects=True)
+                ctype = upstream.headers.get('Content-Type', 'video/mp4')
+                is_video = ctype.startswith('video/') or ctype.startswith('application/')
+                if upstream.status_code in (200, 206) and is_video:
+                    # Sunucu başarıyla çekti → proxy stream (hotlink korumasını aşar)
+                    def _direct_gen(r):
+                        for chunk in r.iter_content(chunk_size=512 * 1024):
+                            if chunk:
+                                yield chunk
+                    from django.http import StreamingHttpResponse
+                    sc = upstream.status_code if upstream.status_code in (200, 206) else 200
+                    resp = StreamingHttpResponse(_direct_gen(upstream), status=sc, content_type=ctype)
+                    for hdr in ('Content-Length', 'Content-Range', 'Accept-Ranges'):
+                        if hdr in upstream.headers:
+                            resp[hdr] = upstream.headers[hdr]
+                    resp['Accept-Ranges'] = 'bytes'
+                    resp['Access-Control-Allow-Origin'] = '*'
+                    resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
+                    return resp
+            except Exception:
+                pass
+            # Sunucu fetch başarısız (IP kısıtlı token vb.) → tarayıcıyı direkt yönlendir
             from django.http import HttpResponseRedirect
             return HttpResponseRedirect(url)
 
