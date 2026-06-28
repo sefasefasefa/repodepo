@@ -35,6 +35,10 @@ waitForPort = 5000
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 22983
+externalPort = 3001
+
 [deployment]
 deploymentTarget = "autoscale"
 run = ["bash", "-c", "cd backend && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]
