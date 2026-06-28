@@ -395,6 +395,7 @@ def stream_video(request, video_id):
     """
     import requests as _rq
     from django.http import StreamingHttpResponse, FileResponse
+    from django.conf import settings
     import mimetypes
     import os
 
