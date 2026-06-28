@@ -218,7 +218,8 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
 
       // Doğrudan video dosyası (.mp4, .m3u8, .webm vb.) → tarayıcı direkt oynatır,
       // proxy'ye gerek yok (secure token'lar sunucu IP'sine değil client IP'sine bağlı olabilir)
-      const cleanUrl = effectiveUrl.split("?")[0].split("#")[0];
+      // Not: sondaki slash'ı temizle (örn: "697.mp4/" → "697.mp4")
+      const cleanUrl = effectiveUrl.split("?")[0].split("#")[0].replace(/\/+$/, "");
       const isDirectFile = /\.(mp4|m3u8|webm|ogg|ogv|mov|ts|mkv)$/i.test(cleanUrl);
       if (isDirectFile) {
         return { id: 0, playerName: "Kendi Oynatıcı", directUrl: effectiveUrl, isDefault: players.length === 0, quality: "HD", language: "TR" };

@@ -521,7 +521,7 @@ def stream_video(request, video_id):
         # Proxy'leme YAPMIYORUZ çünkü:
         #   - IP-locked secure token'lar sunucu IP'sinden geçince geçersiz sayılır
         #   - Tarayıcı kendi IP'siyle bağlanırsa token çalışır
-        _clean = url.split('?')[0].split('#')[0]
+        _clean = url.split('?')[0].split('#')[0].rstrip('/')
         _is_direct_file = bool(_re.search(r'\.(mp4|m3u8|webm|ogg|ogv|mov|ts|mkv|avi|flv|wmv|mpg|mpeg)$', _clean, _re.I))
         if _is_direct_file:
             from django.http import HttpResponseRedirect
