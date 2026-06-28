@@ -200,26 +200,50 @@ const EMPTY_EDIT = {
 // ── Distribution tab sub-component ──────────────────────────────────────────
 function DistributionTab({ videoId }: { videoId: number }) {
   const [sites, setSites] = useState<any[]>([]);
+  // siteId → latest CrossPostJob for this video
+  const [siteJobs, setSiteJobs] = useState<Record<number, any>>({});
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [dispatching, setDispatching] = useState(false);
-  const [result, setResult] = useState<any[] | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
+  const [newJobs, setNewJobs] = useState<any[] | null>(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const loadData = async () => {
     const token = localStorage.getItem("token");
-    fetch("/api/cross-post/sites", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(r => r.json())
-      .then(d => {
-        const list = d.sites ?? [];
-        setSites(list);
-        setSelected(new Set(list.filter((s: any) => s.enabled).map((s: any) => s.id)));
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+    try {
+      const [sitesRes, jobsRes] = await Promise.all([
+        fetch("/api/cross-post/sites", { headers }).then(r => r.json()),
+        fetch(`/api/cross-post/jobs?videoId=${videoId}`, { headers }).then(r => r.json()),
+      ]);
+
+      const list: any[] = sitesRes.sites ?? [];
+      setSites(list);
+
+      // En güncel job'u siteId bazında grupla
+      const jobMap: Record<number, any> = {};
+      for (const job of (jobsRes.jobs ?? [])) {
+        const sid: number = job.siteId;
+        if (!jobMap[sid]) jobMap[sid] = job;
+      }
+      setSiteJobs(jobMap);
+
+      // Başarılı gönderilmemiş, etkin siteleri varsayılan seçili yap
+      const sentSiteIds = new Set(
+        Object.entries(jobMap)
+          .filter(([, j]) => j.status === "success")
+          .map(([id]) => Number(id))
+      );
+      setSelected(new Set(list.filter((s: any) => s.enabled && !sentSiteIds.has(s.id)).map((s: any) => s.id)));
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); }, [videoId]);
 
   const toggle = (id: number) =>
     setSelected(prev => {
@@ -227,6 +251,27 @@ function DistributionTab({ videoId }: { videoId: number }) {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+
+  const handleDelete = async (jobId: number, siteId: number) => {
+    setDeletingJobId(jobId);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/cross-post/jobs/${jobId}/delete`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? "Silinemedi"); return; }
+      // Silinen job'u state'den çıkar ve siteyi seçilebilir yap
+      setSiteJobs(prev => { const next = { ...prev }; delete next[siteId]; return next; });
+      setSelected(prev => new Set([...prev, siteId]));
+      setNewJobs(null);
+    } catch {
+      setError("Sunucu hatası");
+    } finally {
+      setDeletingJobId(null);
+    }
+  };
 
   const dispatch = async () => {
     if (selected.size === 0) return;
@@ -244,7 +289,14 @@ function DistributionTab({ videoId }: { videoId: number }) {
       });
       const d = await res.json();
       if (!res.ok) { setError(d.error ?? "Gönderilemedi"); return; }
-      setResult(d.jobs ?? []);
+      setNewJobs(d.jobs ?? []);
+      // Gönderilen job'ları state'e ekle
+      const updatedMap: Record<number, any> = { ...siteJobs };
+      for (const job of (d.jobs ?? [])) {
+        updatedMap[job.siteId] = job;
+      }
+      setSiteJobs(updatedMap);
+      setSelected(new Set());
     } catch {
       setError("Sunucu hatası");
     } finally {
@@ -278,13 +330,17 @@ function DistributionTab({ videoId }: { videoId: number }) {
     );
   }
 
-  if (result) {
-    return (
-      <div className="space-y-3">
-        <p className="text-sm font-medium text-white">{result.length} siteye gönderildi</p>
-        <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-          {result.map((job: any) => {
-            const errMsg: string = job.responseText ?? job.response_text ?? job.error ?? "";
+  const sentCount = Object.values(siteJobs).filter(j => j.status === "success").length;
+  const selectableSites = sites.filter(s => !siteJobs[s.id] || siteJobs[s.id].status !== "success");
+
+  return (
+    <div className="space-y-3">
+      {/* Son gönderim sonuçları */}
+      {newJobs && newJobs.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-[#888]">Son gönderim sonuçları:</p>
+          {newJobs.map((job: any) => {
+            const errMsg: string = job.responseText ?? job.response_text ?? "";
             return (
               <div key={job.id} className="bg-[#111] border border-[#222] rounded-lg px-3 py-2 space-y-1">
                 <div className="flex items-center justify-between gap-2">
@@ -303,12 +359,8 @@ function DistributionTab({ videoId }: { videoId: number }) {
                   </p>
                 )}
                 {job.status === "success" && (job.remoteUrl ?? job.remote_url) && (
-                  <a
-                    href={job.remoteUrl ?? job.remote_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[11px] text-primary hover:underline truncate block"
-                  >
+                  <a href={job.remoteUrl ?? job.remote_url} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] text-primary hover:underline truncate block">
                     {job.remoteUrl ?? job.remote_url}
                   </a>
                 )}
@@ -316,32 +368,74 @@ function DistributionTab({ videoId }: { videoId: number }) {
             );
           })}
         </div>
-        <button
-          onClick={() => setResult(null)}
-          className="w-full py-2 rounded-lg bg-[#222] border border-[#333] text-sm text-[#888] hover:text-white transition-colors"
-        >
-          Tekrar Dağıt
-        </button>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div className="space-y-3">
-      {/* Select all / clear */}
-      <div className="flex items-center justify-between text-xs text-[#555]">
-        <span>{selected.size} / {sites.length} sağlayıcı seçili</span>
-        <div className="flex gap-3">
-          <button onClick={() => setSelected(new Set(sites.map((s: any) => s.id)))} className="hover:text-white transition-colors">Tümünü Seç</button>
-          <span>·</span>
-          <button onClick={() => setSelected(new Set())} className="hover:text-red-400 transition-colors">Temizle</button>
+      {/* Özet */}
+      {sentCount > 0 && (
+        <div className="flex items-center gap-2 bg-green-500/8 border border-green-500/20 rounded-lg px-3 py-2">
+          <Check className="h-3.5 w-3.5 text-green-400 shrink-0" />
+          <p className="text-xs text-green-300/80">{sentCount} sağlayıcıya daha önce başarıyla gönderildi.</p>
         </div>
-      </div>
+      )}
+
+      {/* Select all / clear — only for selectable sites */}
+      {selectableSites.length > 0 && (
+        <div className="flex items-center justify-between text-xs text-[#555]">
+          <span>{selected.size} / {selectableSites.length} gönderilebilir sağlayıcı seçili</span>
+          <div className="flex gap-3">
+            <button onClick={() => setSelected(new Set(selectableSites.map((s: any) => s.id)))} className="hover:text-white transition-colors">Tümünü Seç</button>
+            <span>·</span>
+            <button onClick={() => setSelected(new Set())} className="hover:text-red-400 transition-colors">Temizle</button>
+          </div>
+        </div>
+      )}
 
       {/* Site list */}
-      <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+      <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
         {sites.map((site: any) => {
+          const job = siteJobs[site.id];
+          const isSent = job?.status === "success";
+          const isFailed = job?.status === "failed";
+          const isPending = job?.status === "pending" || job?.status === "running";
           const isSelected = selected.has(site.id);
+
+          if (isSent) {
+            // Başarıyla gönderilmiş — seçilemez, "Gönderildi" göster + Sil butonu
+            return (
+              <div
+                key={site.id}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border bg-green-900/10 border-green-700/30 text-left"
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs shrink-0 opacity-70"
+                  style={{ backgroundColor: site.providerColor ?? site.provider_color ?? "#555" }}
+                >
+                  {(site.providerLetter ?? site.provider_letter ?? site.name?.substring(0, 2).toUpperCase())}
+                </div>
+                <span className="flex-1 text-sm font-medium text-[#aaa]">{site.name}</span>
+                {job.remoteUrl && (
+                  <a href={job.remoteUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-primary opacity-60 hover:opacity-100 shrink-0"
+                    title="Bağlantıyı aç">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
+                <span className="text-[11px] font-semibold text-green-400 bg-green-900/30 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
+                  <Check className="h-2.5 w-2.5" /> Gönderildi
+                </span>
+                <button
+                  onClick={() => handleDelete(job.id, site.id)}
+                  disabled={deletingJobId === job.id}
+                  title="Kaydı sil — tekrar gönderilebilir hale getirir (yalnızca yükleme başarısız olduysa kullan)"
+                  className="shrink-0 p-1.5 rounded-lg bg-red-900/20 text-red-400/60 hover:text-red-400 hover:bg-red-900/40 disabled:opacity-40 transition-colors"
+                >
+                  {deletingJobId === job.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                </button>
+              </div>
+            );
+          }
+
+          // Başarısız / bekleyen / gönderilmemiş — seçilebilir
           return (
             <button
               key={site.id}
@@ -349,6 +443,10 @@ function DistributionTab({ videoId }: { videoId: number }) {
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${
                 isSelected
                   ? "bg-primary/8 border-primary/30"
+                  : isFailed
+                  ? "bg-red-900/10 border-red-700/30 hover:border-red-600/50"
+                  : isPending
+                  ? "bg-blue-900/10 border-blue-700/30"
                   : "bg-[#161616] border-[#222] hover:border-[#333]"
               }`}
             >
@@ -361,7 +459,13 @@ function DistributionTab({ videoId }: { videoId: number }) {
               <span className={`flex-1 text-sm font-medium ${isSelected ? "text-white" : "text-[#aaa]"}`}>
                 {site.name}
               </span>
-              {!site.enabled && (
+              {isFailed && (
+                <span className="text-[10px] text-red-400 border border-red-700/40 px-1.5 py-0.5 rounded shrink-0">Başarısız</span>
+              )}
+              {isPending && (
+                <span className="text-[10px] text-blue-400 border border-blue-700/40 px-1.5 py-0.5 rounded shrink-0">Kuyrukta</span>
+              )}
+              {!site.enabled && !job && (
                 <span className="text-[10px] text-[#555] border border-[#2a2a2a] px-1.5 py-0.5 rounded">Devre dışı</span>
               )}
               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
@@ -374,7 +478,7 @@ function DistributionTab({ videoId }: { videoId: number }) {
         })}
       </div>
 
-      {selected.size === 0 && (
+      {selectableSites.length > 0 && selected.size === 0 && (
         <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
           <AlertCircle className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
           <p className="text-xs text-yellow-300/80">Hiçbir sağlayıcı seçili değil — dağıtım yapılmaz.</p>
@@ -387,15 +491,21 @@ function DistributionTab({ videoId }: { videoId: number }) {
         </p>
       )}
 
-      <button
-        onClick={dispatch}
-        disabled={dispatching || selected.size === 0}
-        className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-colors"
-      >
-        {dispatching
-          ? <><Loader2 className="h-4 w-4 animate-spin" /> Gönderiliyor…</>
-          : <><Share2 className="h-4 w-4" /> {selected.size} Sağlayıcıya Dağıt</>}
-      </button>
+      {selectableSites.length > 0 && (
+        <button
+          onClick={dispatch}
+          disabled={dispatching || selected.size === 0}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-colors"
+        >
+          {dispatching
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Gönderiliyor…</>
+            : <><Share2 className="h-4 w-4" /> {selected.size} Sağlayıcıya Dağıt</>}
+        </button>
+      )}
+
+      {selectableSites.length === 0 && sentCount === sites.length && (
+        <p className="text-center text-xs text-[#555] py-2">Tüm sağlayıcılara gönderildi. Tekrar göndermek için ilgili kaydı silin.</p>
+      )}
     </div>
   );
 }

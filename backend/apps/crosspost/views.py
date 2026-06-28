@@ -189,18 +189,44 @@ def dispatch(request):
         return Response({'error': 'Video bulunamadi'}, status=404)
     if video.creator_id != request.user.id and request.user.role != 'admin':
         return Response({'error': 'yetkisiz'}, status=403)
+
     site_ids = d.get('siteIds')  # None -> auto_post sites
+
+    # Daha önce başarıyla gönderilmiş sitelere tekrar göndermeyiz
+    if site_ids:
+        already_sent = set(
+            CrossPostJob.objects.filter(
+                video=video, site_id__in=site_ids, status='success'
+            ).values_list('site_id', flat=True)
+        )
+        site_ids = [sid for sid in site_ids if sid not in already_sent]
+        if not site_ids:
+            return Response({'error': 'Seçili sağlayıcıların tamamına zaten başarıyla gönderildi.'}, status=400)
+
     jobs = dispatch_for_video(video, request.user, site_ids)
     return Response({'jobs': [j.to_dict() for j in jobs]}, status=201)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def job_delete(request, job_id):
+    """Bir crosspost job'unu sil — böylece o sağlayıcıya tekrar gönderilebilir."""
+    try:
+        job = CrossPostJob.objects.get(id=job_id, user=request.user)
+    except CrossPostJob.DoesNotExist:
+        return Response({'error': 'Bulunamadı'}, status=404)
+    job.delete()
+    return Response({'message': 'silindi'})
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def jobs_list(request):
-    qs = (CrossPostJob.objects
-          .filter(user=request.user)
-          .select_related('site', 'video')
-          .order_by('-created_at')[:500])
+    video_id = request.query_params.get('videoId') or request.query_params.get('video_id')
+    qs = CrossPostJob.objects.filter(user=request.user).select_related('site', 'video')
+    if video_id:
+        qs = qs.filter(video_id=video_id)
+    qs = qs.order_by('-created_at')[:500]
 
     def _job_dict(j):
         d = j.to_dict()
