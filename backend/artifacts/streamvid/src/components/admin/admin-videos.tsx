@@ -26,18 +26,22 @@ async function apiFetch(path: string, opts: RequestInit = {}) {
 
 const EMPTY_FORM = {
   title: "", videoUrl: "", hlsUrl: "", thumbnailUrl: "", description: "",
-  categoryId: "", isPublished: true, isPremium: false, isPPV: false, ppvPrice: "", type: "video",
+  isPublished: true, isPremium: false, isPPV: false, ppvPrice: "", type: "video",
 };
 
 function AddVideoModal({ categories, onClose, onSuccess }: {
   categories: any[]; onClose: () => void; onSuccess: () => void;
 }) {
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"url" | "file">("url");
   const [uploading, setUploading] = useState(false);
   const set = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
+  const toggleCat = (id: number) => setSelectedCategoryIds(prev =>
+    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+  );
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,7 +86,8 @@ function AddVideoModal({ categories, onClose, onSuccess }: {
           title: form.title.trim(), videoUrl: form.videoUrl.trim(),
           hlsUrl: form.hlsUrl.trim() || undefined, thumbnailUrl: form.thumbnailUrl.trim() || undefined,
           description: form.description.trim() || undefined,
-          categoryId: form.categoryId ? Number(form.categoryId) : undefined,
+          categoryId: selectedCategoryIds[0] || undefined,
+          categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
           isPublished: form.isPublished, isPremium: form.isPremium, isPPV: form.isPPV,
           ppvPrice: form.isPPV && form.ppvPrice ? Number(form.ppvPrice) : undefined,
           type: form.type,
@@ -144,22 +149,34 @@ function AddVideoModal({ categories, onClose, onSuccess }: {
             <textarea value={form.description} onChange={e => set("description", e.target.value)} placeholder="Video açıklaması..." rows={3} className="w-full bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555] focus:outline-none focus:border-primary resize-none" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-[#888] mb-1.5 block font-medium">Kategori</label>
-              <select value={form.categoryId} onChange={e => set("categoryId", e.target.value)} className="w-full bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
-                <option value="">Seç</option>
-                {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs text-[#888] font-medium">Kategori</label>
+              {selectedCategoryIds.length > 0 && (
+                <span className="text-[11px] text-primary/70">{selectedCategoryIds.length} seçildi</span>
+              )}
             </div>
-            <div>
-              <label className="text-xs text-[#888] mb-1.5 block font-medium">Tür</label>
-              <select value={form.type} onChange={e => set("type", e.target.value)} className="w-full bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
-                <option value="video">Video</option>
-                <option value="short">Short</option>
-                <option value="live">Live VOD</option>
-              </select>
+            <div className="flex flex-wrap gap-1.5">
+              {categories.map((c: any) => {
+                const sel = selectedCategoryIds.includes(c.id);
+                return (
+                  <button key={c.id} type="button" onClick={() => toggleCat(c.id)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${sel ? "bg-primary text-white border-primary" : "bg-[#1e1e1e] text-[#888] border-[#2a2a2a] hover:border-primary/50 hover:text-white"}`}>
+                    {c.name}
+                  </button>
+                );
+              })}
+              {categories.length === 0 && <span className="text-xs text-[#555]">Yükleniyor...</span>}
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-[#888] mb-1.5 block font-medium">Tür</label>
+            <select value={form.type} onChange={e => set("type", e.target.value)} className="w-full bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
+              <option value="video">Video</option>
+              <option value="short">Short</option>
+              <option value="live">Live VOD</option>
+            </select>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
@@ -519,11 +536,18 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
     title: video.title || "", description: video.description || "",
     videoUrl: video.videoUrl || "", hlsUrl: video.hlsUrl || "",
     thumbnailUrl: video.thumbnailUrl || "",
-    categoryId: video.categoryId || "",
     isPremium: !!video.isPremium, isPPV: !!video.isPPV,
     ppvPrice: video.ppvPrice ? String(video.ppvPrice) : "",
     isPublished: !!video.isPublished, type: video.type || "video",
   });
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(() => {
+    if (Array.isArray(video.categoryIds) && video.categoryIds.length > 0) return video.categoryIds.map(Number);
+    if (video.categoryId) return [Number(video.categoryId)];
+    return [];
+  });
+  const toggleEditCat = (id: number) => setSelectedCategoryIds(prev =>
+    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+  );
   const [uploading, setUploading] = useState(false);
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
 
@@ -690,11 +714,24 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
               </div>
 
               <div>
-                <label className="text-[11px] text-[#666] mb-1 block">Kategori</label>
-                <select value={form.categoryId} onChange={e => set("categoryId", e.target.value)} className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
-                  <option value="">—</option>
-                  {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] text-[#666]">Kategori</label>
+                  {selectedCategoryIds.length > 0 && (
+                    <span className="text-[10px] text-primary/70">{selectedCategoryIds.length} seçildi</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {categories.map((c: any) => {
+                    const sel = selectedCategoryIds.includes(Number(c.id));
+                    return (
+                      <button key={c.id} type="button" onClick={() => toggleEditCat(Number(c.id))}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${sel ? "bg-primary text-white border-primary" : "bg-[#252525] text-[#777] border-[#333] hover:border-primary/50 hover:text-white"}`}>
+                        {c.name}
+                      </button>
+                    );
+                  })}
+                  {categories.length === 0 && <span className="text-xs text-[#555]">Yükleniyor...</span>}
+                </div>
               </div>
 
               <div>
@@ -727,7 +764,8 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
                 title: form.title, description: form.description,
                 videoUrl: form.videoUrl || undefined, hlsUrl: form.hlsUrl || undefined,
                 thumbnailUrl: form.thumbnailUrl || undefined,
-                categoryId: form.categoryId ? Number(form.categoryId) : null,
+                categoryId: selectedCategoryIds[0] ?? null,
+                categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : [],
                 isPremium: form.isPremium, isPPV: form.isPPV,
                 ppvPrice: form.isPPV && form.ppvPrice ? Number(form.ppvPrice) : undefined,
                 isPublished: form.isPublished, type: form.type,
