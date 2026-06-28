@@ -294,9 +294,9 @@ def webhook_stats(request):
     pending_del = deliveries.filter(status__in=['pending', 'retrying']).count()
     avg_ms = deliveries.filter(status='success').aggregate(a=Avg('response_time_ms'))['a']
 
-    # Events breakdown (last 500)
+    # Events breakdown (top 10 by count)
     event_counts = (
-        deliveries.order_by('-triggered_at')[:500]
+        WebhookDelivery.objects
         .values('event')
         .annotate(count=Count('id'))
         .order_by('-count')[:10]

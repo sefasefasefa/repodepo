@@ -1,0 +1,153 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ curl -fsSL https://raw.githubusercontent.com/sefasefasefa/repodepo/main/update.sh -o update.sh && ./update.sh
+=== Hotpulse Guncelleme ===
+[1/6] Sunucu durduruluyor...
+[2/6] Kod guncelleniyor...
+   Indiriliyor: https://github.com/sefasefasefa/repodepo/archive/refs/heads/main.tar.gz
+   Kod guncellendi.
+[3/6] Python paketleri guncelleniyor...
+[4/6] Frontend derleniyor...
+Scope: all 4 workspace projects
+Already up to date
+Done in 2.3s using pnpm v11.9.0
+$ vite build --config vite.config.ts
+vite v7.3.3 building client environment for production...
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/avatar.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/dropdown-menu.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+✓ 3684 modules transformed.
+Generated an empty chunk: "react-core".
+dist/public/index.html                                      4.69 kB
+dist/public/assets/index-CK-TE-3m.css                     248.40 kB
+dist/public/assets/react-core-l0sNRNKZ.js                   0.00 kB
+dist/public/assets/skeleton-D0ssDgT0.js                     0.22 kB
+dist/public/assets/label-C6cA5gZ1.js                        0.44 kB
+dist/public/assets/textarea-BWa1SQrX.js                     0.53 kB
+dist/public/assets/badge-jdxk8dXz.js                        0.80 kB
+dist/public/assets/link-filter-CCJRzgw1.js                  0.91 kB
+dist/public/assets/watch-progress-9VSsGmG4.js               1.11 kB
+dist/public/assets/tabs-yCCsCijY.js                         1.17 kB
+dist/public/assets/button-BzErHuhY.js                       1.39 kB
+dist/public/assets/screen-protection-overlay-zhcP68mo.js    2.06 kB
+dist/public/assets/creators-DAIHreiC.js                     2.42 kB
+dist/public/assets/use-screen-protection-CfJfeS0U.js        2.49 kB
+dist/public/assets/developer-BmXMBK7T.js                    2.74 kB
+dist/public/assets/video-card-DaOdaMWE.js                   3.25 kB
+dist/public/assets/index-D2n8ztvH.js                        3.58 kB
+dist/public/assets/notifications-DKBaZ5R6.js                3.72 kB
+dist/public/assets/not-found-C0cKIIC0.js                    3.77 kB
+dist/public/assets/categories-qfA09EoU.js                   4.29 kB
+dist/public/assets/playlist-detail-DpDfrBOz.js              4.35 kB
+dist/public/assets/pricing-YsJ6BvIm.js                      4.81 kB
+dist/public/assets/bookmarks-D5gkrJ7S.js                    5.21 kB
+dist/public/assets/category-detail-sPYGbfGR.js              5.32 kB
+dist/public/assets/register-C0spNb96.js                     5.34 kB
+dist/public/assets/live-streams-CpQmwuII.js                 5.56 kB
+dist/public/assets/history-Bb6xeuWU.js                      5.75 kB
+dist/public/assets/custom-request-modal-hBDZ5vyA.js         5.85 kB
+dist/public/assets/leaderboard-D_01IjXH.js                  6.52 kB
+dist/public/assets/my-requests-BLOj1ia4.js                  6.62 kB
+dist/public/assets/custom-page-C8uh8bvx.js                  6.74 kB
+dist/public/assets/search-DYDsbMVU.js                       7.17 kB
+dist/public/assets/playlists-CfjyO72h.js                    7.35 kB
+dist/public/assets/login-TlLrWhN-.js                        8.36 kB
+dist/public/assets/shorts-BEhhntcq.js                       8.38 kB
+dist/public/assets/subscriptions-Br_3iRG5.js                9.02 kB
+dist/public/assets/videos-Ba3GRjYV.js                       9.13 kB
+dist/public/assets/creator-profile-Bnht-ZtV.js              9.48 kB
+dist/public/assets/crosspost-jobs-DTCwi_dC.js               9.98 kB
+dist/public/assets/become-creator-DYbTuSeF.js              10.67 kB
+dist/public/assets/affiliate-CuoADKv6.js                   11.27 kB
+dist/public/assets/routing-Bzd4TU89.js                     13.20 kB
+dist/public/assets/payment-8qE8DKjS.js                     13.29 kB
+dist/public/assets/stories-3kLkWOXS.js                     14.98 kB
+dist/public/assets/downloads-DDPvJh1W.js                   16.03 kB
+dist/public/assets/home-C-et2mED.js                        19.11 kB
+dist/public/assets/profile-D3F8gRMQ.js                     19.77 kB
+dist/public/assets/match-rooms-DhSi_M44.js                 20.88 kB
+dist/public/assets/messages-akVphyTH.js                    23.93 kB
+dist/public/assets/react-query-BS7tmDKE.js                 39.93 kB
+dist/public/assets/icons-D7PK2AVK.js                       43.22 kB
+dist/public/assets/utils-BdEa6iqF.js                       49.55 kB
+dist/public/assets/creator-dashboard-CQ8Wrxty.js           54.43 kB
+dist/public/assets/app-layout-BZISihru.js                  57.09 kB
+dist/public/assets/upload-BX5S7Ric.js                      74.38 kB
+dist/public/assets/video-watch-ZSTHIX38.js                 82.20 kB
+dist/public/assets/form-FszmRxL7.js                        85.94 kB
+dist/public/assets/ui-radix-B7D3ahvu.js                   117.87 kB
+dist/public/assets/index-CTlhGZxA.js                      246.99 kB
+dist/public/assets/charts-Bo3zW_R_.js                     443.32 kB
+dist/public/assets/live-watch-CDOY0TBA.js                 529.73 kB
+dist/public/assets/admin-OwCcNyTT.js                      551.35 kB
+✓ built in 55.13s
+   Statik dosyalar kopyalaniyor...
+   Frontend build tamamlandi.
+[5/6] Veritabani migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, tokens, videos
+Running migrations:
+  No migrations to apply.
+[6/6] Statik dosyalar toplaniyor...
+
+Guncelleme tamamlandi! Sunucu baslatiliyor...
+
+Windows: Donanim analiz ediliyor...
+
+  Donanim  : 3 CPU cekirdek, 4095MB GB RAM
+  Threads  : 24  (cpu_core x8, min=16, max=64)
+  Conn Lmt : 579  (RAM'e gore otomatik)
+  Timeout  : 120 s
+
+Waitress sunucusu baslatiliyor (port 8000)...
+INFO 2026-06-28 04:39:34,347 wasyncore Serving on http://0.0.0.0:8000
+WARNING 2026-06-28 04:51:46,610 log Not Found: /favicon.ico
+WARNING 2026-06-28 04:53:41,927 log Not Found: /api/categories/16/delete
+WARNING 2026-06-28 04:54:11,267 log Not Found: /api/categories/16/delete
+WARNING 2026-06-28 04:54:13,546 log Not Found: /api/categories/16/delete
+ERROR 2026-06-28 04:55:11,249 log Internal Server Error: /api/webhooks/admin/stats
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\decorators\csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\rest_framework\decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\backend\apps\admin_panel\webhook_views.py", line 302, in webhook_stats
+    .order_by('-count')[:10]
+     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\db\models\query.py", line 1656, in order_by
+    raise TypeError("Cannot reorder a query once a slice has been taken.")
+TypeError: Cannot reorder a query once a slice has been taken.
+WARNING 2026-06-28 04:55:41,564 log Not Found: /api/affiliate/admin/links
+WARNING 2026-06-28 04:55:41,564 log Not Found: /api/affiliate/admin/payouts
+WARNING 2026-06-28 04:57:18,038 log Not Found: /favicon.ico
+WARNING 2026-06-28 04:57:55,953 log Not Found: /api/creator/earnings
+WARNING 2026-06-28 07:04:47,160 log Not Found: /favicon.ico
+WARNING 2026-06-28 07:05:33,066 log Not Found: /443
+WARNING 2026-06-28 07:21:12,607 log Not Found: /favicon.ico
+WARNING 2026-06-28 10:39:23,747 log Unauthorized: /api/auth/me
+WARNING 2026-06-28 10:39:24,952 log Forbidden: /api/tokens/balance
+WARNING 2026-06-28 10:39:24,959 log Forbidden: /api/messages/unread-count
+WARNING 2026-06-28 10:39:26,742 log Forbidden: /api/messages/unread-count

@@ -12,6 +12,7 @@ urlpatterns = [
     path('subscriptions/payment-history', views.payment_history),
     path('subscriptions/ppv/<int:video_id>', ex.ppv_purchase),
     path('subscriptions/creator-earnings', ex.creator_earnings),
+    path('creator/earnings', ex.creator_earnings),
     # Admin plan yönetimi
     path('admin/subscription-plans', views.admin_list_plans),
     path('admin/subscription-plans/create', views.admin_create_plan),
