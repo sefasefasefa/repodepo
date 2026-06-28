@@ -36,28 +36,32 @@ git config maintenance.auto false
 git config core.fscache true
 
 if [ "$OS" = "windows" ]; then
-    # KOK NEDEN: git gc, eski pack dosyasini silmeye calisirken
-    # Windows Defender dosyayi kilitli tuttugundan "Should I try again?" sorar.
-    # Hicbir env degiskeni (GIT_TERMINAL_PROMPT, gc.auto vb.) bunu engelleyemez
-    # cunku git CONIN$ aygitini dogrudan acar.
+    # KOK NEDEN: git gc pack dosyasini silerken Defender kilitledigindan
+    # "Should I try again?" sorusu cikiyor. Hicbir env degiskeni engelleyemez
+    # cunku git CONIN$ konsol aygitini C API ile dogrudan aciyor.
     #
-    # COZUM: pack dosyalarini cozup loose object yap, sonra pack'leri sil.
-    # gc yeni pack olusturur ama silecek ESKI PACK KALMAZ → soru cikamaz.
-
-    echo "   Pack dosyalari cozuluyor (Windows kilitleme sorunu icin)..."
-    for packfile in .git/objects/pack/*.pack; do
-        [ -f "$packfile" ] || continue
-        git unpack-objects < "$packfile" 2>/dev/null || true
-    done
-    # Artik gereksiz pack dosyalarini sil
-    rm -f .git/objects/pack/*.pack \
-          .git/objects/pack/*.idx \
-          .git/objects/pack/*.bitmap \
-          .git/objects/pack/*.rev 2>/dev/null || true
-    echo "   Pack dosyalari temizlendi."
-
+    # COZUM: ProcessStartInfo(CreateNoWindow=true) ile giti konsolsuz calistir.
+    # Konsol olmayinca CreateFileA("CONIN$") basarisiz olur → soru sorulamaz,
+    # git hatayi sessizce logar ve devam eder.
     git maintenance unregister --force 2>/dev/null || true
-    git -c gc.auto=0 -c gc.autopacklimit=0 -c maintenance.auto=false fetch origin
+    WORK_WIN="$(pwd -W 2>/dev/null || echo "$PWD")"
+    echo "   Git fetch baslatiliyor (konsol olmadan)..."
+    powershell.exe -NonInteractive -Command "
+        \$psi = New-Object System.Diagnostics.ProcessStartInfo
+        \$psi.FileName = 'git'
+        \$psi.Arguments = 'fetch origin'
+        \$psi.UseShellExecute = \$false
+        \$psi.CreateNoWindow = \$true
+        \$psi.RedirectStandardOutput = \$true
+        \$psi.RedirectStandardError = \$true
+        \$psi.WorkingDirectory = '$WORK_WIN'
+        \$p = [System.Diagnostics.Process]::Start(\$psi)
+        \$out = \$p.StandardOutput.ReadToEnd()
+        \$err = \$p.StandardError.ReadToEnd()
+        \$p.WaitForExit()
+        if (\$out.Trim()) { Write-Host \$out.Trim() }
+        if (\$err.Trim()) { Write-Host \$err.Trim() }
+    " || true
 else
     git fetch origin
 fi
