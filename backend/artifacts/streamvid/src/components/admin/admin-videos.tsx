@@ -987,8 +987,8 @@ export function AdminVideos() {
   const deleteMutation = useDeleteVideo();
   const updateMutation = useUpdateVideo();
 
-  // Crosspost durum özeti
-  useEffect(() => {
+  // Crosspost durum özeti — sayfa değişince yükle + pending/running varsa her 3sn polling
+  const fetchJobSummary = () => {
     const token = localStorage.getItem("token");
     fetch("/api/cross-post/jobs/summary", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -996,7 +996,21 @@ export function AdminVideos() {
       .then(r => r.json())
       .then(d => { if (d.summary) setJobSummary(d.summary); })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchJobSummary();
   }, [page]);
+
+  // Pending/running job varsa polling
+  useEffect(() => {
+    const hasPendingOrRunning = Object.values(jobSummary).some(jobs =>
+      (jobs as any[]).some(j => j.status === "pending" || j.status === "running")
+    );
+    if (!hasPendingOrRunning) return;
+    const interval = setInterval(fetchJobSummary, 3000);
+    return () => clearInterval(interval);
+  }, [jobSummary]);
 
   const videos = data?.videos ?? [];
   const total = data?.total ?? 0;
@@ -1051,7 +1065,7 @@ export function AdminVideos() {
   return (
     <div className="space-y-4 max-w-5xl">
       {showAddModal && (
-        <AddVideoModal categories={categories} onClose={() => setShowAddModal(false)} onSuccess={refetchAll} />
+        <AddVideoModal categories={categories} onClose={() => setShowAddModal(false)} onSuccess={() => { refetchAll(); setTimeout(fetchJobSummary, 1500); setTimeout(fetchJobSummary, 4000); }} />
       )}
 
       {/* Tab switcher */}

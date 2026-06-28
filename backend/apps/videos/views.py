@@ -779,14 +779,20 @@ def create_video(request):
     # Kendi Oynatıcı kapalıysa video_url / hls_url'i temizle (crosspost'tan sonra)
     save_to_own_player = data.get('saveToOwnPlayer', data.get('save_to_own_player', True))
 
-    # Optional cross-posting
+    # Cross-posting: video eklenince otomatik olarak auto_post=True sitelere gönder
     try:
         site_ids = data.get('crossPostSiteIds')
-        auto_flag = data.get('autoCrossPost', False)
-        send_all = auto_flag and not site_ids
-        if site_ids or auto_flag:
-            from apps.crosspost.dispatcher import dispatch_for_video
-            dispatch_for_video(video, user, site_ids, send_all=send_all)
+        auto_flag = data.get('autoCrossPost', True)  # Varsayılan True — her zaman otomatik
+        send_all = bool(data.get('autoCrossPostAll', False)) and not site_ids
+        # site_ids verilmişse yalnızca onlara, verilmemişse auto_post=True sitelere gönder
+        from apps.crosspost.dispatcher import dispatch_for_video
+        import threading
+        def _dispatch_async():
+            try:
+                dispatch_for_video(video, user, site_ids, send_all=send_all)
+            except Exception:
+                pass
+        threading.Thread(target=_dispatch_async, daemon=True).start()
     except Exception:
         pass
 
