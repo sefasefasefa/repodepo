@@ -602,7 +602,6 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           poster={poster}
           playsInline
           preload="metadata"
-          crossOrigin="anonymous"
           {...(isProtected ? {
             controlsList: "nodownload noremoteplayback",
             disablePictureInPicture: true,
