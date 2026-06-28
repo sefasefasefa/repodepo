@@ -37,8 +37,8 @@ interface PlayerSource {
 /** Video ID'sinin geçerli format olup olmadığını kontrol eder (dict/JSON karışmasını önler) */
 function isValidId(id: string | undefined): boolean {
   if (!id) return false;
-  // Geçerli ID: sadece harf, rakam, tire, alt çizgi — { } ' " : içermez
-  return /^[A-Za-z0-9_\-]{4,64}$/.test(id);
+  // Geçerli ID: UUID, slug veya integer pk — { } ' " : gibi JSON kalıntıları içermez
+  return /^[A-Za-z0-9_\-]{1,300}$/.test(id);
 }
 
 /** Streaming platformu URL'sini embed iframe koduna dönüştürür */

@@ -3,14 +3,16 @@ import uuid as _uuid_module
 
 
 def resolve_video(video_id):
-    """Return a Video instance given a UUID string or integer pk. Returns None if not found."""
+    """Return a Video instance given a UUID string, slug, or integer pk. Returns None if not found."""
     from .models import Video
+    vid_str = str(video_id).strip()
     try:
-        uid = _uuid_module.UUID(str(video_id))
-        return Video.objects.filter(uuid=uid).first()
+        _uuid_module.UUID(vid_str)
+        return Video.objects.filter(uuid=vid_str).first()
     except (ValueError, AttributeError):
         pass
     try:
-        return Video.objects.filter(pk=int(video_id)).first()
+        return Video.objects.filter(pk=int(vid_str)).first()
     except (ValueError, TypeError):
-        return None
+        pass
+    return Video.objects.filter(slug=vid_str).first()

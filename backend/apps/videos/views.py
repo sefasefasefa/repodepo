@@ -1,4 +1,6 @@
 import os
+import re
+import uuid as _uuid_module
 from django.db.models import Q, F
 from django.utils import timezone
 from django.core.cache import cache
@@ -7,6 +9,25 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
+
+
+def _make_slug(title, exclude_id=None):
+    """Türkçe uyumlu slug üret; çakışma varsa UUID suffix ekle."""
+    tr_map = str.maketrans('çğıöşüÇĞİÖŞÜ', 'cgiosucgiosu')
+    text = (title or 'video').translate(tr_map).lower()
+    text = re.sub(r'[^a-z0-9\s-]', '', text)
+    text = re.sub(r'[\s_]+', '-', text.strip())
+    text = re.sub(r'-+', '-', text)
+    base = text[:200].strip('-') or 'video'
+    slug = base
+    qs = Video.objects.filter(slug=slug)
+    if exclude_id:
+        qs = qs.exclude(pk=exclude_id)
+    if qs.exists():
+        slug = f'{base}-{str(_uuid_module.uuid4())[:8]}'
+    return slug
+
+
 from .models import (
     Video, Category, VideoLike, VideoBookmark, WatchHistory,
     VideoReport, Comment, CommentLike, Playlist, PlaylistVideo,
@@ -17,15 +38,20 @@ from apps.accounts.views import format_user as fmt_user
 
 
 def _resolve_video(video_id, qs=None):
-    """UUID string veya eski integer pk ile Video döner, bulunamazsa None."""
+    """UUID string, slug veya eski integer pk ile Video döner, bulunamazsa None."""
+    import uuid as _uuid_mod
     base = (qs or Video.objects).select_related('creator', 'category')
+    vid_str = str(video_id).strip()
     try:
-        return base.get(uuid=video_id)
-    except (Video.DoesNotExist, Exception):
-        try:
-            return base.get(pk=int(video_id))
-        except (Video.DoesNotExist, ValueError, TypeError):
-            return None
+        _uuid_mod.UUID(vid_str)
+        return base.filter(uuid=vid_str).first()
+    except (ValueError, AttributeError):
+        pass
+    try:
+        return base.filter(pk=int(vid_str)).first()
+    except (ValueError, TypeError):
+        pass
+    return base.filter(slug=vid_str).first()
 
 
 def enrich_video(v, user=None):
@@ -41,6 +67,7 @@ def enrich_video(v, user=None):
     return {
         'id': v.id,
         'uuid': str(v.uuid),
+        'slug': v.slug or None,
         'title': v.title,
         'description': v.description,
         'thumbnailUrl': v.thumbnail_url,
@@ -87,6 +114,7 @@ def enrich_videos_bulk(videos, user=None):
         result.append({
             'id': v.id,
             'uuid': str(v.uuid),
+            'slug': v.slug or None,
             'title': v.title,
             'description': v.description,
             'thumbnailUrl': v.thumbnail_url,
@@ -294,8 +322,10 @@ def create_video(request):
     if scheduled_dt:
         is_published = False
 
+    _title = data.get('title', 'Başlıksız Video')
     video = Video.objects.create(
-        title=data.get('title', 'Başlıksız Video'),
+        title=_title,
+        slug=_make_slug(_title),
         description=data.get('description'),
         video_url=data.get('videoUrl', data.get('video_url')),
         hls_url=data.get('hlsUrl', data.get('hls_url')),
@@ -361,8 +391,12 @@ def update_video(request, video_id):
     elif 'scheduledPublishAt' in data and data['scheduledPublishAt'] is None:
         video.scheduled_publish_at = None
 
+    new_title = data.get('title')
+    if new_title and new_title != video.title:
+        video.slug = _make_slug(new_title, exclude_id=video.pk)
+
     for field, value in {
-        'title': data.get('title'),
+        'title': new_title,
         'description': data.get('description'),
         'thumbnail_url': data.get('thumbnailUrl', data.get('thumbnail_url')),
         'video_url': data.get('videoUrl', data.get('video_url')),
