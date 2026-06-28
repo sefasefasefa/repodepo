@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useListVideos, useDeleteVideo, useUpdateVideo, useListCategories } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -527,6 +527,55 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
   const [uploading, setUploading] = useState(false);
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
 
+  // ── cloud.mail.ru indirme durumu ─────────────────────────────────────────
+  const [dlStatus, setDlStatus] = useState<string | null>(null);
+  const [dlPct, setDlPct]       = useState(0);
+  const dlPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const isCloudMail = form.videoUrl.includes('cloud.mail.ru/public/');
+  const isLocalVideo = form.videoUrl.startsWith('/media/');
+
+  const stopPoll = () => {
+    if (dlPollRef.current) { clearInterval(dlPollRef.current); dlPollRef.current = null; }
+  };
+
+  const pollStatus = () => {
+    stopPoll();
+    dlPollRef.current = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`/api/videos/${video.id}/fetch-status`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const d = await res.json();
+        setDlStatus(d.status);
+        setDlPct(d.percent ?? 0);
+        if (d.isLocal || (d.status && d.status.startsWith('error')) || d.status === 'done') {
+          stopPoll();
+          if (d.isLocal && d.videoUrl) {
+            set("videoUrl", d.videoUrl);
+          }
+        }
+      } catch { stopPoll(); }
+    }, 1500);
+  };
+
+  const startDownload = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/videos/${video.id}/fetch-from-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      const d = await res.json();
+      setDlStatus(d.status ?? 'pending');
+      setDlPct(0);
+      pollStatus();
+    } catch { setDlStatus('error'); }
+  };
+
+  useEffect(() => () => stopPoll(), []);
+
   const handleThumbUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setUploading(true);
@@ -588,6 +637,39 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
               <div>
                 <label className="text-[11px] text-[#666] mb-1 block">Video URL</label>
                 <input value={form.videoUrl} onChange={e => set("videoUrl", e.target.value)} placeholder="https://..." className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
+                {/* cloud.mail.ru indirme butonu */}
+                {isCloudMail && !isLocalVideo && (
+                  <div className="mt-2 space-y-1.5">
+                    {(!dlStatus || dlStatus === 'done') && (
+                      <button
+                        type="button"
+                        onClick={startDownload}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors"
+                      >
+                        <Upload className="h-3 w-3" /> Sunucuya İndir
+                      </button>
+                    )}
+                    {(dlStatus === 'pending' || dlStatus === 'downloading') && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-xs text-blue-300">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span>İndiriliyor… {dlPct > 0 ? `${dlPct}%` : ''}</span>
+                        </div>
+                        {dlPct > 0 && (
+                          <div className="w-full h-1.5 bg-[#333] rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${dlPct}%` }} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {dlStatus && dlStatus.startsWith('error') && (
+                      <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> İndirme başarısız. Tekrar deneyin.</p>
+                    )}
+                  </div>
+                )}
+                {isLocalVideo && (
+                  <p className="mt-1 text-[11px] text-green-400 flex items-center gap-1"><Check className="h-3 w-3" /> Sunucuda saklanıyor — crosspost için hazır</p>
+                )}
               </div>
 
               <div>

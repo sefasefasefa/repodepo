@@ -1446,3 +1446,136 @@ def resolve_video_url(request):
         {'error': 'Bu URL türü desteklenmiyor. Şu an sadece cloud.mail.ru linkleri çözümlenir.'},
         status=400
     )
+
+
+# ── cloud.mail.ru → sunucu indirme ──────────────────────────────────────────
+
+def _fetch_video_to_server(video_id):
+    """
+    Arka planda cloud.mail.ru URL'ini çözümleyip dosyayı media/uploads/'a indirir.
+    İndirme durumunu cache'de tutar:
+      cloudmail_dl_{video_id}: pending | downloading | done | error
+      cloudmail_dl_pct_{video_id}: 0-100
+    """
+    import threading
+
+    def _run():
+        import uuid
+        import requests as _rq
+        from django.conf import settings as _s
+
+        ck_status = f'cloudmail_dl_{video_id}'
+        ck_pct    = f'cloudmail_dl_pct_{video_id}'
+        cache.set(ck_status, 'downloading', 3600)
+        cache.set(ck_pct, 0, 3600)
+
+        try:
+            video = Video.objects.get(id=video_id)
+            raw_url = video.video_url or ''
+
+            if 'cloud.mail.ru/public/' not in raw_url:
+                cache.set(ck_status, 'error', 3600)
+                return
+
+            # CDN URL'ini çöz
+            cdn_url = _resolve_cloudmail_url(raw_url)
+            if not cdn_url or cdn_url == raw_url:
+                cache.set(ck_status, 'error', 3600)
+                return
+
+            headers = {
+                'User-Agent': (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/120.0.0.0 Safari/537.36'
+                ),
+            }
+            resp = _rq.get(cdn_url, headers=headers, stream=True, timeout=60, allow_redirects=True)
+            resp.raise_for_status()
+
+            # Dosya boyutu (varsa)
+            total = int(resp.headers.get('Content-Length', 0)) or 0
+
+            # Uzantıyı content-type'tan belirle
+            ct = resp.headers.get('Content-Type', 'video/mp4')
+            ext = '.mp4'
+            if 'webm' in ct:
+                ext = '.webm'
+            elif 'mkv' in ct or 'matroska' in ct:
+                ext = '.mkv'
+
+            filename    = f'{uuid.uuid4().hex}{ext}'
+            upload_dir  = os.path.join(_s.MEDIA_ROOT, 'uploads')
+            os.makedirs(upload_dir, exist_ok=True)
+            local_path  = os.path.join(upload_dir, filename)
+            local_url   = f'/media/uploads/{filename}'
+
+            downloaded = 0
+            with open(local_path, 'wb') as fh:
+                for chunk in resp.iter_content(chunk_size=512 * 1024):
+                    if chunk:
+                        fh.write(chunk)
+                        downloaded += len(chunk)
+                        if total:
+                            pct = int(downloaded * 100 / total)
+                            cache.set(ck_pct, pct, 3600)
+
+            # Video kaydını güncelle
+            Video.objects.filter(id=video_id).update(video_url=local_url)
+            cache.set(ck_pct, 100, 3600)
+            cache.set(ck_status, 'done', 3600)
+
+        except Exception as exc:
+            cache.set(ck_status, f'error: {exc}', 3600)
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def fetch_video_from_url(request, video_id):
+    """cloud.mail.ru URL'ini sunucuya indir ve video_url'i güncelle."""
+    if request.user.role not in ('admin', 'moderator', 'creator'):
+        return Response({'error': 'Yetki gerekli'}, status=403)
+
+    video = _resolve_video(video_id)
+    if not video:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+    if video.creator != request.user and request.user.role not in ('admin', 'moderator'):
+        return Response({'error': 'Forbidden'}, status=403)
+
+    raw_url = video.video_url or ''
+    if 'cloud.mail.ru/public/' not in raw_url:
+        return Response({'error': 'Bu video cloud.mail.ru linki içermiyor'}, status=400)
+
+    ck = f'cloudmail_dl_{video.id}'
+    current = cache.get(ck, '')
+    if current in ('downloading', 'pending'):
+        return Response({'status': current, 'message': 'İndirme zaten devam ediyor'})
+
+    cache.set(ck, 'pending', 3600)
+    cache.set(f'cloudmail_dl_pct_{video.id}', 0, 3600)
+    _fetch_video_to_server(video.id)
+    return Response({'status': 'pending', 'message': 'İndirme başlatıldı'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def fetch_video_status(request, video_id):
+    """İndirme durumunu ve yüzdesini döner."""
+    video = _resolve_video(video_id)
+    if not video:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+
+    ck_status = f'cloudmail_dl_{video.id}'
+    ck_pct    = f'cloudmail_dl_pct_{video.id}'
+    status_val = cache.get(ck_status, None)
+    pct        = cache.get(ck_pct, 0)
+
+    local = video.video_url and video.video_url.startswith('/media/')
+    return Response({
+        'status': status_val,
+        'percent': pct,
+        'isLocal': local,
+        'videoUrl': video.video_url,
+    })

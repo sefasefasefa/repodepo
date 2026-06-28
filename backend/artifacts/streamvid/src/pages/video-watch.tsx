@@ -160,11 +160,16 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
   const allSources: PlayerSource[] = (() => {
     const rawUrl = video.hlsUrl || video.videoUrl;
     const ownSource: PlayerSource | null = rawUrl ? (() => {
-      const embedCode = resolveEmbedFromUrl(rawUrl);
+      // cloud.mail.ru linkleri tarayıcıda doğrudan oynatılamaz (CORS/redirect).
+      // Backend stream proxy endpoint'ini kullan: /api/videos/<id>/stream
+      const isCloudMail = rawUrl.includes('cloud.mail.ru/public/');
+      const proxyUrl = isCloudMail ? `/api/videos/${video.id}/stream` : null;
+      const embedCode = proxyUrl ? null : resolveEmbedFromUrl(rawUrl);
+      const directUrl = proxyUrl || rawUrl;
       return {
         id: 0,
         playerName: "Kendi Oynatıcı",
-        ...(embedCode ? { embedCode } : { directUrl: rawUrl }),
+        ...(embedCode ? { embedCode } : { directUrl }),
         isDefault: players.length === 0,
         quality: "HD",
         language: "TR",

@@ -100,4 +100,7 @@ urlpatterns = [
     path('resolve-url', views.resolve_video_url),
     # cloud.mail.ru stream proxy
     path('videos/<str:video_id>/stream', views.stream_video),
+    # cloud.mail.ru → sunucuya indir
+    path('videos/<str:video_id>/fetch-from-url', views.fetch_video_from_url),
+    path('videos/<str:video_id>/fetch-status', views.fetch_video_status),
 ]
