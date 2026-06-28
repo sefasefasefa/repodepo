@@ -369,8 +369,14 @@ def stream_video(request, video_id):
     if not v:
         return Response({'error': 'Video not found'}, status=404)
 
-    url = v.video_url
-    if not url or 'cloud.mail.ru/public/' not in url:
+    # hlsUrl veya videoUrl alanlarından hangisi cloud.mail.ru ise onu kullan
+    url = None
+    for candidate in [v.hls_url, v.video_url]:
+        if candidate and 'cloud.mail.ru/public/' in candidate:
+            url = candidate
+            break
+
+    if not url:
         return Response({'error': 'Bu video stream proxy gerektirmiyor'}, status=400)
 
     # Önce cache'deki çözümlenmiş URL'i dene
@@ -432,16 +438,37 @@ def stream_video(request, video_id):
     if range_header:
         upstream_headers['Range'] = range_header
 
-    try:
-        upstream = _rq.get(
-            resolved,
+    def _fetch_upstream(target_url):
+        return _rq.get(
+            target_url,
             headers=upstream_headers,
             stream=True,
             timeout=30,
             allow_redirects=True,
         )
+
+    try:
+        upstream = _fetch_upstream(resolved)
     except Exception as e:
         return Response({'error': f'Stream hatası: {str(e)}'}, status=502)
+
+    # CDN token'ı süresi dolmuşsa (403) — cache'i temizle ve yeniden çöz
+    if upstream.status_code in (403, 401, 410):
+        try:
+            upstream.close()
+        except Exception:
+            pass
+        cache_key = f'cloudmail_cdn_{hash(url)}'
+        cache.delete(cache_key)
+        fresh = _resolve_cloudmail_url(url)
+        if fresh and fresh != url and fresh != resolved:
+            try:
+                upstream = _fetch_upstream(fresh)
+                resolved = fresh
+            except Exception as e:
+                return Response({'error': f'Stream yenileme hatası: {str(e)}'}, status=502)
+        else:
+            return Response({'error': 'CDN bağlantısı reddedildi, lütfen daha sonra tekrar deneyin'}, status=503)
 
     content_type = upstream.headers.get('Content-Type', 'video/mp4')
     status_code = upstream.status_code

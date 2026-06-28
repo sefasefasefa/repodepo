@@ -16,7 +16,8 @@ import { SubtitleOverlay } from "@/components/video/subtitle-overlay";
 import { SubtitleManager } from "@/components/video/subtitle-manager";
 import { ScreenProtectionOverlay, getVideoProtectionProps } from "@/components/video/screen-protection-overlay";
 import { useScreenProtectionState } from "@/lib/use-screen-protection";
-import { useState, useEffect, useRef } from "react";
+import { CustomVideoPlayer } from "@/components/video/custom-video-player";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -145,17 +146,9 @@ function resolveEmbedFromUrl(rawUrl: string): string | null {
 function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players: PlayerSource[]; onRefreshPlayers?: () => void }) {
   const showWatermark: boolean = !!video.watermarkEnabled;
   const screenProt = useScreenProtectionState();
-  const videoProps = getVideoProtectionProps(screenProt);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const overlayControlsRef = useRef<HTMLDivElement | null>(null);
-  const [qualityOpen, setQualityOpen] = useState(false);
-  const [activeQuality, setActiveQuality] = useState<string>("auto");
-  const [subtitleOpen, setSubtitleOpen] = useState(false);
-  const [speedOpen, setSpeedOpen] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [resumePrompt, setResumePrompt] = useState<{ currentTime: number; progress: number } | null>(null);
   const resumeSeeked = useRef(false);
-  const speeds = [0.75, 1, 1.25, 1.5, 1.75, 2];
 
   const allSources: PlayerSource[] = (() => {
     const rawUrl = video.hlsUrl || video.videoUrl;
@@ -181,8 +174,6 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
   const defaultSource = allSources.find(p => p.isDefault) || allSources[0];
   const [active, setActive] = useState(defaultSource?.id ?? 0);
   const activeSource = allSources.find(p => p.id === active) || allSources[0];
-  const qualities = Array.from(new Set(allSources.map(s => s.quality))).filter(Boolean);
-  const hasSubtitles = true;
 
   useEffect(() => {
     const saved = loadWatchProgress(video.id);
@@ -191,81 +182,35 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
     }
   }, [video.id]);
 
-  useEffect(() => {
-    resumeSeeked.current = false;
-  }, [activeSource?.directUrl]);
+  useEffect(() => { resumeSeeked.current = false; }, [activeSource?.directUrl]);
 
-  useEffect(() => {
-    const vid = videoRef.current;
-    if (vid) vid.playbackRate = playbackSpeed;
-  }, [playbackSpeed]);
+  const handleTimeUpdate = useCallback((ct: number, dur: number) => {
+    if (!Number.isNaN(ct) && dur > 0) {
+      saveWatchProgress(video.id, ct, dur);
+      touchWatchHistory(video.id, video.title, video.thumbnailUrl || null, video.creator?.displayName || video.creator?.username || null);
+    }
+  }, [video.id, video.title, video.thumbnailUrl, video.creator?.displayName, video.creator?.username]);
 
-  // Video yüklenince ve her oynatmada hızı yeniden uygula (bazı tarayıcılar sıfırlar)
-  useEffect(() => {
+  const handleLoadedMetadata = useCallback((dur: number) => {
+    if (dur && Number.isFinite(dur) && dur > 0 && !video.duration) {
+      const tok = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      fetch(`/api/videos/${video.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
+        body: JSON.stringify({ duration: Math.round(dur) }),
+      }).catch(() => {});
+    }
+    if (resumeSeeked.current) return;
+    const saved = loadWatchProgress(video.id);
+    if (!saved || saved.currentTime < 8 || saved.currentTime >= dur - 10) return;
     const vid = videoRef.current;
     if (!vid) return;
-    const applyRate = () => { vid.playbackRate = playbackSpeed; };
-    vid.addEventListener('play', applyRate);
-    vid.addEventListener('loadeddata', applyRate);
-    vid.addEventListener('ratechange', () => {
-      if (vid.playbackRate !== playbackSpeed) vid.playbackRate = playbackSpeed;
-    });
-    return () => {
-      vid.removeEventListener('play', applyRate);
-      vid.removeEventListener('loadeddata', applyRate);
-    };
-  }, [activeSource?.directUrl, playbackSpeed]);
+    vid.currentTime = saved.currentTime;
+    resumeSeeked.current = true;
+    setResumePrompt({ currentTime: saved.currentTime, progress: saved.currentTime / Math.max(saved.duration || dur || 1, 1) });
+  }, [video.id, video.duration]);
 
-  useEffect(() => {
-    const onDocClick = (event: MouseEvent) => {
-      if (!overlayControlsRef.current?.contains(event.target as Node)) {
-        setQualityOpen(false);
-        setSpeedOpen(false);
-      }
-    };
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
-  }, []);
-
-  useEffect(() => {
-    const vid = videoRef.current;
-    if (!vid || !activeSource?.directUrl) return;
-
-    const onTimeUpdate = () => {
-      if (!vid.duration || Number.isNaN(vid.currentTime)) return;
-      saveWatchProgress(video.id, vid.currentTime, vid.duration);
-      touchWatchHistory(video.id, video.title, video.thumbnailUrl || null, video.creator?.displayName || video.creator?.username || null);
-    };
-
-    const onLoadedMetadata = () => {
-      // Auto-save duration to backend if not set yet
-      if (vid.duration && Number.isFinite(vid.duration) && vid.duration > 0 && !video.duration) {
-        const _tok = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-        fetch(`/api/videos/${video.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: `Bearer ${_tok}` } : {}) },
-          body: JSON.stringify({ duration: Math.round(vid.duration) }),
-        }).catch(() => {/* silent */});
-      }
-      if (resumeSeeked.current) return;
-      const saved = loadWatchProgress(video.id);
-      if (!saved || saved.currentTime < 8 || saved.currentTime >= vid.duration - 10) return;
-      vid.currentTime = saved.currentTime;
-      resumeSeeked.current = true;
-      setResumePrompt({ currentTime: saved.currentTime, progress: saved.currentTime / Math.max(saved.duration || vid.duration || 1, 1) });
-    };
-
-    const onEnded = () => clearWatchProgress(video.id);
-
-    vid.addEventListener("timeupdate", onTimeUpdate);
-    vid.addEventListener("loadedmetadata", onLoadedMetadata);
-    vid.addEventListener("ended", onEnded);
-    return () => {
-      vid.removeEventListener("timeupdate", onTimeUpdate);
-      vid.removeEventListener("loadedmetadata", onLoadedMetadata);
-      vid.removeEventListener("ended", onEnded);
-    };
-  }, [activeSource?.directUrl, video.id, video.creator?.displayName, video.creator?.username, video.thumbnailUrl, video.title]);
+  const handleEnded = useCallback(() => { clearWatchProgress(video.id); }, [video.id]);
 
   if (!allSources.length) {
     return (
@@ -283,172 +228,96 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
         <ResumeBanner
           title={video.title}
           progress={resumePrompt.progress}
-          onContinue={() => {
-            const vid = videoRef.current;
-            if (vid) vid.currentTime = resumePrompt.currentTime;
-            setResumePrompt(null);
-          }}
-          onDismiss={() => {
-            clearWatchProgress(video.id);
-            setResumePrompt(null);
-          }}
+          onContinue={() => { const vid = videoRef.current; if (vid) vid.currentTime = resumePrompt.currentTime; setResumePrompt(null); }}
+          onDismiss={() => { clearWatchProgress(video.id); setResumePrompt(null); }}
         />
       )}
-      {/* Sağlayıcılar — videonun ÜSTÜNDE */}
+
+      {/* KAYNAK sekmeler */}
       {allSources.length > 0 && (
-        <div className="bg-[#161616] border border-[#252525] rounded-xl p-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-semibold text-[#555] uppercase tracking-wider">Sağlayıcılar</p>
-            {onRefreshPlayers && (
-              <button
-                onClick={onRefreshPlayers}
-                title="Sağlayıcıları yenile"
-                className="text-[#555] hover:text-white transition-colors p-0.5"
-              >
-                <RefreshCw className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {allSources.map((src, idx) => (
-              <button
-                key={src.id}
-                onClick={() => setActive(src.id)}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all border touch-manipulation",
-                  active === src.id
-                    ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                    : "bg-[#1e1e1e] border-[#2e2e2e] text-[#999] hover:text-white hover:border-[#444] hover:bg-[#242424]"
-                )}
-              >
-                <Globe className={cn("h-3.5 w-3.5 shrink-0", active === src.id ? "text-white" : "text-[#555]")} />
-                <span>{src.playerName}</span>
-                {src.quality && src.quality !== "HD" && (
-                  <span className={cn("text-[9px] px-1 py-0.5 rounded font-bold", active === src.id ? "bg-white/20" : "bg-[#333] text-[#666]")}>{src.quality}</span>
-                )}
-                {idx === 0 && allSources.length > 1 && (
-                  <span className={cn("text-[9px] px-1 py-0.5 rounded font-bold", active === src.id ? "bg-white/20" : "bg-[#2a2a2a] text-[#555]")}>Varsayılan</span>
-                )}
-              </button>
-            ))}
-          </div>
+        <div className="bg-[#0e0e0e] border border-[#1e1e1e] rounded-xl px-3 py-2.5 flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold text-[#444] uppercase tracking-widest shrink-0">KAYNAK</span>
+          {allSources.map((src) => (
+            <button
+              key={src.id}
+              onClick={() => setActive(src.id)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold transition-all border",
+                active === src.id
+                  ? "bg-white text-black border-white"
+                  : "bg-transparent border-[#2a2a2a] text-[#666] hover:text-white hover:border-[#444]"
+              )}
+            >
+              <span>{src.playerName}</span>
+              {src.quality && (
+                <span className={cn("text-[9px] font-bold", active === src.id ? "text-black/50" : "text-[#444]")}>{src.quality}</span>
+              )}
+            </button>
+          ))}
+          <div className="flex-1" />
+          {onRefreshPlayers && (
+            <button onClick={onRefreshPlayers} title="Yenile" className="text-[#444] hover:text-white transition-colors p-1">
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       )}
-      {/* Video oynatıcı — sabit 16:9 oranı, max genişlik sınırlı */}
+
+      {/* Video alanı */}
       <div className="w-full max-w-[960px] mx-auto">
         <div className="w-full rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
-        <ScreenProtectionOverlay className="w-full h-full">
-          <div className="w-full h-full bg-black relative group">
-            {(() => {
-              // embedCode bir URL string'i olabilir (admin panelinde link girilmiş) —
-              // bu durumda resolveEmbedFromUrl ile iframe'e çeviriyoruz
-              let embedHtml: string | null = null;
-              let directUrl: string | null = activeSource?.directUrl || null;
+          <ScreenProtectionOverlay className="w-full h-full">
+            <div className="w-full h-full bg-black relative">
+              {(() => {
+                let embedHtml: string | null = null;
+                let directUrl: string | null = activeSource?.directUrl || null;
 
-              if (activeSource?.embedCode) {
-                const code = activeSource.embedCode.trim();
-                if (code.startsWith('http://') || code.startsWith('https://')) {
-                  // URL olarak girilmiş — iframe'e çevir
-                  embedHtml = resolveEmbedFromUrl(code);
-                  if (!embedHtml) directUrl = code; // çevirilemezse direkt oynat
-                } else {
-                  embedHtml = code;
+                if (activeSource?.embedCode) {
+                  const code = activeSource.embedCode.trim();
+                  if (code.startsWith("http://") || code.startsWith("https://")) {
+                    embedHtml = resolveEmbedFromUrl(code);
+                    if (!embedHtml) directUrl = code;
+                  } else {
+                    embedHtml = code;
+                  }
                 }
-              }
 
-              if (embedHtml) {
-                const safeHtml = embedHtml
-                  .replace(/width="[^"]*"/g, 'width="100%"')
-                  .replace(/height="[^"]*"/g, 'height="100%"');
-                return <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: safeHtml }} />;
-              }
-              if (directUrl) {
-                return <video ref={videoRef} key={directUrl} src={directUrl} className="w-full h-full object-contain" controls autoPlay={false} poster={video.thumbnailUrl || undefined} controlsList="nodownload noremoteplayback" disablePictureInPicture {...videoProps} />;
-              }
-              return null;
-            })()}
-            {isDirectVideo && (
-              <div ref={overlayControlsRef} className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-start gap-1 sm:gap-2">
-                {/* CC */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => { setSubtitleOpen(v => !v); setQualityOpen(false); setSpeedOpen(false); }}
-                    className={cn(
-                      "flex items-center gap-1 rounded-full backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold border touch-manipulation",
-                      subtitleOpen ? "bg-primary/20 text-primary border-primary/30" : "bg-black/70 text-white border-white/10 hover:bg-black/80"
-                    )}
-                  >
-                    <Languages className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    <span className="hidden sm:inline">CC</span>
-                  </button>
-                  {subtitleOpen && hasSubtitles && (
-                    <div className="absolute right-0 mt-1.5 w-36 sm:w-44 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
-                      <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-white touch-manipulation">Kapalı</button>
-                      <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-primary touch-manipulation">Türkçe</button>
-                      <button type="button" onClick={() => setSubtitleOpen(false)} className="w-full px-3 py-2 text-left text-xs hover:bg-white/5 text-white touch-manipulation">English</button>
-                    </div>
-                  )}
-                </div>
-                {/* Quality */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => { setQualityOpen(v => !v); setSubtitleOpen(false); setSpeedOpen(false); }}
-                    className="flex items-center gap-1 rounded-full bg-black/70 backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80 touch-manipulation"
-                  >
-                    <SlidersHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    <span className="hidden sm:inline">{activeQuality === "auto" ? "Otomatik" : activeQuality}</span>
-                  </button>
-                  {qualityOpen && (
-                    <div className="absolute right-0 mt-1.5 w-36 sm:w-40 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
-                      <button type="button" onClick={() => { setActiveQuality("auto"); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", activeQuality === "auto" ? "text-primary" : "text-white")}>Otomatik</button>
-                      {qualities.map(q => (
-                        <button key={q} type="button" onClick={() => { setActiveQuality(q); setQualityOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", activeQuality === q ? "text-primary" : "text-white")}>{q}</button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {/* Speed */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => { setSpeedOpen(v => !v); setSubtitleOpen(false); setQualityOpen(false); }}
-                    className="flex items-center rounded-full bg-black/70 backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold text-white border border-white/10 hover:bg-black/80 touch-manipulation min-w-[28px] justify-center"
-                  >
-                    {playbackSpeed}x
-                  </button>
-                  {speedOpen && (
-                    <div className="absolute right-0 mt-1.5 w-28 sm:w-32 rounded-xl border border-white/10 bg-[#111] shadow-xl overflow-hidden">
-                      {speeds.map(speed => (
-                        <button key={speed} type="button" onClick={() => { setPlaybackSpeed(speed); setSpeedOpen(false); }} className={cn("w-full px-3 py-2 text-left text-xs hover:bg-white/5 touch-manipulation", playbackSpeed === speed ? "text-primary" : "text-white")}>
-                          {speed}x
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            <WatermarkOverlay videoWatermarkEnabled={showWatermark} />
-            {isDirectVideo && <SubtitleOverlay videoId={video.id} videoRef={videoRef} />}
-          </div>
-        </ScreenProtectionOverlay>
+                if (embedHtml) {
+                  const safeHtml = embedHtml
+                    .replace(/width="[^"]*"/g, 'width="100%"')
+                    .replace(/height="[^"]*"/g, 'height="100%"');
+                  return <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: safeHtml }} />;
+                }
+                if (directUrl) {
+                  return (
+                    <CustomVideoPlayer
+                      ref={videoRef}
+                      key={directUrl}
+                      src={directUrl}
+                      poster={video.thumbnailUrl || undefined}
+                      protected={screenProt}
+                      onTimeUpdate={handleTimeUpdate}
+                      onLoadedMetadata={handleLoadedMetadata}
+                      onEnded={handleEnded}
+                      className="w-full h-full"
+                    />
+                  );
+                }
+                return null;
+              })()}
+              <WatermarkOverlay videoWatermarkEnabled={showWatermark} />
+              {isDirectVideo && <SubtitleOverlay videoId={video.id} videoRef={videoRef} />}
+            </div>
+          </ScreenProtectionOverlay>
         </div>
-        {/* Embed kaynak açıldığında — video gelmezse doğrudan açma linki */}
         {!isDirectVideo && activeSource?.embedCode && (() => {
           const srcUrl = activeSource.embedCode.trim();
-          if (!srcUrl.startsWith('http')) return null;
+          if (!srcUrl.startsWith("http")) return null;
           return (
             <div className="flex justify-end mt-1.5 px-1">
-              <a
-                href={srcUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ExternalLink className="h-3 w-3" />
-                Sağlayıcıda aç
+              <a href={srcUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                <ExternalLink className="h-3 w-3" /> Sağlayıcıda aç
               </a>
             </div>
           );
