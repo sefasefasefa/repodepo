@@ -580,7 +580,7 @@ function PingSitemapButton({ token }: { token: string }) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-white">Sitemap Ping</p>
-          <p className="text-xs text-[#555]">Bing ve Yandex'e sitemap adresini bildir</p>
+          <p className="text-xs text-[#555]">Yandex'e sitemap bildir (Bing manuel)</p>
         </div>
         <button onClick={ping} disabled={status === "loading"}
           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white transition-all">
@@ -588,12 +588,27 @@ function PingSitemapButton({ token }: { token: string }) {
         </button>
       </div>
       {results && (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {Object.entries(results).map(([engine, r]: any) => (
-            <div key={engine} className="flex items-center gap-2">
-              <span className={r.success ? "text-green-400" : "text-red-400"} style={{ fontSize: 10 }}>
-                {r.success ? "✓" : "✗"} {engine.charAt(0).toUpperCase() + engine.slice(1)}: {r.message}
-              </span>
+            <div key={engine}>
+              {r.manual ? (
+                <div className="flex items-start gap-2">
+                  <span className="text-yellow-400" style={{ fontSize: 10 }}>⚠ Bing:</span>
+                  <span className="text-[#888]" style={{ fontSize: 10 }}>
+                    {r.message}{" "}
+                    {r.action_url && (
+                      <a href={r.action_url} target="_blank" rel="noreferrer"
+                        className="text-blue-400 underline">
+                        Webmaster Tools'u aç →
+                      </a>
+                    )}
+                  </span>
+                </div>
+              ) : (
+                <span className={r.success ? "text-green-400" : "text-red-400"} style={{ fontSize: 10 }}>
+                  {r.success ? "✓" : "✗"} {engine.charAt(0).toUpperCase() + engine.slice(1)}: {r.message}
+                </span>
+              )}
             </div>
           ))}
         </div>
