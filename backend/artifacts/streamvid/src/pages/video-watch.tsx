@@ -46,6 +46,10 @@ function resolveEmbedFromUrl(rawUrl: string): string | null {
   if (!rawUrl) return null;
   // Bozuk URL koruması: dict string karışmış URL'leri filtrele
   if (rawUrl.includes("{'") || rawUrl.includes('{"') || rawUrl.includes("': '")) return null;
+
+  const iframe = (src: string, extra = '') =>
+    `<iframe src="${src}" width="100%" height="100%" frameborder="0" scrolling="no" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer-when-downgrade" ${extra} style="width:100%;height:100%;border:0;pointer-events:all"></iframe>`;
+
   // Doğrudan video dosyası ise embed gerekmez
   const lower = rawUrl.toLowerCase().split('?')[0];
   if (/\.(mp4|webm|ogg|ogv|m3u8|mpd|mov|mkv|flv|ts)(\?|$)/.test(lower)) return null;
@@ -53,8 +57,6 @@ function resolveEmbedFromUrl(rawUrl: string): string | null {
     const u = new URL(rawUrl);
     const host = u.hostname.replace(/^www\./, '');
     const parts = u.pathname.split('/').filter(Boolean);
-    const iframe = (src: string, extra = '') =>
-      `<iframe src="${src}" width="100%" height="100%" frameborder="0" scrolling="no" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer-when-downgrade" ${extra} style="width:100%;height:100%;border:0;pointer-events:all"></iframe>`;
 
     // StreamTape: /v/ID/... veya /e/ID → /e/ID
     if (host === 'streamtape.com' || host === 'streamtape.to' || host === 'streamtape.net' || host === 'streamta.pe') {

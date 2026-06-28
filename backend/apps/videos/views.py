@@ -352,11 +352,112 @@ def get_video(request, video_id):
     v = _resolve_video(video_id)
     if not v:
         return Response({'error': 'Video not found'}, status=404)
-    data = enrich_video(v, request.user)
-    # cloud.mail.ru linklerini sadece tekil video fetch'inde çözümle (40 dk cache'li)
-    if data.get('videoUrl') and 'cloud.mail.ru/public/' in data['videoUrl']:
-        data['videoUrl'] = _resolve_cloudmail_url(data['videoUrl'])
-    return Response(data)
+    return Response(enrich_video(v, request.user))
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def stream_video(request, video_id):
+    """
+    cloud.mail.ru URL'lerini backend üzerinden stream eder.
+    Range isteklerini destekler (video seeking için).
+    """
+    import requests as _rq
+    from django.http import StreamingHttpResponse
+
+    v = _resolve_video(video_id)
+    if not v:
+        return Response({'error': 'Video not found'}, status=404)
+
+    url = v.video_url
+    if not url or 'cloud.mail.ru/public/' not in url:
+        return Response({'error': 'Bu video stream proxy gerektirmiyor'}, status=400)
+
+    # Önce cache'deki çözümlenmiş URL'i dene
+    resolved = _resolve_cloudmail_url(url)
+
+    if not resolved or resolved == url:
+        # Cache'de yok ya da çözümlenemedi — doğrudan CDN URL'ini bulmayı dene
+        try:
+            import urllib.parse
+            headers = {
+                'User-Agent': (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/120.0.0.0 Safari/537.36'
+                ),
+                'Accept-Language': 'tr-TR,tr;q=0.9',
+            }
+            session = _rq.Session()
+            page = session.get(url, headers=headers, timeout=15)
+            html = page.text
+
+            # Birden fazla JSON formatını dene
+            base_url = None
+            for pattern in [
+                r'"weblink_view"\s*:\s*\{"count"\s*:\s*"\d+"\s*,\s*"url"\s*:\s*"([^"]+)"',
+                r'"weblink_view"\s*:\s*\{[^}]*"url"\s*:\s*"([^"]+)"',
+                r'cloclo\d+\.cloud\.mail\.ru/weblink/[^\s"\'<>]+',
+            ]:
+                m = re.search(pattern, html)
+                if m:
+                    base_url = m.group(1) if '(' in pattern else m.group(0)
+                    break
+
+            if base_url:
+                parsed = urllib.parse.urlparse(url)
+                weblink_path = parsed.path.split('/public/', 1)[-1]
+                # base_url zaten tam URL ise direkt kullan, değilse path ekle
+                if base_url.startswith('http') and 'weblink' in base_url and not base_url.endswith('/'):
+                    resolved = base_url + '/' + weblink_path
+                elif base_url.startswith('http'):
+                    resolved = base_url + weblink_path
+                else:
+                    resolved = url  # çözümlenemedi
+        except Exception:
+            resolved = url
+
+    if not resolved or resolved == url:
+        return Response({'error': 'cloud.mail.ru CDN adresi çözümlenemedi'}, status=422)
+
+    # Range header desteği (video seeking)
+    upstream_headers = {
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/120.0.0.0 Safari/537.36'
+        ),
+    }
+    range_header = request.META.get('HTTP_RANGE')
+    if range_header:
+        upstream_headers['Range'] = range_header
+
+    try:
+        upstream = _rq.get(
+            resolved,
+            headers=upstream_headers,
+            stream=True,
+            timeout=30,
+            allow_redirects=True,
+        )
+    except Exception as e:
+        return Response({'error': f'Stream hatası: {str(e)}'}, status=502)
+
+    content_type = upstream.headers.get('Content-Type', 'video/mp4')
+    status_code = upstream.status_code
+
+    def generate():
+        for chunk in upstream.iter_content(chunk_size=65536):
+            if chunk:
+                yield chunk
+
+    resp = StreamingHttpResponse(generate(), content_type=content_type, status=status_code)
+    resp['Accept-Ranges'] = 'bytes'
+    for h in ['Content-Length', 'Content-Range']:
+        if h in upstream.headers:
+            resp[h] = upstream.headers[h]
+    resp['Cache-Control'] = 'no-cache'
+    return resp
 
 
 @api_view(['POST'])
