@@ -55,6 +55,7 @@ const MatchRoomsPage   = lazy(() => import("@/pages/match-rooms"));
 const LeaderboardPage  = lazy(() => import("@/pages/leaderboard"));
 const BecomeCreator    = lazy(() => import("@/pages/become-creator"));
 const CrosspostJobs    = lazy(() => import("@/pages/crosspost-jobs"));
+const PdfAnalyzer      = lazy(() => import("@/pages/pdf-analyzer"));
 const NotFound         = lazy(() => import("@/pages/not-found"));
 
 const queryClient = new QueryClient({
@@ -119,6 +120,7 @@ function RouterInner() {
         <Route path="/leaderboard" component={gated("leaderboard", LeaderboardPage)} />
         <Route path="/become-creator" component={BecomeCreator} />
         <Route path="/crosspost-jobs" component={CrosspostJobs} />
+        <Route path="/pdf-analyzer" component={PdfAnalyzer} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'apps.ai',
     'apps.devices',
     'apps.core',
+    'apps.documents',
 ]
 
 MIDDLEWARE = [
