@@ -45,7 +45,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          "react-core":   ["react", "react-dom"],
           "react-query":  ["@tanstack/react-query"],
           "charts":       ["recharts"],
           "icons":        ["lucide-react"],
