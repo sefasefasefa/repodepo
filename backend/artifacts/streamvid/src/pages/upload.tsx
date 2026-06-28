@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCreateVideo } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
-import { Upload, Lock, Clock, CheckCircle, XCircle, HelpCircle, AlertTriangle, Crown, FileVideo, Calendar, Stamp, Sparkles, Tag, ScanSearch, Link2, ImageIcon, X as XIcon, Share2, Loader2, ExternalLink, RefreshCw } from "lucide-react";
+import { Upload, Lock, Clock, CheckCircle, XCircle, HelpCircle, AlertTriangle, Crown, FileVideo, Calendar, Stamp, Sparkles, Tag, ScanSearch, Link2, ImageIcon, X as XIcon, Share2, Loader2, ExternalLink, RefreshCw, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useListCategories } from "@workspace/api-client-react";
 import { ChunkedUploadZone } from "@/components/upload/chunked-upload-zone";
@@ -130,8 +130,12 @@ export default function UploadPage() {
   const [bulkMsg, setBulkMsg] = useState("");
   const createVideoMutation = useCreateVideo();
 
-  // URL formu için cross-post: 'all' → tüm aktif sitelere, 'select' → seçili, 'none' → yok
-  const [crosspostMode, setCrosspostMode] = useState<"all" | "select" | "none">("all");
+  // Kendi Oynatıcı — video URL'i sitede doğrudan oynat (varsayılan: açık)
+  const [ownPlayerEnabled, setOwnPlayerEnabled] = useState(true);
+  // Crosspost — CDN sağlayıcılara gönder (varsayılan: açık)
+  const [crosspostEnabled, setCrosspostEnabled] = useState(true);
+  // Crosspost modu: 'all' → tüm aktif sitelere, 'select' → seçili
+  const [crosspostMode, setCrosspostMode] = useState<"all" | "select">("all");
   const [urlCrosspostSiteIds, setUrlCrosspostSiteIds] = useState<number[]>([]);
   const [configuredSites, setConfiguredSites] = useState<any[]>([]);
 
@@ -339,15 +343,16 @@ export default function UploadPage() {
         ppvPrice: values.isPPV && values.ppvPrice ? parseFloat(values.ppvPrice) : undefined,
         categoryId: values.categoryId ? Number(values.categoryId) : undefined,
         scheduledPublishAt: scheduleEnabled && scheduleValue ? new Date(scheduleValue).toISOString() : null,
-        crossPostSiteIds: isAdmin && crosspostMode === "select" ? urlCrosspostSiteIds : undefined,
-        autoCrossPost: isAdmin ? crosspostMode === "all" : true,
+        saveToOwnPlayer: isAdmin ? ownPlayerEnabled : true,
+        crossPostSiteIds: isAdmin && crosspostEnabled && crosspostMode === "select" ? urlCrosspostSiteIds : undefined,
+        autoCrossPost: isAdmin ? (crosspostEnabled && crosspostMode === "all") : true,
       };
       const res = await createVideoMutation.mutateAsync({ data: payload });
       if (res) {
         const videoPath = `/videos/${(res as any).uuid || (res as any).id}`;
         const videoId = (res as any).id as number;
         // Crosspost aktifse yönlendirme yapma, durumu göster
-        if (isAdmin && crosspostMode !== "none") {
+        if (isAdmin && crosspostEnabled) {
           setCreatedVideoPath(videoPath);
           setCrosspostVideoId(videoId);
           startCrosspostPolling(videoId);
@@ -1182,16 +1187,115 @@ export default function UploadPage() {
                 )}
               </div>
 
-              {/* Cross-post sağlayıcı seçimi — sadece admin */}
+              {/* Yayın Seçenekleri — sadece admin */}
               {isAdmin && (
-                <div className="pt-4 border-t border-border">
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <Share2 className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Çapraz Yayın (Cross-post)</span>
+                <div className="pt-4 border-t border-border space-y-2">
+                  <p className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-1">Yayın Seçenekleri</p>
+
+                  {/* Kendi Oynatıcı toggle */}
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#161616] border border-[#252525]">
+                    <div className="flex items-center gap-2.5">
+                      <Monitor className="h-4 w-4 text-primary shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium leading-tight">Kendi Oynatıcı</p>
+                        <p className="text-[11px] text-[#555] mt-0.5">
+                          {ownPlayerEnabled ? "Video URL sitede doğrudan oynatılır" : "Video URL saklanmaz, sadece CDN'ler kullanılır"}
+                        </p>
+                      </div>
                     </div>
-                    {!crosspostVideoId && configuredSites.length > 0 && (
-                      <span className="text-[11px] text-[#666]">{configuredSites.filter(s => s.enabled).length} aktif sağlayıcı</span>
+                    <button
+                      type="button"
+                      onClick={() => setOwnPlayerEnabled(v => !v)}
+                      className={cn(
+                        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
+                        ownPlayerEnabled ? "bg-primary" : "bg-[#333]"
+                      )}
+                    >
+                      <span className={cn(
+                        "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform",
+                        ownPlayerEnabled ? "translate-x-[18px]" : "translate-x-0.5"
+                      )} />
+                    </button>
+                  </div>
+
+                  {/* Crosspost toggle + sub-options */}
+                  <div className="rounded-xl bg-[#161616] border border-[#252525] overflow-hidden">
+                    <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <Share2 className="h-4 w-4 text-primary shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium leading-tight">Crosspost</p>
+                          <p className="text-[11px] text-[#555] mt-0.5">
+                            {crosspostEnabled
+                              ? crosspostMode === "all"
+                                ? `${configuredSites.filter(s => s.enabled).length} CDN sağlayıcısına gönder`
+                                : urlCrosspostSiteIds.length > 0
+                                  ? `${urlCrosspostSiteIds.length} seçili sağlayıcıya gönder`
+                                  : "Sağlayıcı seçin"
+                              : "CDN'lere gönderilmez"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCrosspostEnabled(v => !v)}
+                        className={cn(
+                          "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
+                          crosspostEnabled ? "bg-primary" : "bg-[#333]"
+                        )}
+                      >
+                        <span className={cn(
+                          "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform",
+                          crosspostEnabled ? "translate-x-[18px]" : "translate-x-0.5"
+                        )} />
+                      </button>
+                    </div>
+
+                    {/* Crosspost sub-options (açık ve henüz video oluşturulmadıysa) */}
+                    {crosspostEnabled && !crosspostVideoId && (
+                      <div className="px-3 pb-3 border-t border-[#1e1e1e] pt-2.5 space-y-2">
+                        <div className="flex gap-2">
+                          {(["all", "select"] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => setCrosspostMode(mode)}
+                              className={`flex-1 text-xs py-1.5 rounded-lg border transition-all font-medium ${
+                                crosspostMode === mode
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-[#aaa]"
+                              }`}
+                            >
+                              {mode === "all" ? "🔁 Tüme At" : "☑ Seçili Sitelere"}
+                            </button>
+                          ))}
+                        </div>
+                        {crosspostMode === "all" && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {configuredSites.filter(s => s.enabled).length === 0
+                              ? <p className="text-xs text-[#666]">Henüz aktif sağlayıcı yok.</p>
+                              : configuredSites.filter(s => s.enabled).map((site: any) => (
+                                <span key={site.id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium bg-[#1a1a1a] border border-[#2a2a2a] text-[#aaa]">
+                                  <span className="w-4 h-4 rounded flex items-center justify-center text-white text-[9px] font-bold shrink-0" style={{ backgroundColor: site.providerColor || '#555' }}>
+                                    {(site.providerLetter || site.name?.substring(0, 2) || '?').substring(0, 2)}
+                                  </span>
+                                  {site.name}
+                                </span>
+                              ))
+                            }
+                            {configuredSites.filter(s => !s.enabled).length > 0 && (
+                              <span className="text-[11px] text-[#444] self-center">+{configuredSites.filter(s => !s.enabled).length} devre dışı</span>
+                            )}
+                          </div>
+                        )}
+                        {crosspostMode === "select" && (
+                          <ProviderSelector
+                            isAdult={false}
+                            selectedIds={urlCrosspostSiteIds}
+                            onChange={setUrlCrosspostSiteIds}
+                          />
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -1373,60 +1477,7 @@ export default function UploadPage() {
                         })}
                       </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex gap-2 mb-3">
-                        {(["all", "select", "none"] as const).map((mode) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => setCrosspostMode(mode)}
-                            className={`flex-1 text-xs py-2 rounded-lg border transition-all font-medium ${
-                              crosspostMode === mode
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-[#aaa]"
-                            }`}
-                          >
-                            {mode === "all" ? "🔁 Tüme At" : mode === "select" ? "☑ Seç" : "✕ Gönderme"}
-                          </button>
-                        ))}
-                      </div>
-                      {crosspostMode === "all" && (
-                        <div className="space-y-2">
-                          {configuredSites.length === 0 ? (
-                            <p className="text-xs text-[#666]">Henüz sağlayıcı eklenmemiş. "☑ Seç" modunda ekleyebilirsin.</p>
-                          ) : (
-                            <>
-                              <p className="text-xs text-[#666]">Video oluşturulunca aşağıdaki aktif sağlayıcılara otomatik gönderilir:</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {configuredSites.filter(s => s.enabled).map((site: any) => (
-                                  <span key={site.id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium bg-[#1a1a1a] border border-[#2a2a2a] text-[#aaa]">
-                                    <span className="w-4 h-4 rounded flex items-center justify-center text-white text-[9px] font-bold shrink-0" style={{ backgroundColor: site.providerColor || '#555' }}>
-                                      {(site.providerLetter || site.name?.substring(0, 2) || '?').substring(0, 2)}
-                                    </span>
-                                    {site.name}
-                                  </span>
-                                ))}
-                                {configuredSites.filter(s => !s.enabled).length > 0 && (
-                                  <span className="text-[11px] text-[#444] self-center">+{configuredSites.filter(s => !s.enabled).length} devre dışı</span>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-                      {crosspostMode === "select" && (
-                        <ProviderSelector
-                          isAdult={false}
-                          selectedIds={urlCrosspostSiteIds}
-                          onChange={setUrlCrosspostSiteIds}
-                        />
-                      )}
-                      {crosspostMode === "none" && (
-                        <p className="text-xs text-[#666]">Bu video hiçbir sağlayıcıya gönderilmez.</p>
-                      )}
-                    </>
-                  )}
+                  ) : null}
                 </div>
               )}
 
@@ -1438,10 +1489,10 @@ export default function UploadPage() {
                     ? "Admin Onayı Gerekli"
                     : scheduleEnabled && scheduleValue
                     ? "Zamanla"
-                    : isAdmin && crosspostMode === "all"
+                    : isAdmin && crosspostEnabled && crosspostMode === "all"
                     ? "Yayınla + Tüme Crosspost"
-                    : isAdmin && crosspostMode === "select" && urlCrosspostSiteIds.length > 0
-                    ? `Yayınla + ${urlCrosspostSiteIds.length} Siteye Cross-post`
+                    : isAdmin && crosspostEnabled && crosspostMode === "select" && urlCrosspostSiteIds.length > 0
+                    ? `Yayınla + ${urlCrosspostSiteIds.length} Siteye Crosspost`
                     : "Videoyu Yayınla"}
                 </Button>
               </div>

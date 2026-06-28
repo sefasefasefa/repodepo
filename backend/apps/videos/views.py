@@ -509,6 +509,9 @@ def create_video(request):
     from django.contrib.auth import get_user_model as _get_user_model
     _get_user_model().objects.filter(id=user.id).update(video_count=F('video_count') + 1)
 
+    # Kendi Oynatıcı kapalıysa video_url / hls_url'i temizle (crosspost'tan sonra)
+    save_to_own_player = data.get('saveToOwnPlayer', data.get('save_to_own_player', True))
+
     # Optional cross-posting
     try:
         site_ids = data.get('crossPostSiteIds')
@@ -519,6 +522,12 @@ def create_video(request):
             dispatch_for_video(video, user, site_ids, send_all=send_all)
     except Exception:
         pass
+
+    # Crosspost jobs kuyruğa alındıktan sonra kendi oynatıcıyı temizle
+    if not save_to_own_player:
+        Video.objects.filter(id=video.id).update(video_url=None, hls_url=None)
+        video.video_url = None
+        video.hls_url = None
 
     # Auto-distribute to active providers in background
     try:
