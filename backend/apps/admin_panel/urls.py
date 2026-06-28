@@ -106,4 +106,8 @@ urlpatterns = [
     path('admin/ab-tests/<int:test_id>/reset', abt.admin_reset),
     path('admin/email-campaigns', ex.email_campaigns),
     path('admin/email-campaigns/<int:campaign_id>', ex.email_campaign_detail),
+    # Home filters
+    path('home-filters', ex.public_home_filters),
+    path('admin/home-filters', ex.admin_home_filters),
+    path('admin/home-filters/<int:filter_id>', ex.admin_home_filter_detail),
 ]

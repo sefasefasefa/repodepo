@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from apps.videos.models import Video, VideoReport, CustomPage
 from apps.subscriptions.models import Payment
+from .models import HomeFilter
 
 User = get_user_model()
 
@@ -213,3 +214,66 @@ def email_campaign_detail(request, campaign_id):
         return Response({'message': 'Silindi'})
     except EmailCampaign.DoesNotExist:
         return Response({'error': 'Bulunamadı'}, status=404)
+
+
+def _filter_to_dict(f):
+    return {
+        'id': f.id, 'label': f.label, 'icon': f.icon,
+        'type': f.type, 'categoryId': f.category_id,
+        'sortBy': f.sort_by, 'rules': f.rules or {},
+        'order': f.order, 'isActive': f.is_active,
+    }
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_home_filters(request):
+    filters = HomeFilter.objects.filter(is_active=True)
+    return Response({'filters': [_filter_to_dict(f) for f in filters]})
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def admin_home_filters(request):
+    if not _is_admin(request.user):
+        return Response({'error': 'Forbidden'}, status=403)
+    if request.method == 'GET':
+        filters = HomeFilter.objects.all()
+        return Response({'filters': [_filter_to_dict(f) for f in filters]})
+    data = request.data
+    f = HomeFilter.objects.create(
+        label=data.get('label', 'Filtre'),
+        icon=data.get('icon', '🎬'),
+        type=data.get('type', 'sort'),
+        category_id=data.get('categoryId') or None,
+        sort_by=data.get('sortBy') or None,
+        rules=data.get('rules') or {},
+        order=data.get('order', 0),
+        is_active=data.get('isActive', True),
+    )
+    return Response(_filter_to_dict(f), status=201)
+
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_home_filter_detail(request, filter_id):
+    if not _is_admin(request.user):
+        return Response({'error': 'Forbidden'}, status=403)
+    try:
+        f = HomeFilter.objects.get(id=filter_id)
+    except HomeFilter.DoesNotExist:
+        return Response({'error': 'Bulunamadı'}, status=404)
+    if request.method == 'DELETE':
+        f.delete()
+        return Response({'message': 'Silindi'})
+    data = request.data
+    f.label = data.get('label', f.label)
+    f.icon = data.get('icon', f.icon)
+    f.type = data.get('type', f.type)
+    f.category_id = data.get('categoryId') or None
+    f.sort_by = data.get('sortBy') or None
+    f.rules = data.get('rules', f.rules) or {}
+    f.order = data.get('order', f.order)
+    f.is_active = data.get('isActive', f.is_active)
+    f.save()
+    return Response(_filter_to_dict(f))

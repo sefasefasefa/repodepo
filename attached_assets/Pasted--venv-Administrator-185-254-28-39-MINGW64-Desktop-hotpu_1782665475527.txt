@@ -1,0 +1,115 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ ./update.sh
+=== Hotpulse Guncelleme ===
+[1/6] Sunucu durduruluyor...
+[2/6] Kod guncelleniyor...
+   Indiriliyor: https://github.com/sefasefasefa/repodepo/archive/refs/heads/main.tar.gz
+   Kod guncellendi.
+[3/6] Python paketleri guncelleniyor...
+[4/6] Frontend derleniyor...
+Scope: all 4 workspace projects
+Already up to date
+Done in 2.2s using pnpm v11.9.0
+$ vite build --config vite.config.ts
+vite v7.3.3 building client environment for production...
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/avatar.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/dropdown-menu.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+✓ 3688 modules transformed.
+Generated an empty chunk: "react-core".
+dist/public/index.html                                      5.01 kB
+dist/public/assets/index-CLQ9eZqM.css                     252.23 kB
+dist/public/assets/react-core-l0sNRNKZ.js                   0.00 kB
+dist/public/assets/skeleton-D6sqJwT4.js                     0.22 kB
+dist/public/assets/label-DoCRWH6T.js                        0.44 kB
+dist/public/assets/textarea-Chhq8MSQ.js                     0.53 kB
+dist/public/assets/badge-CiTHLL7G.js                        0.80 kB
+dist/public/assets/link-filter-CCJRzgw1.js                  0.91 kB
+dist/public/assets/watch-progress-9VSsGmG4.js               1.11 kB
+dist/public/assets/tabs-CHRMaqJ9.js                         1.17 kB
+dist/public/assets/button-BwCBOLCb.js                       1.39 kB
+dist/public/assets/screen-protection-overlay-B7Mh_pVh.js    2.06 kB
+dist/public/assets/creators-DATX8U5l.js                     2.42 kB
+dist/public/assets/use-screen-protection-CfJfeS0U.js        2.49 kB
+dist/public/assets/developer-DAMaPo9R.js                    2.73 kB
+dist/public/assets/video-card-CCgYQKYY.js                   3.25 kB
+dist/public/assets/index-D2n8ztvH.js                        3.58 kB
+dist/public/assets/notifications-_hRD-4Tg.js                3.72 kB
+dist/public/assets/not-found-ZDCEbgj3.js                    3.77 kB
+dist/public/assets/categories-D1A6_092.js                   4.33 kB
+dist/public/assets/playlist-detail-B4SKsr0-.js              4.35 kB
+dist/public/assets/pricing-DUSNsQRM.js                      4.81 kB
+dist/public/assets/bookmarks-B_3SnEUn.js                    5.21 kB
+dist/public/assets/category-detail-DirFTIqz.js              5.32 kB
+dist/public/assets/register-C5YC2EjK.js                     5.34 kB
+dist/public/assets/live-streams-D5h0kSb-.js                 5.56 kB
+dist/public/assets/history-hE0Snspg.js                      5.76 kB
+dist/public/assets/custom-request-modal-BGBdUWKP.js         5.85 kB
+dist/public/assets/leaderboard-CWXF-zUa.js                  6.52 kB
+dist/public/assets/my-requests-CNe8o50u.js                  6.62 kB
+dist/public/assets/custom-page-xbiGb__8.js                  6.74 kB
+dist/public/assets/search-QeFq7cM6.js                       7.17 kB
+dist/public/assets/playlists-DLDF-YQ4.js                    7.35 kB
+dist/public/assets/live-watch-CqoI2s5D.js                   7.42 kB
+dist/public/assets/login-BjVZjlZt.js                        8.36 kB
+dist/public/assets/shorts-Cf0FuxNs.js                       8.38 kB
+dist/public/assets/subscriptions-8zJcQLps.js                9.02 kB
+dist/public/assets/videos-Dd6n8_zq.js                       9.13 kB
+dist/public/assets/creator-profile-BFo-70HC.js              9.48 kB
+dist/public/assets/crosspost-jobs-BNtZDqk0.js               9.98 kB
+dist/public/assets/become-creator-CIzWOX96.js              10.67 kB
+dist/public/assets/public-profile-D0IK8I-1.js              10.77 kB
+dist/public/assets/affiliate-BFOGgDaf.js                   11.27 kB
+dist/public/assets/routing-Bzd4TU89.js                     13.20 kB
+dist/public/assets/payment-y9temFVo.js                     13.29 kB
+dist/public/assets/stories-Bv0annQ9.js                     14.98 kB
+dist/public/assets/downloads-CpTOEVUI.js                   16.03 kB
+dist/public/assets/home-BLBiIFkY.js                        19.44 kB
+dist/public/assets/profile-CnjJSaU9.js                     19.77 kB
+dist/public/assets/match-rooms-BgxyxB6B.js                 20.88 kB
+dist/public/assets/messages-CA0vk3U0.js                    23.93 kB
+dist/public/assets/react-query-BS7tmDKE.js                 39.93 kB
+dist/public/assets/icons-DcgErha6.js                       45.11 kB
+dist/public/assets/utils-BdEa6iqF.js                       49.55 kB
+dist/public/assets/app-layout-CkH-5rny.js                  57.25 kB
+dist/public/assets/creator-dashboard-DXV4OXet.js           60.12 kB
+dist/public/assets/upload-CBLg45uM.js                      82.14 kB
+dist/public/assets/form-CteWzont.js                        85.94 kB
+dist/public/assets/video-watch-C4P-Vy2R.js                 90.19 kB
+dist/public/assets/ui-radix-B7D3ahvu.js                   117.87 kB
+dist/public/assets/index-eJS6yNSA.js                      247.90 kB
+dist/public/assets/charts-Bo3zW_R_.js                     443.32 kB
+dist/public/assets/hls-DkI61o3c.js                        522.13 kB
+dist/public/assets/admin-DAnvc0dP.js                      581.47 kB
+✓ built in 59.96s
+   Statik dosyalar kopyalaniyor...
+   Frontend build tamamlandi.
+[5/6] Veritabani migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, tokens, videos
+Running migrations:
+  No migrations to apply.
+[6/6] Statik dosyalar toplaniyor...
+
+Guncelleme tamamlandi! Sunucu baslatiliyor...
+
+Windows: Donanim analiz ediliyor...
+
+  Donanim  : 3 CPU cekirdek, 4095MB GB RAM
+  Threads  : 24  (cpu_core x8, min=16, max=64)
+  Conn Lmt : 579  (RAM'e gore otomatik)
+  Timeout  : 120 s
+
+Waitress sunucusu baslatiliyor (port 8000)...
+INFO 2026-06-28 19:49:37,293 wasyncore Serving on http://0.0.0.0:8000
+INFO 2026-06-28 19:49:54,561 channel Client disconnected while serving /api/videos/9/stream
+INFO 2026-06-28 19:50:10,733 channel Client disconnected while serving /api/videos/9/stream
+INFO 2026-06-28 19:50:15,059 channel Client disconnected while serving /api/videos/9/stream
+INFO 2026-06-28 19:50:20,294 channel Client disconnected while serving /api/videos/9/stream
+INFO 2026-06-28 19:50:23,263 channel Client disconnected while serving /api/videos/9/stream
+INFO 2026-06-28 19:50:39,170 channel Client disconnected while serving /api/videos/9/stream
+INFO 2026-06-28 19:50:40,209 channel Client disconnected while serving /api/videos/9/stream
+INFO 2026-06-28 19:50:47,482 channel Client disconnected while serving /api/videos/9/stream

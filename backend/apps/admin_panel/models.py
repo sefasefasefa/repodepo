@@ -239,6 +239,38 @@ class WebhookDelivery(models.Model):
         return f'{self.event} → {self.endpoint.name} [{self.status}]'
 
 
+class HomeFilter(models.Model):
+    TYPE_CHOICES = [
+        ('category', 'Kategori'),
+        ('sort',     'Sıralama'),
+        ('custom',   'Özel Kural'),
+    ]
+    SORT_CHOICES = [
+        ('most_viewed', 'En Çok İzlenen'),
+        ('most_liked',  'En Çok Beğenilen'),
+        ('newest',      'En Yeni'),
+        ('trending',    'Trend'),
+    ]
+    label       = models.CharField(max_length=100)
+    icon        = models.CharField(max_length=10, default='🎬')
+    type        = models.CharField(max_length=20, choices=TYPE_CHOICES, default='sort')
+    category_id = models.IntegerField(null=True, blank=True)
+    sort_by     = models.CharField(max_length=30, choices=SORT_CHOICES, null=True, blank=True)
+    # Kurallar: {"min_views": 0, "min_likes": 0, "is_premium": null, "video_type": null}
+    rules       = models.JSONField(default=dict, blank=True)
+    order       = models.IntegerField(default=0)
+    is_active   = models.BooleanField(default=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'home_filters'
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.label
+
+
 class EmailCampaign(models.Model):
     STATUS_CHOICES = [('draft', 'Draft'), ('scheduled', 'Scheduled'), ('sent', 'Sent')]
 

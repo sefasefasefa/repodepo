@@ -351,22 +351,30 @@ function ForYouSection() {
   );
 }
 
-const FILTER_TAGS = [
-  { label: "Tümü", value: null },
-  { label: "Gaming", value: 1 },
-  { label: "Dans", value: 3 },
-  { label: "Komedi", value: 4 },
-  { label: "Yemek", value: 6 },
-  { label: "Seyahat", value: 5 },
-  { label: "Müzik", value: 2 },
-  { label: "Fitness", value: 7 },
-  { label: "Teknoloji", value: 9 },
-];
+interface HomeFilter {
+  id: number;
+  label: string;
+  icon: string;
+  type: string;
+  categoryId: number | null;
+  sortBy: string | null;
+  rules: Record<string, any>;
+  order: number;
+  isActive: boolean;
+}
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [activeFilter, setActiveFilter] = useState<HomeFilter | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [homeFilters, setHomeFilters] = useState<HomeFilter[]>([]);
   const { settings } = usePublicSiteSettings();
+
+  useEffect(() => {
+    fetch("/api/home-filters").then(r => r.json()).then(d => {
+      if (d.filters) setHomeFilters(d.filters);
+    }).catch(() => {});
+  }, []);
 
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -399,23 +407,41 @@ export default function Home() {
 
   const { data: trendingData, isLoading: trendingLoading } = useGetTrendingVideos({ limit: 8 } as any);
 
+  // Aktif filtreye göre API parametrelerini hesapla
+  const filterParams = (() => {
+    if (!activeFilter) return { categoryId: activeCategory ?? undefined };
+    const p: Record<string, any> = {};
+    if (activeFilter.categoryId) p.categoryId = activeFilter.categoryId;
+    else if (activeCategory) p.categoryId = activeCategory;
+    if (activeFilter.rules?.min_views) p.minViews = activeFilter.rules.min_views;
+    if (activeFilter.rules?.min_likes) p.minLikes = activeFilter.rules.min_likes;
+    if (activeFilter.rules?.is_premium) p.isPremium = true;
+    return p;
+  })();
+  const filteredSort = activeFilter?.sortBy ?? "most_viewed";
+
   const { data: mostViewedData, isLoading: mostViewedLoading } = useListVideos({
     sort: "most_viewed",
     limit: 8,
-    ...(activeCategory ? { categoryId: activeCategory } : {}),
+    ...(activeCategory && !activeFilter ? { categoryId: activeCategory } : {}),
   });
 
   const { data: newestData, isLoading: newestLoading } = useListVideos({
     sort: "newest",
     limit: 8,
-    ...(activeCategory ? { categoryId: activeCategory } : {}),
+    ...(activeCategory && !activeFilter ? { categoryId: activeCategory } : {}),
   });
 
   const { data: mostLikedData, isLoading: mostLikedLoading } = useListVideos({
     sort: "most_liked",
     limit: 8,
-    ...(activeCategory ? { categoryId: activeCategory } : {}),
+    ...(activeCategory && !activeFilter ? { categoryId: activeCategory } : {}),
   });
+
+  // Aktif özel filtre için ayrı sorgu
+  const { data: filteredData, isLoading: filteredLoading } = useListVideos(
+    activeFilter ? { sort: filteredSort, limit: 24, ...filterParams } : { sort: "newest", limit: 1 }
+  );
 
   const { data: shortData, isLoading: shortsLoading } = useListVideos({
     type: "short",
@@ -445,36 +471,104 @@ export default function Home() {
 
       <div className="max-w-[1600px] mx-auto px-3 md:px-6 py-4 space-y-10">
 
-        {/* Category filter bar */}
+        {/* Filtre bar — kategoriler + API filtreleri */}
         {ffVideos !== "disabled" && (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-3 px-3">
-            <Button
-              onClick={() => setShowFilters(v => !v)}
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "shrink-0 text-[#888] hover:text-white border h-8 px-3",
-                showFilters ? "bg-primary/10 text-primary border-primary/30" : "border-[#333] hover:border-[#555]"
-              )}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />
-              Filtre
-            </Button>
-            {showFilters && FILTER_TAGS.map((tag) => (
-              <button
-                key={tag.label}
-                onClick={() => setActiveCategory(tag.value)}
+            {/* Filtre toggle butonu — yalnızca filtre varsa göster */}
+            {(homeFilters.length > 0 || visibleCategories.length > 0) && (
+              <Button
+                onClick={() => { setShowFilters(v => !v); if (showFilters) { setActiveFilter(null); setActiveCategory(null); } }}
+                variant="ghost"
+                size="sm"
                 className={cn(
-                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
-                  activeCategory === tag.value
-                    ? "bg-primary text-white border-primary"
-                    : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
+                  "shrink-0 text-[#888] hover:text-white border h-8 px-3",
+                  showFilters ? "bg-primary/10 text-primary border-primary/30" : "border-[#333] hover:border-[#555]"
                 )}
               >
-                {tag.label}
-              </button>
-            ))}
+                <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />
+                Filtre
+              </Button>
+            )}
+            {showFilters && (
+              <>
+                {/* Tümü */}
+                <button
+                  onClick={() => { setActiveFilter(null); setActiveCategory(null); }}
+                  className={cn(
+                    "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
+                    !activeFilter && !activeCategory
+                      ? "bg-primary text-white border-primary"
+                      : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
+                  )}
+                >
+                  Tümü
+                </button>
+
+                {/* Admin panelinden eklenen filtreler */}
+                {homeFilters.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => {
+                      if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
+                      setActiveFilter(f);
+                      setActiveCategory(f.type === "category" && f.categoryId ? f.categoryId : null);
+                    }}
+                    className={cn(
+                      "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border flex items-center gap-1.5",
+                      activeFilter?.id === f.id
+                        ? "bg-primary text-white border-primary"
+                        : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
+                    )}
+                  >
+                    <span>{f.icon}</span>
+                    <span>{f.label}</span>
+                  </button>
+                ))}
+
+                {/* Mevcut kategoriler (filtre olmayan) */}
+                {visibleCategories.slice(0, 10).map((cat: Category) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setActiveFilter(null);
+                      setActiveCategory(activeCategory === cat.id ? null : cat.id);
+                    }}
+                    className={cn(
+                      "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
+                      activeCategory === cat.id && !activeFilter
+                        ? "bg-primary text-white border-primary"
+                        : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
+                    )}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
+        )}
+
+        {/* Aktif filtre sonuçları */}
+        {activeFilter && ffVideos !== "disabled" && (
+          <section>
+            <SectionHeader
+              icon={SlidersHorizontal}
+              title={`${activeFilter.icon} ${activeFilter.label}`}
+              subtitle={[
+                activeFilter.rules?.min_views ? `Min. ${activeFilter.rules.min_views.toLocaleString()} izlenme` : null,
+                activeFilter.rules?.min_likes ? `Min. ${activeFilter.rules.min_likes} beğeni` : null,
+                activeFilter.rules?.is_premium ? "Sadece Premium" : null,
+              ].filter(Boolean).join(" · ") || "Filtrelenmiş sonuçlar"}
+              iconColor="text-primary"
+            />
+            {filteredLoading ? (
+              <SectionSkeleton count={6} />
+            ) : filteredData?.videos && filteredData.videos.length > 0 ? (
+              <VideoGrid videos={filteredData.videos} />
+            ) : (
+              <p className="text-[#666] text-sm py-8 text-center">Bu filtreye uygun içerik bulunamadı</p>
+            )}
+          </section>
         )}
 
         {/* SANA ÖZEL */}

@@ -224,6 +224,8 @@ def list_videos(request):
     is_premium = request.query_params.get('isPremium')
     sort = request.query_params.get('sort', 'latest')
     creator_id = request.query_params.get('creatorId')
+    min_views = request.query_params.get('minViews')
+    min_likes = request.query_params.get('minLikes')
 
     auto_publish_scheduled()
     qs = Video.objects.filter(is_published=True).select_related('creator', 'category')
@@ -235,6 +237,16 @@ def list_videos(request):
         qs = qs.filter(is_premium=is_premium.lower() == 'true')
     if creator_id:
         qs = qs.filter(creator_id=creator_id)
+    if min_views:
+        try:
+            qs = qs.filter(view_count__gte=int(min_views))
+        except (ValueError, TypeError):
+            pass
+    if min_likes:
+        try:
+            qs = qs.filter(like_count__gte=int(min_likes))
+        except (ValueError, TypeError):
+            pass
 
     if sort == 'most_viewed':
         qs = qs.order_by('-view_count')
