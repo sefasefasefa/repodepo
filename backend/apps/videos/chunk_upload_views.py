@@ -217,6 +217,13 @@ def chunk_complete(request):
     except Exception:
         pass
 
+    # Thumbnail yoksa ffmpeg ile otomatik üret (arka planda)
+    try:
+        from .thumbnail_utils import auto_generate_thumbnail_async
+        auto_generate_thumbnail_async(video)
+    except Exception:
+        pass
+
     # Crosspost dağıtımı
     crosspost_site_ids_raw = request.data.get('crosspostSiteIds')
     auto_cross = request.data.get('autoCrossPost', False)

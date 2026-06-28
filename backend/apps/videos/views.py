@@ -802,6 +802,13 @@ def create_video(request):
         video.video_url = None
         video.hls_url = None
 
+    # Thumbnail yoksa otomatik üret (arka planda)
+    try:
+        from apps.videos.thumbnail_utils import auto_generate_thumbnail_async
+        auto_generate_thumbnail_async(video)
+    except Exception:
+        pass
+
     # Auto-distribute to active providers in background
     try:
         _distribute_video_background(video.id)
