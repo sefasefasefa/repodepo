@@ -5,8 +5,14 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 
+from apps.core.sitemap import sitemap_xml, robots_txt
+
 urlpatterns = [
     path('django-admin/', admin.site.urls),
+
+    # SEO
+    path('sitemap.xml', sitemap_xml, name='sitemap'),
+    path('robots.txt', robots_txt, name='robots_txt'),
 
     # JWT token endpoints
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
