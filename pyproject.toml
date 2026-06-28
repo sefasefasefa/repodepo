@@ -13,6 +13,7 @@ dependencies = [
     "gunicorn==22.0.0",
     "pillow==10.4.0",
     "psycopg2-binary==2.9.12",
+    "pyjwt>=2.13.0",
     "python-dotenv==1.0.1",
     "requests==2.34.2",
     "waitress==3.0.1",
