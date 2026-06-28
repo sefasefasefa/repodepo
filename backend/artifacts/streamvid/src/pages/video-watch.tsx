@@ -877,10 +877,22 @@ export default function VideoWatch() {
               )}
             </div>
           </div>
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] p-4 rounded-xl text-sm">
-            <p className="text-[#888] font-medium mb-1.5">{video.viewCount?.toLocaleString()} görüntülenme • {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}{video.category && <span className="ml-2 text-primary">• {video.category.name}</span>}</p>
-            <p className={cn("whitespace-pre-wrap text-[#ccc] text-sm leading-relaxed", !descExpanded && "line-clamp-3")}>{video.description}</p>
-            {video.description && video.description.length > 150 && <button onClick={() => setDescExpanded(p => !p)} className="flex items-center gap-1 text-xs text-primary mt-2 hover:text-primary/80">{descExpanded ? <><ChevronUp className="h-3 w-3" />Daha az</> : <><ChevronDown className="h-3 w-3" />Daha fazla</>}</button>}
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl text-sm overflow-hidden">
+            <div className="px-4 pt-4 pb-3">
+              <p className="text-[#888] font-medium">{video.viewCount?.toLocaleString()} görüntülenme • {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}</p>
+            </div>
+            {video.category && (
+              <div className="border-t border-[#2a2a2a] px-4 py-2.5 flex items-center gap-2">
+                <span className="text-[#666] text-xs">Kategori</span>
+                <span className="inline-flex items-center gap-1 bg-primary/15 text-primary text-xs font-semibold px-2.5 py-1 rounded-full border border-primary/25">
+                  {video.category.name}
+                </span>
+              </div>
+            )}
+            <div className="px-4 pb-4 pt-2">
+              <p className={cn("whitespace-pre-wrap text-[#ccc] text-sm leading-relaxed", !descExpanded && "line-clamp-3")}>{video.description}</p>
+              {video.description && video.description.length > 150 && <button onClick={() => setDescExpanded(p => !p)} className="flex items-center gap-1 text-xs text-primary mt-2 hover:text-primary/80">{descExpanded ? <><ChevronUp className="h-3 w-3" />Daha az</> : <><ChevronDown className="h-3 w-3" />Daha fazla</>}</button>}
+            </div>
           </div>
           {isLocked && <div className="flex items-center justify-between gap-4 bg-primary/10 border border-primary/20 rounded-xl px-5 py-4"><div className="flex items-center gap-3"><Crown className="h-5 w-5 text-primary shrink-0" /><p className="text-sm text-white">{user ? "Bu içeriği izlemek için Premium üyelik gerekiyor." : "Giriş yap veya abone ol."}</p></div><Button size="sm" onClick={() => setLocation("/pricing")} className="shrink-0 bg-primary hover:bg-primary/90">{user ? "Premium'a Geç" : "Abone Ol"}</Button></div>}
           <div className="flex items-center gap-3 flex-wrap">
