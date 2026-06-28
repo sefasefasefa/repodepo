@@ -6,6 +6,7 @@ from django.views.generic import TemplateView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 
 from apps.core.sitemap import sitemap_xml, robots_txt
+from apps.core.seo_views import video_seo_page
 
 urlpatterns = [
     path('django-admin/', admin.site.urls),
@@ -98,5 +99,8 @@ urlpatterns += [
     re_path(r'^(?P<path>favicon\.[a-zA-Z0-9]+)$', _serve_from_static),
     re_path(r'^(?P<path>mining-worker\.js)$', _serve_from_static),
     re_path(r'^(?P<path>opengraph\.[a-zA-Z]+)$', _serve_from_static),
+    # Video sayfaları — server-side OG meta + JSON-LD enjeksiyonu
+    re_path(r'^videos/(?P<slug>[\w.-]+)$', video_seo_page),
+    # SPA catch-all — diğer tüm URL'ler
     re_path(r'^(?!api/|django-admin/|static/|media/|assets/).*$', spa_index),
 ]
