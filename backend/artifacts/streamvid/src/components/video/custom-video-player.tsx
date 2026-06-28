@@ -16,6 +16,7 @@ interface CustomVideoPlayerProps {
   onTimeUpdate?: (currentTime: number, duration: number) => void;
   onEnded?: () => void;
   onLoadedMetadata?: (duration: number) => void;
+  onError?: () => void;
   className?: string;
   videoId?: string | number;
   token?: string;
@@ -45,7 +46,7 @@ function signalLevel(bps: number): 0 | 1 | 2 | 3 {
 }
 
 export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerProps>(
-  function CustomVideoPlayer({ src, poster, protected: isProtected, onTimeUpdate, onEnded, onLoadedMetadata, className, videoId, token }, ref) {
+  function CustomVideoPlayer({ src, poster, protected: isProtected, onTimeUpdate, onEnded, onLoadedMetadata, onError: onErrorProp, className, videoId, token }, ref) {
     const videoRef = useRef<HTMLVideoElement>(null);
     useImperativeHandle(ref, () => videoRef.current!);
 
@@ -393,11 +394,14 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           return;
         }
 
-        if (code === 4) setError("Bu video formatı desteklenmiyor.");
-        else if (code === 2) setError("Ağ hatası — video yüklenemedi.");
-        else            setError("Video oynatılamadı.");
+        let msg: string;
+        if (code === 4) msg = "Video bu kaynaktan oynatılamadı.";
+        else if (code === 2) msg = "Ağ hatası — video yüklenemedi.";
+        else msg = "Video oynatılamadı.";
+        setError(msg);
         setLoading(false);
         clearStallTimer();
+        onErrorProp?.();
       };
 
       const onTimeUpdate_ = () => {
@@ -462,7 +466,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
         vid.removeEventListener("timeupdate",     onTimeUpdate_);
         vid.removeEventListener("loadedmetadata", onLoadedMetadata_);
       };
-    }, [onEnded, onTimeUpdate, onLoadedMetadata, clearStallTimer, clearLoadTimer, triggerStallRecovery, videoId]);
+    }, [onEnded, onTimeUpdate, onLoadedMetadata, onErrorProp, clearStallTimer, clearLoadTimer, triggerStallRecovery, videoId]);
 
     /* ── Fullscreen değişim ─────────────────────────────────────── */
     useEffect(() => {
@@ -630,17 +634,19 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
 
         {/* Hata */}
         {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80">
-            <AlertCircle className="h-12 w-12 text-red-400" />
-            <p className="text-white text-sm font-medium">{error}</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 px-4">
+            <AlertCircle className="h-12 w-12 text-red-400 shrink-0" />
+            <p className="text-white text-sm font-medium text-center">{error}</p>
+            <p className="text-[#888] text-xs text-center">Yukarıdan farklı bir kaynak seçmeyi deneyin.</p>
             <button
               data-controls
               onClick={(e) => {
                 e.stopPropagation();
+                proxyTriedRef.current = false;
                 setError(null); setLoading(true);
                 recoveryCount.current = 0;
                 const v = videoRef.current;
-                if (v) { v.load(); v.play().catch(() => {}); }
+                if (v) { v.src = src; v.load(); v.play().catch(() => {}); }
               }}
               className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs px-4 py-2 rounded-full border border-white/20 transition-colors"
             >

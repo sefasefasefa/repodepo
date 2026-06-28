@@ -174,6 +174,14 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
 
   const defaultSource = allSources.find(p => p.isDefault) || allSources[0];
   const [active, setActive] = useState(defaultSource?.id ?? 0);
+
+  const handlePlayerError = useCallback(() => {
+    const currentIdx = allSources.findIndex(s => s.id === active);
+    const nextSource = allSources[currentIdx + 1];
+    if (nextSource) {
+      setActive(nextSource.id);
+    }
+  }, [allSources, active]);
   const activeSource = allSources.find(p => p.id === active) || allSources[0];
 
   useEffect(() => {
@@ -306,6 +314,7 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
                       onTimeUpdate={handleTimeUpdate}
                       onLoadedMetadata={handleLoadedMetadata}
                       onEnded={handleEnded}
+                      onError={handlePlayerError}
                       className="w-full h-full"
                       videoId={video.id}
                       token={token}

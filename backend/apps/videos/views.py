@@ -534,9 +534,8 @@ def stream_video(request, video_id):
             final_url = upstream.url
             ctype = upstream.headers.get('Content-Type', 'video/mp4')
             if not ctype.startswith('video/') and not ctype.startswith('application/'):
-                # Çözümlenmemiş redirect / HTML sayfası → URL'i doğrudan tarayıcıya yönlendir
-                from django.http import HttpResponseRedirect
-                return HttpResponseRedirect(final_url)
+                # HTML sayfası döndü (JS challenge, redirect sayfası vb.) — oynatılamaz
+                return Response({'error': 'Video kaynağı oynatılamaz içerik döndürdü'}, status=502)
 
             def _upstream_gen(r):
                 for chunk in r.iter_content(chunk_size=512 * 1024):
