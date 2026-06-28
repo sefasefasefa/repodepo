@@ -151,47 +151,79 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
   const resumeSeeked = useRef(false);
   const token = typeof window !== "undefined" ? (localStorage.getItem("token") ?? "") : "";
 
-  const allSources: PlayerSource[] = (() => {
-    const rawUrl = video.hlsUrl || video.videoUrl;
-    const ownSource: PlayerSource | null = rawUrl ? (() => {
-      const isExternal = rawUrl.startsWith('http://') || rawUrl.startsWith('https://');
-      const isCloudMail = rawUrl.includes('cloud.mail.ru/public/');
+  // ── cloud.mail.ru otomatik indirme ──────────────────────────────
+  const rawVideoUrl = video.hlsUrl || video.videoUrl || "";
+  const isCloudMail = rawVideoUrl.includes("cloud.mail.ru/public/");
+  const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(
+    rawVideoUrl.startsWith("/media/") ? rawVideoUrl : null
+  );
+  const [dlStatus, setDlStatus] = useState<string | null>(null);
+  const [dlPct, setDlPct] = useState(0);
+  const dlPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-      if (isExternal && !isCloudMail) {
-        // Tanınan embed platformu ise → iframe embed oluştur
-        const embedCode = resolveEmbedFromUrl(rawUrl);
-        if (embedCode) {
-          return {
-            id: 0,
-            playerName: "Kendi Oynatıcı",
-            embedCode,
-            isDefault: players.length === 0,
-            quality: "HD",
-            language: "TR",
-          };
+  useEffect(() => {
+    if (!isCloudMail || localVideoUrl) return;
+    const tok = localStorage.getItem("token");
+
+    const checkStatus = async () => {
+      try {
+        const res = await fetch(`/api/videos/${video.id}/fetch-status`, {
+          headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+        });
+        if (!res.ok) return;
+        const d = await res.json();
+
+        if (d.isLocal && d.videoUrl) {
+          setLocalVideoUrl(d.videoUrl);
+          setDlStatus("done");
+          if (dlPollRef.current) { clearInterval(dlPollRef.current); dlPollRef.current = null; }
+          return;
         }
-        // Tanınmayan harici URL veya doğrudan video dosyası → backend proxy üzerinden oynat
-        // (CORS sorununu önler, tarayıcı hata almaz)
-        return {
-          id: 0,
-          playerName: "Kendi Oynatıcı",
-          directUrl: `/api/videos/${video.id}/stream`,
-          isDefault: players.length === 0,
-          quality: "HD",
-          language: "TR",
-        };
+
+        setDlStatus(d.status ?? null);
+        setDlPct(d.percent ?? 0);
+
+        // Henüz başlamadıysa ve kullanıcı giriş yapmışsa otomatik başlat
+        if (!d.status && tok) {
+          await fetch(`/api/videos/${video.id}/fetch-from-url`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+          });
+        }
+      } catch { /* sessizce geç */ }
+    };
+
+    checkStatus();
+    dlPollRef.current = setInterval(checkStatus, 2500);
+    return () => { if (dlPollRef.current) clearInterval(dlPollRef.current); };
+  }, [video.id, isCloudMail, localVideoUrl]);
+  // ────────────────────────────────────────────────────────────────
+
+  const allSources: PlayerSource[] = (() => {
+    // Yerel dosya indirildiyse onu kullan
+    const effectiveUrl = localVideoUrl || rawVideoUrl;
+    const ownSource: PlayerSource | null = effectiveUrl ? (() => {
+      const isExternal = effectiveUrl.startsWith("http://") || effectiveUrl.startsWith("https://");
+      const isCloud    = effectiveUrl.includes("cloud.mail.ru/public/");
+
+      // Yerel dosya → doğrudan sun
+      if (!isExternal) {
+        return { id: 0, playerName: "Kendi Oynatıcı", directUrl: effectiveUrl, isDefault: players.length === 0, quality: "HD", language: "TR" };
       }
 
-      // cloud.mail.ru → özel proxy; yerel /media/ dosyası → doğrudan sun
-      const directUrl = isCloudMail ? `/api/videos/${video.id}/stream` : rawUrl;
-      return {
-        id: 0,
-        playerName: "Kendi Oynatıcı",
-        directUrl,
-        isDefault: players.length === 0,
-        quality: "HD",
-        language: "TR",
-      };
+      // cloud.mail.ru → proxy stream (indirme tamamlanana kadar)
+      if (isCloud) {
+        return { id: 0, playerName: "Kendi Oynatıcı", directUrl: `/api/videos/${video.id}/stream`, isDefault: players.length === 0, quality: "HD", language: "TR" };
+      }
+
+      // Tanınan harici embed platformu → iframe
+      const embedCode = resolveEmbedFromUrl(effectiveUrl);
+      if (embedCode) {
+        return { id: 0, playerName: "Kendi Oynatıcı", embedCode, isDefault: players.length === 0, quality: "HD", language: "TR" };
+      }
+
+      // Tanınmayan harici URL → proxy üzerinden dene
+      return { id: 0, playerName: "Kendi Oynatıcı", directUrl: `/api/videos/${video.id}/stream`, isDefault: players.length === 0, quality: "HD", language: "TR" };
     })() : null;
     return [...(ownSource ? [ownSource] : []), ...players];
   })();
@@ -199,6 +231,11 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
   const defaultSource = allSources.find(p => p.isDefault) || allSources[0];
   const [active, setActive] = useState(defaultSource?.id ?? 0);
   const activeSource = allSources.find(p => p.id === active) || allSources[0];
+
+  // Yerel dosya hazır olunca Kendi Oynatıcı'ya geç
+  useEffect(() => {
+    if (localVideoUrl && active !== 0) setActive(0);
+  }, [localVideoUrl]);
 
   useEffect(() => {
     const saved = loadWatchProgress(video.id);
@@ -290,6 +327,26 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
             <button onClick={onRefreshPlayers} title="Yenile" className="text-[#444] hover:text-white transition-colors p-1">
               <RefreshCw className="h-3.5 w-3.5" />
             </button>
+          )}
+        </div>
+      )}
+
+      {/* cloud.mail.ru indirme progress */}
+      {isCloudMail && !localVideoUrl && dlStatus && dlStatus !== 'done' && (
+        <div className="bg-[#0a1628] border border-blue-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
+          <Loader2 className="h-4 w-4 text-blue-400 animate-spin shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-blue-300 text-xs font-semibold">
+              {dlStatus?.startsWith('error') ? '⚠ İndirme başarısız' : 'Video sunucuya indiriliyor...'}
+            </p>
+            {dlStatus === 'downloading' && (
+              <div className="mt-1.5 h-1 bg-blue-900/40 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{ width: `${dlPct}%` }} />
+              </div>
+            )}
+          </div>
+          {dlStatus === 'downloading' && (
+            <span className="text-blue-400 text-xs font-bold tabular-nums shrink-0">{dlPct}%</span>
           )}
         </div>
       )}
