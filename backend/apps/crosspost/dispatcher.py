@@ -377,43 +377,81 @@ def _doodstream(job, site, video, r):
     if not key:
         return _fail(job, "DoodStream: API anahtarı gerekli")
 
+    # ── 1. Önce uzak URL yüklemesini dene (daha hızlı, indirme gerekmez) ──────
+    public_src = ""
+    raw_url = video.video_url or video.hls_url or ""
+    if raw_url:
+        public_src = _public_url(raw_url)
+
+    if public_src and public_src.startswith("http"):
+        try:
+            ru = r.get(
+                "https://doodapi.com/api/upload/url",
+                params={"key": key, "url": public_src},
+                headers={"User-Agent": UA},
+                timeout=30,
+            )
+            job.response_code = ru.status_code
+            rd = ru.json()
+            if rd.get("status") == 200:
+                result = rd.get("result") or {}
+                filecode = result.get("filecode") or result.get("file_code") or ""
+                if filecode:
+                    remote = f"https://dood.pm/e/{filecode}"
+                    return _success(job, remote, ru.text)
+            # Uzak yükleme başarısız — hatayı kaydet, dosya yüklemesine düş
+            remote_err = rd.get("msg") or ru.text[:300]
+        except Exception as exc:
+            remote_err = f"{type(exc).__name__}: {exc}"
+    else:
+        remote_err = "Genel erişilebilir URL yok"
+
+    # ── 2. Dosya indirip doğrudan yükle (yedek yol) ──────────────────────────
     path = _local_path(video)
     tmp = None
 
     if not path or not os.path.exists(path):
-        video_src = video.video_url or video.hls_url or ""
-        if not video_src:
-            return _fail(job, "DoodStream: Dosya bulunamadı ve video URL yok")
-        path, err = _fetch_to_tempfile(video_src, r)
+        if not raw_url:
+            return _fail(job, f"DoodStream: Uzak URL yüklemesi başarısız ({remote_err}); yerel dosya da yok")
+        path, err = _fetch_to_tempfile(raw_url, r)
         if not path:
-            return _fail(job, f"DoodStream: Video indirilemedi — {err}")
+            return _fail(job, f"DoodStream: Uzak URL: {remote_err} | İndirme: {err}")
         tmp = path
 
     try:
-        resp = r.get("https://doodapi.com/api/upload/server", params={"key": key},
-                     headers={"User-Agent": UA}, timeout=30)
+        resp = r.get(
+            "https://doodapi.com/api/upload/server",
+            params={"key": key},
+            headers={"User-Agent": UA},
+            timeout=30,
+        )
         data = resp.json()
         if data.get("status") != 200:
-            return _fail(job, f"DoodStream server hatası: {resp.text[:500]}")
+            return _fail(job, f"DoodStream upload server hatası: {resp.text[:400]} (uzak URL: {remote_err})")
         server = data["result"]
 
         with open(path, "rb") as f:
-            up = r.post(f"{server}?key={key}",
-                        files={"file": (os.path.basename(path), f, "video/mp4")},
-                        headers={"User-Agent": UA}, timeout=3600)
+            up = r.post(
+                f"{server}?key={key}",
+                files={"file": (os.path.basename(path), f, "video/mp4")},
+                headers={"User-Agent": UA},
+                timeout=3600,
+            )
         job.response_code = up.status_code
         ud = up.json()
         if ud.get("status") == 200:
             remote = _extract_url(ud.get("result") or {})
             _success(job, remote, up.text)
         else:
-            _fail(job, f"DoodStream yükleme hatası: {up.text[:500]}")
+            _fail(job, f"DoodStream yükleme hatası: {up.text[:400]}")
     except Exception as exc:
         _fail(job, f"DoodStream: {type(exc).__name__}: {exc}")
     finally:
         if tmp:
-            try: os.unlink(tmp)
-            except: pass
+            try:
+                os.unlink(tmp)
+            except Exception:
+                pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────

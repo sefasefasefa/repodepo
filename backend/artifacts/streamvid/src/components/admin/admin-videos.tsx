@@ -282,19 +282,39 @@ function DistributionTab({ videoId }: { videoId: number }) {
     return (
       <div className="space-y-3">
         <p className="text-sm font-medium text-white">{result.length} siteye gönderildi</p>
-        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-          {result.map((job: any) => (
-            <div key={job.id} className="flex items-center justify-between bg-[#111] border border-[#222] rounded-lg px-3 py-2 text-sm">
-              <span className="text-[#bbb] truncate">{job.siteName ?? job.site_name}</span>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
-                job.status === "success" ? "bg-green-400/10 text-green-400" :
-                job.status === "failed"  ? "bg-red-400/10 text-red-400" :
-                "bg-primary/10 text-primary"
-              }`}>
-                {job.status === "success" ? "✓ Başarılı" : job.status === "failed" ? "✕ Başarısız" : "⟳ Kuyrukta"}
-              </span>
-            </div>
-          ))}
+        <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+          {result.map((job: any) => {
+            const errMsg: string = job.responseText ?? job.response_text ?? job.error ?? "";
+            return (
+              <div key={job.id} className="bg-[#111] border border-[#222] rounded-lg px-3 py-2 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[#bbb] text-sm truncate">{job.siteName ?? job.site_name}</span>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                    job.status === "success" ? "bg-green-400/10 text-green-400" :
+                    job.status === "failed"  ? "bg-red-400/10 text-red-400" :
+                    "bg-primary/10 text-primary"
+                  }`}>
+                    {job.status === "success" ? "✓ Başarılı" : job.status === "failed" ? "✕ Başarısız" : "⟳ Kuyrukta"}
+                  </span>
+                </div>
+                {job.status === "failed" && errMsg && (
+                  <p className="text-[11px] text-red-400/80 bg-red-900/10 rounded px-2 py-1 break-words">
+                    {errMsg.slice(0, 300)}
+                  </p>
+                )}
+                {job.status === "success" && (job.remoteUrl ?? job.remote_url) && (
+                  <a
+                    href={job.remoteUrl ?? job.remote_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-primary hover:underline truncate block"
+                  >
+                    {job.remoteUrl ?? job.remote_url}
+                  </a>
+                )}
+              </div>
+            );
+          })}
         </div>
         <button
           onClick={() => setResult(null)}

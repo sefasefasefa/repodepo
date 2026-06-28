@@ -1,23 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <style>html,body{background:#0a0a0a;margin:0;padding:0;}</style>
-    <title>Prnhbbbb - Video Streaming Platform</title>
+    <title>Hotpulse</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-_so6nEpS.js"></script>
+    <style>
+      *{box-sizing:border-box}
+      html,body{background:#0a0a0a;margin:0;padding:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+      #root:empty::before{content:'';display:block}
+      /* Yükleme iskelet ekranı — JS yüklenene kadar gösterilir */
+      #app-shell{position:fixed;inset:0;background:#0a0a0a;display:flex;z-index:9999;transition:opacity .25s}
+      #app-shell.hidden{opacity:0;pointer-events:none}
+      #app-shell .sidebar{width:220px;background:#111;border-right:1px solid #1a1a1a;padding:16px;display:flex;flex-direction:column;gap:12px;flex-shrink:0}
+      #app-shell .sidebar .logo{height:32px;width:100px;background:#1e1e1e;border-radius:6px;margin-bottom:8px}
+      #app-shell .sidebar .nav-item{height:36px;background:#1a1a1a;border-radius:8px;animation:pulse 1.5s ease-in-out infinite}
+      #app-shell .main{flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;overflow:hidden}
+      #app-shell .topbar{height:40px;background:#111;border-radius:10px;animation:pulse 1.5s ease-in-out infinite}
+      #app-shell .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+      #app-shell .card{background:#111;border-radius:12px;overflow:hidden}
+      #app-shell .card .thumb{height:150px;background:#1a1a1a;animation:pulse 1.5s ease-in-out infinite}
+      #app-shell .card .info{padding:12px;display:flex;flex-direction:column;gap:8px}
+      #app-shell .card .line{height:12px;background:#1a1a1a;border-radius:4px;animation:pulse 1.5s ease-in-out infinite}
+      #app-shell .card .line.short{width:60%}
+      @keyframes pulse{0%,100%{opacity:.4}50%{opacity:.8}}
+      @media(max-width:768px){#app-shell .sidebar{display:none}}
+    </style>
+    <script type="module" crossorigin src="/assets/index-VWonPYt5.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/routing-Bzd4TU89.js">
-    <link rel="modulepreload" crossorigin href="/assets/react-query-B8grpUaP.js">
-    <link rel="modulepreload" crossorigin href="/assets/ui-radix-C7AyGS9S.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-query-BS7tmDKE.js">
+    <link rel="modulepreload" crossorigin href="/assets/ui-radix-B7D3ahvu.js">
     <link rel="modulepreload" crossorigin href="/assets/utils-BdEa6iqF.js">
-    <link rel="modulepreload" crossorigin href="/assets/icons-7mcGg5NX.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-ChRwg7HL.css">
+    <link rel="modulepreload" crossorigin href="/assets/icons-D7PK2AVK.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CK-TE-3m.css">
   </head>
   <body>
+    <!-- İskelet ekranı — React yüklenince JS tarafından kaldırılır -->
+    <div id="app-shell" aria-hidden="true">
+      <div class="sidebar">
+        <div class="logo"></div>
+        <div class="nav-item"></div>
+        <div class="nav-item" style="width:80%"></div>
+        <div class="nav-item" style="width:90%"></div>
+        <div class="nav-item" style="width:70%"></div>
+        <div class="nav-item" style="width:85%"></div>
+        <div class="nav-item" style="width:60%"></div>
+      </div>
+      <div class="main">
+        <div class="topbar"></div>
+        <div class="grid">
+          <div class="card"><div class="thumb"></div><div class="info"><div class="line"></div><div class="line short"></div></div></div>
+          <div class="card"><div class="thumb"></div><div class="info"><div class="line"></div><div class="line short"></div></div></div>
+          <div class="card"><div class="thumb"></div><div class="info"><div class="line"></div><div class="line short"></div></div></div>
+          <div class="card"><div class="thumb"></div><div class="info"><div class="line"></div><div class="line short"></div></div></div>
+          <div class="card"><div class="thumb"></div><div class="info"><div class="line"></div><div class="line short"></div></div></div>
+          <div class="card"><div class="thumb"></div><div class="info"><div class="line"></div><div class="line short"></div></div></div>
+        </div>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      // React mount olunca iskelet ekranını kaldır
+      (function(){
+        var mo = new MutationObserver(function(){
+          var root = document.getElementById('root');
+          if(root && root.firstChild){
+            var shell = document.getElementById('app-shell');
+            if(shell){ shell.classList.add('hidden'); setTimeout(function(){ shell.remove(); }, 300); }
+            mo.disconnect();
+          }
+        });
+        mo.observe(document.getElementById('root'), {childList:true});
+      })();
+    </script>
   </body>
 </html>
