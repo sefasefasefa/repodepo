@@ -28,47 +28,38 @@ else
 fi
 sleep 1
 
-# ── 2. Kodu cek (conflict varsa remote ustu al) ────────────────────────
-echo "[2/6] Git pull..."
-git config gc.auto 0
-git config gc.autopacklimit 0
-git config maintenance.auto false
-git config core.fscache true
-
+# ── 2. Kodu guncelle ───────────────────────────────────────────────
+echo "[2/6] Kod guncelleniyor..."
 if [ "$OS" = "windows" ]; then
-    # KOK NEDEN: git gc pack dosyasini silerken Defender kilitledigindan
-    # "Should I try again?" sorusu cikiyor. Hicbir env degiskeni engelleyemez
-    # cunku git CONIN$ konsol aygitini C API ile dogrudan aciyor.
+    # Windows'ta git gc, pack dosyalarini silerken Defender kilitlemesinden
+    # "Should I try again?" sorusu cikiyor. Git bunu CONIN$ C API ile sorar;
+    # hicbir env degiskeni veya flag bunu engelleyemez.
     #
-    # COZUM: ProcessStartInfo(CreateNoWindow=true) ile giti konsolsuz calistir.
-    # Konsol olmayinca CreateFileA("CONIN$") basarisiz olur → soru sorulamaz,
-    # git hatayi sessizce logar ve devam eder.
-    git maintenance unregister --force 2>/dev/null || true
-    WORK_WIN="$(pwd -W 2>/dev/null || echo "$PWD")"
-    echo "   Git fetch baslatiliyor (konsol olmadan)..."
-    powershell.exe -NonInteractive -Command "
-        \$psi = New-Object System.Diagnostics.ProcessStartInfo
-        \$psi.FileName = 'git'
-        \$psi.Arguments = 'fetch origin'
-        \$psi.UseShellExecute = \$false
-        \$psi.CreateNoWindow = \$true
-        \$psi.RedirectStandardOutput = \$true
-        \$psi.RedirectStandardError = \$true
-        \$psi.WorkingDirectory = '$WORK_WIN'
-        \$p = [System.Diagnostics.Process]::Start(\$psi)
-        \$out = \$p.StandardOutput.ReadToEnd()
-        \$err = \$p.StandardError.ReadToEnd()
-        \$p.WaitForExit()
-        if (\$out.Trim()) { Write-Host \$out.Trim() }
-        if (\$err.Trim()) { Write-Host \$err.Trim() }
-    " || true
-else
-    git fetch origin
-fi
+    # KALICI COZUM: git fetch yerine GitHub'dan tarball indir.
+    # Tarball'da pack/gc islemi yok → Defender'in kilitleyecegi dosya olusmuyor.
+    # Tarball yalnizca git-tracked dosyalari icerir; db.sqlite3, .env, media/
+    # tarball'da olmadigi icin tar xz onlara dokunmaz.
 
-if ! git merge --ff-only origin/main 2>/dev/null; then
-    echo "   Yerel degisiklikler var, remote ustu aliniyor..."
-    git reset --hard origin/main
+    ORIGIN=$(git remote get-url origin 2>/dev/null | sed 's|\.git$||')
+    if [ -z "$ORIGIN" ]; then
+        echo "   [HATA] git remote bulunamadi. 'git remote -v' kontrol edin."
+        exit 1
+    fi
+    TARBALL="${ORIGIN}/archive/refs/heads/main.tar.gz"
+    echo "   Indiriliyor: $TARBALL"
+    if ! curl -fsSL --max-time 120 "$TARBALL" | tar xz --strip-components=1 2>/dev/null; then
+        echo "   [HATA] Tarball indirilemedi! Internet ve repo URL kontrol edin."
+        exit 1
+    fi
+    echo "   Kod guncellendi."
+else
+    # Linux: normal git pull
+    git config gc.auto 0
+    git fetch origin
+    if ! git merge --ff-only origin/main 2>/dev/null; then
+        echo "   Yerel degisiklikler var, remote ustu aliniyor..."
+        git reset --hard origin/main
+    fi
 fi
 
 # ── 3. Python bağımlılıkları ────────────────────────────────────────────
