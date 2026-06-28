@@ -352,7 +352,11 @@ def get_video(request, video_id):
     v = _resolve_video(video_id)
     if not v:
         return Response({'error': 'Video not found'}, status=404)
-    return Response(enrich_video(v, request.user))
+    data = enrich_video(v, request.user)
+    # cloud.mail.ru linklerini sadece tekil video fetch'inde çözümle (40 dk cache'li)
+    if data.get('videoUrl') and 'cloud.mail.ru/public/' in data['videoUrl']:
+        data['videoUrl'] = _resolve_cloudmail_url(data['videoUrl'])
+    return Response(data)
 
 
 @api_view(['POST'])
