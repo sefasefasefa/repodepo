@@ -143,97 +143,87 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       hlsRef.current?.destroy();
       hlsRef.current = null;
 
-      const isHls = /\.m3u8(\?|$)/i.test(src);
+      if (Hls.isSupported()) {
+        // HLS.js destekleniyor — her URL için önce HLS.js dene
+        // (.m3u8 uzantısı olmayan HLS stream'leri de yakalar)
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
 
-      if (isHls) {
-        if (Hls.isSupported()) {
-          const hls = new Hls({
-            enableWorker: true,
-            lowLatencyMode: false,
+          // ── Buffer: en kötü ağda bile biriktir ──────────────────
+          maxBufferLength: 120,
+          maxMaxBufferLength: 600,
+          maxBufferSize: 300 * 1000 * 1000,
+          maxBufferHole: 0.5,
+          backBufferLength: 60,
 
-            // ── Buffer: en kötü ağda bile biriktir ──────────────────
-            maxBufferLength: 120,            // 2 dakika öne buffer'la
-            maxMaxBufferLength: 600,         // Ağ iyiyse 10 dakikaya kadar
-            maxBufferSize: 300 * 1000 * 1000, // 300 MB bellek tamponu
-            maxBufferHole: 0.5,              // 0.5s'den küçük boşlukları atla
-            backBufferLength: 60,            // Geri gitme için 60s tut
+          // ── Takılma kurtarma ────────────────────────────────────
+          highBufferWatchdogPeriod: 2,
+          nudgeMaxRetry: 10,
+          nudgeOffset: 0.1,
 
-            // ── Takılma kurtarma ────────────────────────────────────
-            highBufferWatchdogPeriod: 2,    // Her 2 saniyede stall kontrol
-            nudgeMaxRetry: 10,              // 10 kez küçük ilerleme dene
-            nudgeOffset: 0.1,              // Çok küçük adımlarla
+          // ── ABR: Kaliteyi agresif artır, düşürmeye dirençli ────
+          abrEwmaDefaultEstimate: 2_000_000,
+          abrBandWidthFactor: 0.95,
+          abrBandWidthUpFactor: 0.6,
+          abrEwmaFastHalf: 3.0,
+          abrEwmaSlowHalf: 9.0,
+          startLevel: -1,
+          capLevelToPlayerSize: false,
 
-            // ── ABR: Kaliteyi agresif artır, düşürmeye dirençli ────
-            abrEwmaDefaultEstimate: 2_000_000, // 2Mbps başlangıç tahmini
-            abrBandWidthFactor: 0.95,          // %95 bant genişliği kullan
-            abrBandWidthUpFactor: 0.6,         // Yavaş kalite artır
-            abrEwmaFastHalf: 3.0,              // Düşüş hızlı tespit edilsin
-            abrEwmaSlowHalf: 9.0,              // Artış yavaş tespit edilsin
-            startLevel: -1,                    // Otomatik başlangıç
-            capLevelToPlayerSize: false,       // Oynatıcı boyutuna kısıtlama YOK
+          // ── Retry: ağ hatalarında vazgeçme ──────────────────────
+          fragLoadingMaxRetry: 12,
+          fragLoadingRetryDelay: 200,
+          fragLoadingMaxRetryTimeout: 4000,
+          manifestLoadingMaxRetry: 3,
+          manifestLoadingRetryDelay: 200,
+          levelLoadingMaxRetry: 10,
+          levelLoadingRetryDelay: 200,
+        });
 
-            // ── Retry: ağ hatalarında vazgeçme ──────────────────────
-            fragLoadingMaxRetry: 12,
-            fragLoadingRetryDelay: 200,
-            fragLoadingMaxRetryTimeout: 4000,
-            manifestLoadingMaxRetry: 8,
-            manifestLoadingRetryDelay: 200,
-            levelLoadingMaxRetry: 10,
-            levelLoadingRetryDelay: 200,
-          });
+        hlsRef.current = hls;
+        hls.loadSource(src);
+        hls.attachMedia(vid);
 
-          hlsRef.current = hls;
-          hls.loadSource(src);
-          hls.attachMedia(vid);
-
-          hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-            setHlsLevels(data.levels.map(l => ({ height: l.height, bitrate: l.bitrate })));
-            setLoading(false);
-          });
-
-          hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => setCurrentLevel(data.level));
-
-          // Gerçek zamanlı bant genişliği ölçümü
-          hls.on(Hls.Events.FRAG_LOADED, () => {
-            const bw = hls.bandwidthEstimate;
-            if (bw && isFinite(bw)) {
-              setBandwidth(bw);
-              setSlowConn(bw < 300_000);
-            }
-          });
-
-          hls.on(Hls.Events.ERROR, (_, data) => {
-            if (data.fatal) {
-              switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                  // Ağ hatası: hemen yeniden yükle
-                  hls.startLoad();
-                  break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                  // Medya hatası: kurtarma dene
-                  hls.recoverMediaError();
-                  break;
-                default:
-                  // Kurtarılamaz: native fallback dene
-                  hls.destroy();
-                  hlsRef.current = null;
-                  if (vid.canPlayType("application/vnd.apple.mpegurl")) {
-                    vid.src = src;
-                  } else {
-                    setError("Video yüklenemedi. Farklı kaynak seçin.");
-                  }
-              }
-            }
-          });
-
-        } else if (vid.canPlayType("application/vnd.apple.mpegurl")) {
-          // iOS Safari — native HLS
-          vid.src = src;
-        } else {
-          setError("Bu tarayıcı HLS formatını desteklemiyor.");
+        hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+          setHlsLevels(data.levels.map(l => ({ height: l.height, bitrate: l.bitrate })));
           setLoading(false);
-        }
+        });
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => setCurrentLevel(data.level));
+
+        // Gerçek zamanlı bant genişliği ölçümü
+        hls.on(Hls.Events.FRAG_LOADED, () => {
+          const bw = hls.bandwidthEstimate;
+          if (bw && isFinite(bw)) {
+            setBandwidth(bw);
+            setSlowConn(bw < 300_000);
+          }
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                // HLS değil veya kurtarılamaz — native oynatmaya düş
+                hls.destroy();
+                hlsRef.current = null;
+                vid.src = src;
+            }
+          }
+        });
+
+      } else if (vid.canPlayType("application/vnd.apple.mpegurl")) {
+        // iOS Safari — native HLS
+        vid.src = src;
       } else {
+        // Native oynatıcı (MP4 vb.)
         vid.src = src;
       }
 
