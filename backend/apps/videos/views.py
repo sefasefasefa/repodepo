@@ -656,15 +656,36 @@ def get_category(request, slug):
     })
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def list_comments(request, video_id):
-    page = int(request.query_params.get('page', 1))
-    limit = min(int(request.query_params.get('limit', 20)), 50)
-    offset = (page - 1) * limit
     video = _resolve_video(video_id)
     if not video:
         return Response({'error': 'Video not found'}, status=404)
+
+    if request.method == 'POST':
+        if not request.user or not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=401)
+        content = request.data.get('content', '').strip()
+        if not content:
+            return Response({'error': 'Content required'}, status=400)
+        parent_id = request.data.get('parentId', request.data.get('parent_id'))
+        parent = None
+        if parent_id:
+            try:
+                parent = Comment.objects.get(id=parent_id, video=video)
+                Comment.objects.filter(id=parent_id).update(reply_count=F('reply_count') + 1)
+            except Comment.DoesNotExist:
+                pass
+        comment = Comment.objects.create(
+            content=content, video=video, author=request.user, parent=parent
+        )
+        Video.objects.filter(id=video.id).update(comment_count=F('comment_count') + 1)
+        return Response(_fmt_comment(comment), status=201)
+
+    page = int(request.query_params.get('page', 1))
+    limit = min(int(request.query_params.get('limit', 20)), 50)
+    offset = (page - 1) * limit
     comments = Comment.objects.filter(video_id=video.id, parent=None).select_related('author').order_by('-created_at')
     total = comments.count()
     items = list(comments[offset:offset + limit])

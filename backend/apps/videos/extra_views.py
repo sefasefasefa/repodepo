@@ -61,11 +61,29 @@ def auto_categorize(request):
     }})
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def auto_category_rules_list(request):
     if request.user.role != 'admin':
         return Response({'error': 'Admin gerekli'}, status=403)
+
+    if request.method == 'PUT':
+        rules = request.data.get('rules')
+        if not isinstance(rules, list):
+            return Response({'error': 'rules dizisi gerekli'}, status=400)
+        for r in rules:
+            cat_id = r.get('categoryId')
+            if not cat_id:
+                continue
+            keywords = [k.strip().lower() for k in (r.get('keywords') or []) if k and k.strip()]
+            is_enabled = bool(r.get('isEnabled', True))
+            AutoCategoryRule.objects.filter(category_id=cat_id).delete()
+            AutoCategoryRule.objects.bulk_create([
+                AutoCategoryRule(category_id=cat_id, keyword=kw, is_active=is_enabled)
+                for kw in keywords
+            ])
+        return Response({'ok': True})
+
     cats = Category.objects.all().order_by('name')
     rules_by_cat = {}
     for r in AutoCategoryRule.objects.all():
@@ -87,25 +105,8 @@ def auto_category_rules_list(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def auto_category_rules_save(request):
-    """Replace the keyword set for each provided category."""
-    if request.user.role != 'admin':
-        return Response({'error': 'Admin gerekli'}, status=403)
-    rules = request.data.get('rules')
-    if not isinstance(rules, list):
-        return Response({'error': 'rules dizisi gerekli'}, status=400)
-
-    for r in rules:
-        cat_id = r.get('categoryId')
-        if not cat_id:
-            continue
-        keywords = [k.strip().lower() for k in (r.get('keywords') or []) if k and k.strip()]
-        is_enabled = bool(r.get('isEnabled', True))
-        AutoCategoryRule.objects.filter(category_id=cat_id).delete()
-        AutoCategoryRule.objects.bulk_create([
-            AutoCategoryRule(category_id=cat_id, keyword=kw, is_active=is_enabled)
-            for kw in keywords
-        ])
-    return Response({'ok': True})
+    """Eski uyumluluk için korundu — auto_category_rules_list PUT'a yönlendir."""
+    return auto_category_rules_list(request)
 
 
 # ─── Video Players (CRUD by creator/admin) ────────────────────────────────────
