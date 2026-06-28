@@ -829,103 +829,93 @@ export function AdminIntegrations() {
         ))}
       </div>
 
-      {/* Platform kartları */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
-        {visiblePlatforms.map((p) => {
-          const added = integrations.find((i) => i.platform === p.id);
-          return (
-            <div key={p.id}
-              className={cn("border rounded-xl p-3 transition-all",
-                added ? `${p.bg} border-current/20` : "bg-[#1a1a1a] border-[#2a2a2a]")}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0", p.bg, p.color)}>
-                  {p.logo}
+      {/* Platform kartları — aktif olanlar öne */}
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-28 bg-[#1a1a1a] rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+          {visiblePlatforms.map((p) => {
+            const added = integrations.find((i) => i.platform === p.id);
+            return (
+              <div key={p.id}
+                className={cn(
+                  "border rounded-xl p-3 transition-all flex flex-col gap-2",
+                  added
+                    ? `${p.bg} border-white/10`
+                    : "bg-[#1a1a1a] border-[#2a2a2a] opacity-70 hover:opacity-100"
+                )}>
+                {/* Üst: logo + isim */}
+                <div className="flex items-center gap-2">
+                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0", p.bg, p.color)}>
+                    {p.logo}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {/* İsim: eklenmiş ise int.name, değilse p.name */}
+                    <p className={cn("font-semibold text-xs leading-tight truncate", added ? p.color : "text-[#aaa]")}>
+                      {added ? added.name : p.name}
+                    </p>
+                    {added ? (
+                      <p className="text-[9px] text-[#777] mt-0.5">{added.uploadCount || 0} yükleme</p>
+                    ) : (
+                      <p className="text-[9px] text-[#555] mt-0.5">+18</p>
+                    )}
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className={cn("font-semibold text-xs truncate", added ? p.color : "text-[#aaa]")}>{p.name}</p>
-                  <p className="text-[9px] text-[#555]">{added ? `${added.uploadCount || 0} yükleme` : "+18"}</p>
-                </div>
-              </div>
-              {added ? (
-                <div className="flex gap-1 mt-1">
-                  <button onClick={() => openEdit(added)}
-                    className="flex-1 text-[9px] py-1 rounded bg-[#222] hover:bg-primary/20 text-[#aaa] hover:text-primary transition-colors flex items-center justify-center gap-1">
-                    <Pencil className="h-2.5 w-2.5" /> Düzenle
-                  </button>
-                  <button onClick={() => test(added.id)} disabled={testing === added.id}
-                    className="p-1 rounded bg-[#222] hover:bg-[#333] text-[#888] transition-colors">
-                    {testing === added.id ? <RefreshCw className="h-2.5 w-2.5 animate-spin" /> : <Link2 className="h-2.5 w-2.5" />}
-                  </button>
-                  <button onClick={() => remove(added.id)}
-                    className="p-1 rounded bg-red-900/30 hover:bg-red-900/50 text-red-400 transition-colors">
-                    <Trash2 className="h-2.5 w-2.5" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => openAdd(p.id, p.name)}
-                  className="w-full text-[9px] py-1 rounded bg-[#222] hover:bg-[#2a2a2a] text-[#666] hover:text-white transition-colors mt-1">
-                  + Ekle
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
 
-      {/* Eklenmiş entegrasyonlar listesi */}
-      {integrations.length > 0 && (
-        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#222] flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#aaa]">Aktif Entegrasyonlar</h3>
-            <span className="text-xs text-primary font-bold">{integrations.length} bağlı</span>
-          </div>
-          <div className="divide-y divide-[#222]">
-            {integrations.map((int) => {
-              const p = PLATFORMS.find((x) => x.id === int.platform);
-              return (
-                <div key={int.id} className="flex items-center gap-4 px-4 py-3">
-                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0", p?.bg, p?.color)}>
-                    {p?.logo ?? "?"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white">{int.name}</p>
-                    <p className="text-[11px] text-[#555]">{int.platform} • {int.uploadCount || 0} yükleme</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 text-[11px] text-[#666]">
+                {/* Aktif kart — bilgiler + butonlar */}
+                {added ? (
+                  <>
+                    {/* Otomatik toggle */}
+                    <button
+                      onClick={() => toggle(added.id, "autoUpload", !added.autoUpload)}
+                      className={cn(
+                        "flex items-center justify-between w-full px-2 py-1 rounded-lg text-[10px] transition-colors",
+                        added.autoUpload
+                          ? "bg-primary/15 text-primary"
+                          : "bg-[#1e1e1e] text-[#555]"
+                      )}
+                    >
                       <span>Otomatik</span>
-                      <button onClick={() => toggle(int.id, "autoUpload", !int.autoUpload)}>
-                        {int.autoUpload
-                          ? <ToggleRight className="h-4 w-4 text-primary" />
-                          : <ToggleLeft className="h-4 w-4 text-[#444]" />}
+                      {added.autoUpload
+                        ? <ToggleRight className="h-3.5 w-3.5 shrink-0" />
+                        : <ToggleLeft className="h-3.5 w-3.5 shrink-0" />}
+                    </button>
+
+                    {/* Eylem butonları */}
+                    <div className="flex gap-1">
+                      <button onClick={() => openEdit(added)}
+                        className="flex-1 text-[9px] py-1 rounded bg-black/30 hover:bg-primary/20 text-[#bbb] hover:text-primary transition-colors flex items-center justify-center gap-1">
+                        <Pencil className="h-2.5 w-2.5" /> Düzenle
+                      </button>
+                      <button onClick={() => test(added.id)} disabled={testing === added.id}
+                        title="Bağlantı testi"
+                        className="p-1.5 rounded bg-black/30 hover:bg-[#333] text-[#888] transition-colors">
+                        {testing === added.id
+                          ? <RefreshCw className="h-2.5 w-2.5 animate-spin" />
+                          : <Link2 className="h-2.5 w-2.5" />}
+                      </button>
+                      <button onClick={() => remove(added.id)}
+                        title="Entegrasyonu sil"
+                        className="p-1.5 rounded bg-red-900/30 hover:bg-red-900/60 text-red-400 transition-colors">
+                        <Trash2 className="h-2.5 w-2.5" />
                       </button>
                     </div>
-                    <button onClick={() => openEdit(int)}
-                      className="text-[11px] px-2 py-1 rounded bg-[#222] hover:bg-primary/20 hover:text-primary text-[#888] transition-colors flex items-center gap-1">
-                      <Pencil className="h-3 w-3" /> Düzenle
-                    </button>
-                    <button onClick={() => test(int.id)} disabled={testing === int.id}
-                      className="text-[11px] px-2 py-1 rounded bg-[#222] hover:bg-[#2a2a2a] text-[#888] transition-colors flex items-center gap-1">
-                      {testing === int.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <><Link2 className="h-3 w-3" /> Test</>}
-                    </button>
-                    <button onClick={() => remove(int.id)}
-                      className="p-1.5 rounded hover:bg-red-900/30 text-[#555] hover:text-red-400 transition-colors">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {loading && integrations.length === 0 && (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-12 bg-[#1a1a1a] rounded-xl animate-pulse" />
-          ))}
+                  </>
+                ) : (
+                  /* Eklenmemiş kart — sadece ekle butonu */
+                  <button
+                    onClick={() => openAdd(p.id, p.name)}
+                    className="w-full text-[9px] py-1.5 rounded bg-[#222] hover:bg-primary/20 hover:text-primary text-[#666] transition-colors mt-auto">
+                    + Ekle
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
