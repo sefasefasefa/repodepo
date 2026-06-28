@@ -13,6 +13,7 @@ urlpatterns = [
     path('videos/shorts', views.get_shorts),
     path('videos/search', views.search_videos),
     path('videos/create', views.create_video),
+    path('videos/bulk-fetch', views.bulk_fetch_all_videos),
     path('videos/scheduled', views.list_scheduled_videos),
     path('videos/<str:video_id>', views.get_video),
     path('videos/<str:video_id>/update', views.update_video),

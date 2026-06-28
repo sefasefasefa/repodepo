@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Video, Trash2, Edit2, Eye, EyeOff, Search, ChevronLeft, ChevronRight,
   Crown, Plus, X, Loader2, Link, Image, Upload, Share2, Check,
-  AlertCircle, PlayCircle, RefreshCw, ExternalLink, Grid3x3,
+  AlertCircle, PlayCircle, RefreshCw, ExternalLink, Grid3x3, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VideoPlayerManager } from "./video-player-manager";
@@ -980,6 +980,8 @@ export function AdminVideos() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [distributing, setDistributing] = useState<number | null>(null);
   const [distributeResult, setDistributeResult] = useState<Record<number, string>>({});
+  const [bulkFetching, setBulkFetching] = useState(false);
+  const [bulkFetchResult, setBulkFetchResult] = useState<string | null>(null);
   const [jobSummary, setJobSummary] = useState<Record<string, any[]>>({});
 
   const { data, isLoading } = useListVideos({ page, limit: 20 } as any);
@@ -1096,10 +1098,44 @@ export function AdminVideos() {
           <h1 className="text-xl font-bold flex items-center gap-2"><Video className="h-5 w-5 text-primary" /> Video Yönetimi</h1>
           <p className="text-xs text-[#555] mt-0.5">{total} video · Sayfa {page}/{Math.max(1, totalPages)}</p>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors shrink-0">
-          <Plus className="h-3.5 w-3.5" /> Video Ekle
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={async () => {
+              if (bulkFetching) return;
+              setBulkFetching(true);
+              setBulkFetchResult(null);
+              try {
+                const token = localStorage.getItem("token");
+                const res = await fetch("/api/videos/bulk-fetch", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                });
+                const d = await res.json().catch(() => ({}));
+                setBulkFetchResult(d.message || "İndirme başlatıldı");
+                setTimeout(() => setBulkFetchResult(null), 8000);
+              } catch {
+                setBulkFetchResult("Hata oluştu");
+              } finally {
+                setBulkFetching(false);
+              }
+            }}
+            disabled={bulkFetching}
+            title="Tüm harici URL'li videoları sunucuya indir (embed kullanma)"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs font-semibold hover:bg-blue-600/30 transition-colors shrink-0 disabled:opacity-50"
+          >
+            {bulkFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            {bulkFetching ? "İndiriliyor..." : "Tümünü Sunucuya İndir"}
+          </button>
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors shrink-0">
+            <Plus className="h-3.5 w-3.5" /> Video Ekle
+          </button>
+        </div>
       </div>
+      {bulkFetchResult && (
+        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg px-4 py-2.5 text-blue-300 text-xs font-medium">
+          ✓ {bulkFetchResult}
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">

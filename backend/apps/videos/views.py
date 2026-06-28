@@ -809,6 +809,14 @@ def create_video(request):
     except Exception:
         pass
 
+    # Harici URL varsa arka planda sunucuya indir (embed asla kullanılmayacak)
+    try:
+        _url = video.video_url or video.hls_url or ''
+        if _url and (_url.startswith('http://') or _url.startswith('https://')):
+            _download_any_url_to_server(video.id)
+    except Exception:
+        pass
+
     # Auto-distribute to active providers in background
     try:
         _distribute_video_background(video.id)
@@ -1815,40 +1823,41 @@ def resolve_video_url(request):
     )
 
 
-# ── cloud.mail.ru → sunucu indirme ──────────────────────────────────────────
+# ── Evrensel video indirme: HERHANGİ bir URL → media/uploads/ ────────────────
 
-def _fetch_video_to_server(video_id):
+def _download_any_url_to_server(video_id):
     """
-    Arka planda cloud.mail.ru URL'ini çözümleyip dosyayı media/uploads/'a indirir.
+    Arka planda HERHANGİ bir HTTP/HTTPS URL'ini çözümleyip dosyayı media/uploads/'a indirir.
     İndirme durumunu cache'de tutar:
-      cloudmail_dl_{video_id}: pending | downloading | done | error
-      cloudmail_dl_pct_{video_id}: 0-100
+      video_dl_{video_id}: pending | downloading | done | error:<msg>
+      video_dl_pct_{video_id}: 0-100
     """
     import threading
 
     def _run():
-        import uuid
+        import uuid as _uuid
         import requests as _rq
+        from urllib.parse import urlparse
         from django.conf import settings as _s
 
-        ck_status = f'cloudmail_dl_{video_id}'
-        ck_pct    = f'cloudmail_dl_pct_{video_id}'
-        cache.set(ck_status, 'downloading', 3600)
-        cache.set(ck_pct, 0, 3600)
+        ck_status = f'video_dl_{video_id}'
+        ck_pct    = f'video_dl_pct_{video_id}'
+        cache.set(ck_status, 'downloading', 7200)
+        cache.set(ck_pct, 0, 7200)
 
         try:
             video = Video.objects.get(id=video_id)
-            raw_url = video.video_url or ''
+            raw_url = video.video_url or video.hls_url or ''
 
-            if 'cloud.mail.ru/public/' not in raw_url:
-                cache.set(ck_status, 'error', 3600)
+            if not raw_url or raw_url.startswith('/media/') or raw_url.startswith('media/'):
+                cache.set(ck_status, 'done', 7200)
                 return
 
-            # CDN URL'ini çöz
-            cdn_url = _resolve_cloudmail_url(raw_url)
-            if not cdn_url or cdn_url == raw_url:
-                cache.set(ck_status, 'error', 3600)
-                return
+            # cloud.mail.ru için CDN URL'ini önce çöz
+            if 'cloud.mail.ru/public/' in raw_url:
+                resolved = _resolve_cloudmail_url(raw_url)
+                if resolved and resolved != raw_url:
+                    raw_url = resolved
 
             headers = {
                 'User-Agent': (
@@ -1856,26 +1865,35 @@ def _fetch_video_to_server(video_id):
                     'AppleWebKit/537.36 (KHTML, like Gecko) '
                     'Chrome/120.0.0.0 Safari/537.36'
                 ),
+                'Accept': 'video/*,*/*',
+                'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
             }
-            resp = _rq.get(cdn_url, headers=headers, stream=True, timeout=60, allow_redirects=True)
+
+            resp = _rq.get(raw_url, headers=headers, stream=True, timeout=120, allow_redirects=True)
             resp.raise_for_status()
 
-            # Dosya boyutu (varsa)
             total = int(resp.headers.get('Content-Length', 0)) or 0
+            ct    = resp.headers.get('Content-Type', 'video/mp4').split(';')[0].strip().lower()
 
-            # Uzantıyı content-type'tan belirle
-            ct = resp.headers.get('Content-Type', 'video/mp4')
+            # Uzantı: önce URL yoluna bak, sonra content-type'a
             ext = '.mp4'
-            if 'webm' in ct:
-                ext = '.webm'
-            elif 'mkv' in ct or 'matroska' in ct:
-                ext = '.mkv'
+            url_path = urlparse(resp.url).path.lower()
+            for x in ['.mp4', '.webm', '.mkv', '.ogv', '.ogg', '.ts']:
+                if url_path.endswith(x):
+                    ext = x
+                    break
+            else:
+                ct_map = {
+                    'video/webm': '.webm', 'video/x-matroska': '.mkv',
+                    'video/ogg': '.ogv', 'video/mp2t': '.ts',
+                }
+                ext = ct_map.get(ct, '.mp4')
 
-            filename    = f'{uuid.uuid4().hex}{ext}'
-            upload_dir  = os.path.join(_s.MEDIA_ROOT, 'uploads')
+            filename   = f'{_uuid.uuid4().hex}{ext}'
+            upload_dir = os.path.join(_s.MEDIA_ROOT, 'uploads')
             os.makedirs(upload_dir, exist_ok=True)
-            local_path  = os.path.join(upload_dir, filename)
-            local_url   = f'/media/uploads/{filename}'
+            local_path = os.path.join(upload_dir, filename)
+            local_url  = f'/media/uploads/{filename}'
 
             downloaded = 0
             with open(local_path, 'wb') as fh:
@@ -1885,23 +1903,36 @@ def _fetch_video_to_server(video_id):
                         downloaded += len(chunk)
                         if total:
                             pct = int(downloaded * 100 / total)
-                            cache.set(ck_pct, pct, 3600)
+                            cache.set(ck_pct, pct, 7200)
 
-            # Video kaydını güncelle
-            Video.objects.filter(id=video_id).update(video_url=local_url)
-            cache.set(ck_pct, 100, 3600)
-            cache.set(ck_status, 'done', 3600)
+            # Video kaydını güncelle (hem video_url hem hls_url temizle)
+            Video.objects.filter(id=video_id).update(video_url=local_url, hls_url=None)
+            cache.set(ck_pct, 100, 7200)
+            cache.set(ck_status, 'done', 7200)
+
+            # Thumbnail yoksa üret
+            try:
+                from apps.videos.thumbnail_utils import auto_generate_thumbnail_async
+                v2 = Video.objects.get(id=video_id)
+                auto_generate_thumbnail_async(v2)
+            except Exception:
+                pass
 
         except Exception as exc:
-            cache.set(ck_status, f'error: {exc}', 3600)
+            cache.set(ck_status, f'error:{exc}', 7200)
 
     threading.Thread(target=_run, daemon=True).start()
+
+
+# Eski cloud.mail.ru fonksiyonu artık generic indiriciyi çağırır (geriye dönük uyumluluk)
+def _fetch_video_to_server(video_id):
+    _download_any_url_to_server(video_id)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def fetch_video_from_url(request, video_id):
-    """cloud.mail.ru URL'ini sunucuya indir ve video_url'i güncelle."""
+    """Herhangi bir harici URL'i sunucuya indir ve video_url'i güncelle."""
     if request.user.role not in ('admin', 'moderator', 'creator'):
         return Response({'error': 'Yetki gerekli'}, status=403)
 
@@ -1911,38 +1942,84 @@ def fetch_video_from_url(request, video_id):
     if video.creator != request.user and request.user.role not in ('admin', 'moderator'):
         return Response({'error': 'Forbidden'}, status=403)
 
-    raw_url = video.video_url or ''
-    if 'cloud.mail.ru/public/' not in raw_url:
-        return Response({'error': 'Bu video cloud.mail.ru linki içermiyor'}, status=400)
+    raw_url = video.video_url or video.hls_url or ''
+    if not raw_url:
+        return Response({'error': 'Bu video için kayıtlı URL yok'}, status=400)
+    if raw_url.startswith('/media/') or raw_url.startswith('media/'):
+        return Response({'status': 'done', 'message': 'Video zaten yerel'})
 
-    ck = f'cloudmail_dl_{video.id}'
+    ck = f'video_dl_{video.id}'
     current = cache.get(ck, '')
     if current in ('downloading', 'pending'):
         return Response({'status': current, 'message': 'İndirme zaten devam ediyor'})
 
-    cache.set(ck, 'pending', 3600)
-    cache.set(f'cloudmail_dl_pct_{video.id}', 0, 3600)
-    _fetch_video_to_server(video.id)
+    cache.set(ck, 'pending', 7200)
+    cache.set(f'video_dl_pct_{video.id}', 0, 7200)
+    _download_any_url_to_server(video.id)
     return Response({'status': 'pending', 'message': 'İndirme başlatıldı'})
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def fetch_video_status(request, video_id):
     """İndirme durumunu ve yüzdesini döner."""
     video = _resolve_video(video_id)
     if not video:
         return Response({'error': 'Video bulunamadı'}, status=404)
 
-    ck_status = f'cloudmail_dl_{video.id}'
-    ck_pct    = f'cloudmail_dl_pct_{video.id}'
-    status_val = cache.get(ck_status, None)
-    pct        = cache.get(ck_pct, 0)
+    ck_status  = f'video_dl_{video.id}'
+    ck_pct     = f'video_dl_pct_{video.id}'
+    # Geriye dönük uyumluluk: eski cloud.mail.ru cache anahtarlarını da kontrol et
+    status_val = cache.get(ck_status) or cache.get(f'cloudmail_dl_{video.id}')
+    pct        = cache.get(ck_pct) or cache.get(f'cloudmail_dl_pct_{video.id}') or 0
 
-    local = video.video_url and video.video_url.startswith('/media/')
+    url   = video.video_url or video.hls_url or ''
+    local = url.startswith('/media/') or url.startswith('media/')
+    if local:
+        status_val = 'done'
+
     return Response({
         'status': status_val,
         'percent': pct,
         'isLocal': local,
         'videoUrl': video.video_url,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_fetch_all_videos(request):
+    """
+    Sitedeki tüm harici URL'li videoları sunucuya indirir.
+    Sadece admin/moderator kullanabilir.
+    """
+    if request.user.role not in ('admin', 'moderator'):
+        return Response({'error': 'Admin yetkisi gerekli'}, status=403)
+
+    videos = Video.objects.filter(is_published=True)
+    queued = []
+    skipped = []
+
+    for video in videos:
+        url = video.video_url or video.hls_url or ''
+        if not url:
+            skipped.append({'id': video.id, 'title': video.title, 'reason': 'URL yok'})
+            continue
+        if url.startswith('/media/') or url.startswith('media/'):
+            skipped.append({'id': video.id, 'title': video.title, 'reason': 'Zaten yerel'})
+            continue
+        ck = f'video_dl_{video.id}'
+        current = cache.get(ck, '')
+        if current in ('downloading', 'pending'):
+            skipped.append({'id': video.id, 'title': video.title, 'reason': 'İndirme devam ediyor'})
+            continue
+        cache.set(ck, 'pending', 7200)
+        cache.set(f'video_dl_pct_{video.id}', 0, 7200)
+        _download_any_url_to_server(video.id)
+        queued.append({'id': video.id, 'title': video.title, 'url': url[:80]})
+
+    return Response({
+        'message': f'{len(queued)} video indirme kuyruğuna alındı',
+        'queued': queued,
+        'skipped': skipped,
     })

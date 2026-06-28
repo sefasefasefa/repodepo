@@ -151,9 +151,9 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
   const resumeSeeked = useRef(false);
   const token = typeof window !== "undefined" ? (localStorage.getItem("token") ?? "") : "";
 
-  // ── cloud.mail.ru otomatik indirme ──────────────────────────────
+  // ── Tüm harici URL'ler için otomatik indirme + polling ──────────
   const rawVideoUrl = video.hlsUrl || video.videoUrl || "";
-  const isCloudMail = rawVideoUrl.includes("cloud.mail.ru/public/");
+  const isExternalUrl = rawVideoUrl.startsWith("http://") || rawVideoUrl.startsWith("https://");
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(
     rawVideoUrl.startsWith("/media/") ? rawVideoUrl : null
   );
@@ -162,14 +162,13 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
   const dlPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!isCloudMail || localVideoUrl) return;
+    // Zaten yerelleştirilmişse ya da URL yoksa polling gerekmez
+    if (!isExternalUrl || localVideoUrl) return;
     const tok = localStorage.getItem("token");
 
     const checkStatus = async () => {
       try {
-        const res = await fetch(`/api/videos/${video.id}/fetch-status`, {
-          headers: tok ? { Authorization: `Bearer ${tok}` } : {},
-        });
+        const res = await fetch(`/api/videos/${video.id}/fetch-status`);
         if (!res.ok) return;
         const d = await res.json();
 
@@ -183,12 +182,12 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
         setDlStatus(d.status ?? null);
         setDlPct(d.percent ?? 0);
 
-        // Henüz başlamadıysa ve kullanıcı giriş yapmışsa otomatik başlat
+        // Henüz başlamadıysa admin/creator ise otomatik başlat
         if (!d.status && tok) {
           await fetch(`/api/videos/${video.id}/fetch-from-url`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
-          });
+          }).catch(() => {});
         }
       } catch { /* sessizce geç */ }
     };
@@ -196,45 +195,25 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
     checkStatus();
     dlPollRef.current = setInterval(checkStatus, 2500);
     return () => { if (dlPollRef.current) clearInterval(dlPollRef.current); };
-  }, [video.id, isCloudMail, localVideoUrl]);
+  }, [video.id, isExternalUrl, localVideoUrl]);
   // ────────────────────────────────────────────────────────────────
 
   const allSources: PlayerSource[] = (() => {
-    // Yerel dosya indirildiyse onu kullan
     const effectiveUrl = localVideoUrl || rawVideoUrl;
-    const ownSource: PlayerSource | null = effectiveUrl ? (() => {
-      const isExternal = effectiveUrl.startsWith("http://") || effectiveUrl.startsWith("https://");
-      const isCloud    = effectiveUrl.includes("cloud.mail.ru/public/");
+    if (!effectiveUrl) return [...players];
 
-      // Yerel dosya → doğrudan sun; her zaman varsayılan (başka cihazlardan da erişilebilir)
-      if (!isExternal) {
-        return { id: 0, playerName: "Kendi Oynatıcı", directUrl: effectiveUrl, isDefault: true, quality: "HD", language: "TR" };
-      }
+    const isExternal = effectiveUrl.startsWith("http://") || effectiveUrl.startsWith("https://");
 
-      // cloud.mail.ru → proxy stream (indirme tamamlanana kadar); her zaman varsayılan
-      if (isCloud) {
-        return { id: 0, playerName: "Kendi Oynatıcı", directUrl: `/api/videos/${video.id}/stream`, isDefault: true, quality: "HD", language: "TR" };
-      }
+    // Yerel dosya → doğrudan sun; embed ASLA kullanılmaz
+    if (!isExternal) {
+      const ownSrc: PlayerSource = { id: 0, playerName: "Kendi Oynatıcı", directUrl: effectiveUrl, isDefault: true, quality: "HD", language: "TR" };
+      return [ownSrc, ...players];
+    }
 
-      // Doğrudan video dosyası (.mp4, .m3u8, .webm vb.) → tarayıcı direkt oynatır,
-      // proxy'ye gerek yok (secure token'lar sunucu IP'sine değil client IP'sine bağlı olabilir)
-      // Not: sondaki slash'ı temizle (örn: "697.mp4/" → "697.mp4")
-      const cleanUrl = effectiveUrl.split("?")[0].split("#")[0].replace(/\/+$/, "");
-      const isDirectFile = /\.(mp4|m3u8|webm|ogg|ogv|mov|ts|mkv)$/i.test(cleanUrl);
-      if (isDirectFile) {
-        return { id: 0, playerName: "Kendi Oynatıcı", directUrl: effectiveUrl, isDefault: players.length === 0, quality: "HD", language: "TR" };
-      }
-
-      // Tanınan harici embed platformu → iframe
-      const embedCode = resolveEmbedFromUrl(effectiveUrl);
-      if (embedCode) {
-        return { id: 0, playerName: "Kendi Oynatıcı", embedCode, isDefault: players.length === 0, quality: "HD", language: "TR" };
-      }
-
-      // Tanınmayan harici URL → proxy üzerinden dene
-      return { id: 0, playerName: "Kendi Oynatıcı", directUrl: `/api/videos/${video.id}/stream`, isDefault: players.length === 0, quality: "HD", language: "TR" };
-    })() : null;
-    return [...(ownSource ? [ownSource] : []), ...players];
+    // Harici URL → stream proxy üzerinden oynat (indirme arka planda devam eder)
+    // embed iframe ASLA kullanılmaz
+    const ownSrc: PlayerSource = { id: 0, playerName: "Kendi Oynatıcı", directUrl: `/api/videos/${video.id}/stream`, isDefault: true, quality: "HD", language: "TR" };
+    return [ownSrc, ...players];
   })();
 
   const defaultSource = allSources.find(p => p.isDefault) || allSources[0];
@@ -340,72 +319,52 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
         </div>
       )}
 
-      {/* cloud.mail.ru indirme progress */}
-      {isCloudMail && !localVideoUrl && dlStatus && dlStatus !== 'done' && (
+      {/* Harici URL indirme ilerlemesi (herhangi bir video için) */}
+      {isExternalUrl && !localVideoUrl && dlStatus && dlStatus !== 'done' && (
         <div className="bg-[#0a1628] border border-blue-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
           <Loader2 className="h-4 w-4 text-blue-400 animate-spin shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-blue-300 text-xs font-semibold">
-              {dlStatus?.startsWith('error') ? '⚠ İndirme başarısız' : 'Video sunucuya indiriliyor...'}
+              {dlStatus?.startsWith('error') ? '⚠ İndirme başarısız — proxy üzerinden oynatılıyor' : 'Video sunucuya indiriliyor... (şimdilik proxy üzerinden oynatılıyor)'}
             </p>
-            {dlStatus === 'downloading' && (
+            {(dlStatus === 'downloading' || dlStatus === 'pending') && (
               <div className="mt-1.5 h-1 bg-blue-900/40 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{ width: `${dlPct}%` }} />
+                <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{ width: `${dlStatus === 'pending' ? 2 : dlPct}%` }} />
               </div>
             )}
           </div>
-          {dlStatus === 'downloading' && (
+          {dlStatus === 'downloading' && dlPct > 0 && (
             <span className="text-blue-400 text-xs font-bold tabular-nums shrink-0">{dlPct}%</span>
           )}
         </div>
       )}
 
-      {/* Video alanı */}
+      {/* Video alanı — SADECE kendi oynatıcı, embed ASLA kullanılmaz */}
       <div className="w-full max-w-[960px] mx-auto">
         <div className="w-full rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
           <ScreenProtectionOverlay className="w-full h-full">
             <div className="w-full h-full bg-black relative">
-              {(() => {
-                let embedHtml: string | null = null;
-                let directUrl: string | null = activeSource?.directUrl || null;
-
-                if (activeSource?.embedCode) {
-                  const code = activeSource.embedCode.trim();
-                  if (code.startsWith("http://") || code.startsWith("https://")) {
-                    embedHtml = resolveEmbedFromUrl(code);
-                    if (!embedHtml) directUrl = code;
-                  } else {
-                    embedHtml = code;
-                  }
-                }
-
-                if (embedHtml) {
-                  const safeHtml = embedHtml
-                    .replace(/width="[^"]*"/g, 'width="100%"')
-                    .replace(/height="[^"]*"/g, 'height="100%"');
-                  return <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: safeHtml }} />;
-                }
-                if (directUrl) {
-                  return (
-                    <CustomVideoPlayer
-                      ref={videoRef}
-                      key={directUrl}
-                      src={directUrl}
-                      poster={video.thumbnailUrl || undefined}
-                      protected={screenProt}
-                      onTimeUpdate={handleTimeUpdate}
-                      onLoadedMetadata={handleLoadedMetadata}
-                      onEnded={handleEnded}
-                      className="w-full h-full"
-                      videoId={video.id}
-                      token={token}
-                    />
-                  );
-                }
-                return null;
-              })()}
+              {activeSource?.directUrl ? (
+                <CustomVideoPlayer
+                  ref={videoRef}
+                  key={activeSource.directUrl}
+                  src={activeSource.directUrl}
+                  poster={video.thumbnailUrl || undefined}
+                  protected={screenProt}
+                  onTimeUpdate={handleTimeUpdate}
+                  onLoadedMetadata={handleLoadedMetadata}
+                  onEnded={handleEnded}
+                  className="w-full h-full"
+                  videoId={video.id}
+                  token={token}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <p className="text-[#555] text-sm">Video kaynağı bulunamadı</p>
+                </div>
+              )}
               <WatermarkOverlay videoWatermarkEnabled={showWatermark} />
-              {isDirectVideo && <SubtitleOverlay videoId={video.id} videoRef={videoRef} />}
+              <SubtitleOverlay videoId={video.id} videoRef={videoRef} />
               {(video as any).hlsStatus === 'processing' && (
                 <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/70 text-blue-400 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-blue-500/30 pointer-events-none z-10">
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -415,18 +374,6 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
             </div>
           </ScreenProtectionOverlay>
         </div>
-        {!isDirectVideo && activeSource?.embedCode && (() => {
-          const srcUrl = activeSource.embedCode.trim();
-          if (!srcUrl.startsWith("http")) return null;
-          return (
-            <div className="flex justify-end mt-1.5 px-1">
-              <a href={srcUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                <ExternalLink className="h-3 w-3" /> Sağlayıcıda aç
-              </a>
-            </div>
-          );
-        })()}
       </div>
     </div>
   );
