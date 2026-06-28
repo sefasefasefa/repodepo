@@ -21,6 +21,8 @@ import { useAuth } from "@/lib/auth";
 import { StoriesLiveBar } from "@/components/live/stories-live-bar";
 import { useFeatureState } from "@/lib/feature-flags";
 import type { Video, Category } from "@workspace/api-client-react";
+import { JsonLd } from "@/components/json-ld";
+import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 
 function SectionSkeleton({ count = 4 }: { count?: number }) {
   return (
@@ -364,6 +366,28 @@ const FILTER_TAGS = [
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const { settings } = usePublicSiteSettings();
+
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: settings.siteName,
+        item: siteUrl + "/",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Ana Sayfa",
+        item: siteUrl + "/",
+      },
+    ],
+  };
 
   const ffVideos = useFeatureState("videos");
   const ffShorts = useFeatureState("shorts");
@@ -414,6 +438,8 @@ export default function Home() {
 
   return (
     <AppLayout>
+      <JsonLd id="schema-breadcrumb-home" schema={breadcrumbSchema} />
+
       {/* Instagram-style Stories + Live bar */}
       {(ffStories !== "disabled" || ffLive !== "disabled") && <StoriesLiveBar />}
 

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { JsonLd } from "@/components/json-ld";
 
 export interface PublicSiteSettings {
   siteName: string;
@@ -98,7 +99,30 @@ export function PublicSiteSettingsProvider({ children }: { children: ReactNode }
     if (settings.siteName) document.title = settings.siteName;
   }, [settings.primaryColor, settings.siteName]);
 
-  return <Context.Provider value={{ settings, reload }}>{children}</Context.Provider>;
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: settings.siteName,
+    description: settings.siteDescription || undefined,
+    url: siteUrl,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${siteUrl}/search?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
+  return (
+    <Context.Provider value={{ settings, reload }}>
+      <JsonLd id="schema-website" schema={websiteSchema} />
+      {children}
+    </Context.Provider>
+  );
 }
 
 export function usePublicSiteSettings() {
