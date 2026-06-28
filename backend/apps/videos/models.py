@@ -130,6 +130,17 @@ class WatchHistory(models.Model):
         db_table = 'watch_history'
 
 
+class VideoHeatmap(models.Model):
+    """Video izleme ısı haritası — 100 segmentlik izlenme sayacı."""
+    video = models.OneToOneField(Video, on_delete=models.CASCADE, related_name='heatmap')
+    segments = models.JSONField(default=list)
+    total_sessions = models.IntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'video_heatmaps'
+
+
 class VideoReport(models.Model):
     STATUS_CHOICES = [('pending', 'Pending'), ('resolved', 'Resolved'), ('dismissed', 'Dismissed')]
     CONTENT_TYPES = [('video', 'Video'), ('comment', 'Comment'), ('user', 'User')]

@@ -306,6 +306,8 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
                       onLoadedMetadata={handleLoadedMetadata}
                       onEnded={handleEnded}
                       className="w-full h-full"
+                      videoId={video.id}
+                      token={token}
                     />
                   );
                 }

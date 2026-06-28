@@ -17,6 +17,8 @@ interface CustomVideoPlayerProps {
   onEnded?: () => void;
   onLoadedMetadata?: (duration: number) => void;
   className?: string;
+  videoId?: string | number;
+  token?: string;
 }
 
 function formatTime(sec: number): string {
@@ -43,7 +45,7 @@ function signalLevel(bps: number): 0 | 1 | 2 | 3 {
 }
 
 export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerProps>(
-  function CustomVideoPlayer({ src, poster, protected: isProtected, onTimeUpdate, onEnded, onLoadedMetadata, className }, ref) {
+  function CustomVideoPlayer({ src, poster, protected: isProtected, onTimeUpdate, onEnded, onLoadedMetadata, className, videoId, token }, ref) {
     const videoRef = useRef<HTMLVideoElement>(null);
     useImperativeHandle(ref, () => videoRef.current!);
 
@@ -76,6 +78,15 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
     const [bufferPct, setBufferPct]       = useState(0);
     const [showSettings, setShowSettings] = useState(false);
     const [playbackRate, setPlaybackRate] = useState(1);
+
+    /* ── Heatmap / izleme takibi ────────────────────────────────── */
+    const [heatmapData, setHeatmapData]   = useState<number[]>([]);
+    const watchedSegRef   = useRef<boolean[]>(new Array(100).fill(false));
+    const milestonesHitRef = useRef<Set<number>>(new Set());
+    const newMilestonesRef = useRef<number[]>([]);
+    const durationRef      = useRef(0);
+    const currentTimeRef   = useRef(0);
+    const postHeatmapFnRef = useRef<() => void>(() => {});
 
     /* ── Kontrol gizleme zamanlayıcısı ─────────────────────────── */
     const resetHideTimer = useCallback(() => {
@@ -120,6 +131,53 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       // 6 saniye sonra hâlâ takılıysa tekrar dene
       stallTimerRef.current = setTimeout(triggerStallRecovery, 6000);
     }, []);
+
+    /* ── Heatmap: POST fonksiyonu ref'i ────────────────────────── */
+    useEffect(() => {
+      postHeatmapFnRef.current = () => {
+        if (!videoId) return;
+        const dur = durationRef.current;
+        const ct  = currentTimeRef.current;
+        if (dur <= 0) return;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        fetch(`/api/videos/${videoId}/heatmap`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            segments: [...watchedSegRef.current],
+            watchTime: Math.round(ct),
+            completionRate: Math.round((ct / dur) * 100),
+            milestones: [...newMilestonesRef.current],
+          }),
+        }).catch(() => {});
+        newMilestonesRef.current = [];
+      };
+    }, [videoId, token]);
+
+    /* ── Heatmap: fetch (yeni video yüklendiğinde) ──────────────── */
+    useEffect(() => {
+      if (!videoId) return;
+      watchedSegRef.current   = new Array(100).fill(false);
+      milestonesHitRef.current = new Set();
+      newMilestonesRef.current = [];
+      fetch(`/api/videos/${videoId}/heatmap`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.segments) setHeatmapData(d.segments); })
+        .catch(() => {});
+    }, [videoId, src]);
+
+    /* ── Heatmap: 15 saniyede bir + sayfa kapanmadan gönder ─────── */
+    useEffect(() => {
+      if (!videoId) return;
+      const timer = setInterval(() => postHeatmapFnRef.current(), 15000);
+      const onUnload = () => postHeatmapFnRef.current();
+      window.addEventListener('beforeunload', onUnload);
+      return () => {
+        clearInterval(timer);
+        window.removeEventListener('beforeunload', onUnload);
+      };
+    }, [videoId, src]);
 
     /* ── HLS başlatma ───────────────────────────────────────────── */
     useEffect(() => {
@@ -259,7 +317,17 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       const onWaiting   = () => setLoading(true);
       const onCanPlay   = () => { setLoading(false); clearStallTimer(); };
       const onLoadStart = () => setLoading(true);
-      const onEnded_    = () => { setPlaying(false); clearStallTimer(); onEnded?.(); };
+      const onEnded_    = () => {
+        setPlaying(false);
+        clearStallTimer();
+        // %100 milestone + son heatmap raporu
+        if (!milestonesHitRef.current.has(100)) {
+          milestonesHitRef.current.add(100);
+          newMilestonesRef.current.push(100);
+        }
+        postHeatmapFnRef.current();
+        onEnded?.();
+      };
 
       // Takılma tespiti — tarayıcının stalled event'i
       const onStalled   = () => {
@@ -280,6 +348,25 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       const onTimeUpdate_ = () => {
         setCurrentTime(vid.currentTime);
         onTimeUpdate?.(vid.currentTime, vid.duration);
+
+        // Ref'leri güncelle (stale closure olmadan heatmap POST kullanır)
+        currentTimeRef.current = vid.currentTime;
+        durationRef.current    = isFinite(vid.duration) ? vid.duration : 0;
+
+        // Segment takibi (100 dilim)
+        if (durationRef.current > 0) {
+          const idx = Math.min(99, Math.floor((vid.currentTime / durationRef.current) * 100));
+          watchedSegRef.current[idx] = true;
+
+          // Milestone takibi: 25 / 50 / 75 / 100
+          const pct = (vid.currentTime / durationRef.current) * 100;
+          for (const ms of [25, 50, 75, 100]) {
+            if (pct >= ms && !milestonesHitRef.current.has(ms)) {
+              milestonesHitRef.current.add(ms);
+              newMilestonesRef.current.push(ms);
+            }
+          }
+        }
 
         // Buffer yüzdesi güncelle
         if (vid.buffered.length > 0 && vid.duration > 0) {
@@ -554,6 +641,29 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
               onTouchEnd={handleProgressTouchEnd}
             >
               <div className="w-full h-[3px] group-hover/bar:h-1.5 transition-all rounded-full bg-white/15 relative">
+                {/* Isı haritası overlay — en çok izlenen segmentler */}
+                {heatmapData.length === 100 && (
+                  <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
+                    {heatmapData.map((v, i) =>
+                      v > 0.05 ? (
+                        <div
+                          key={i}
+                          className="absolute top-0 h-full"
+                          style={{
+                            left: `${i}%`,
+                            width: '1.2%',
+                            opacity: 0.55 + v * 0.4,
+                            background: v > 0.7
+                              ? '#f97316'
+                              : v > 0.4
+                              ? '#facc15'
+                              : 'rgba(255,255,255,0.5)',
+                          }}
+                        />
+                      ) : null
+                    )}
+                  </div>
+                )}
                 {/* Buffer göstergesi */}
                 <div
                   className="absolute left-0 top-0 h-full rounded-full bg-white/25 transition-none"

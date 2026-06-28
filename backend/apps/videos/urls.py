@@ -23,6 +23,7 @@ urlpatterns = [
     path('videos/<str:video_id>/bookmark', views.bookmark_video),
     path('videos/<str:video_id>/unbookmark', views.unbookmark_video),
     path('videos/<str:video_id>/view', views.record_view),
+    path('videos/<str:video_id>/heatmap', views.video_heatmap),
     path('videos/<str:video_id>/related', views.get_related_videos),
     path('videos/<str:video_id>/comments', views.list_comments),
     path('videos/<str:video_id>/comments/create', views.create_comment),

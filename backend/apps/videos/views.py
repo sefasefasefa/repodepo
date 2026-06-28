@@ -834,6 +834,74 @@ def record_view(request, video_id):
     return Response({'message': 'View recorded'})
 
 
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def video_heatmap(request, video_id):
+    """
+    GET  → normalize edilmiş 100-segmentlik ısı haritası döner.
+    POST → kullanıcının izlediği segmentleri birikimli sayaca ekler.
+    """
+    video = _resolve_video(video_id)
+    if not video:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+
+    from apps.videos.models import VideoHeatmap
+
+    if request.method == 'GET':
+        try:
+            hm = video.heatmap
+            segs = hm.segments if isinstance(hm.segments, list) and len(hm.segments) == 100 else [0] * 100
+            total = hm.total_sessions
+        except Exception:
+            segs = [0] * 100
+            total = 0
+        max_val = max(segs) if segs and max(segs) > 0 else 1
+        normalized = [round(v / max_val, 3) for v in segs]
+        return Response({'segments': normalized, 'totalSessions': total})
+
+    # ── POST ──────────────────────────────────────────────────────────
+    segments_watched = request.data.get('segments', [])
+    watch_time = int(request.data.get('watchTime', 0) or 0)
+    completion_rate = int(request.data.get('completionRate', 0) or 0)
+    milestones = request.data.get('milestones', [])
+
+    if isinstance(segments_watched, list) and len(segments_watched) == 100:
+        from django.db import transaction
+        with transaction.atomic():
+            hm, _ = VideoHeatmap.objects.select_for_update().get_or_create(
+                video=video,
+                defaults={'segments': [0] * 100}
+            )
+            current = hm.segments if isinstance(hm.segments, list) and len(hm.segments) == 100 else [0] * 100
+            for i, watched in enumerate(segments_watched):
+                if watched:
+                    current[i] += 1
+            hm.segments = current
+            hm.total_sessions += 1
+            hm.save()
+
+    # WatchHistory güncelle (giriş yapmış kullanıcı için)
+    if request.user.is_authenticated and (watch_time > 0 or completion_rate > 0):
+        wh, _ = WatchHistory.objects.get_or_create(user=request.user, video=video)
+        if watch_time >= wh.watch_time or completion_rate >= wh.completion_rate:
+            wh.watch_time = max(wh.watch_time, watch_time)
+            wh.completion_rate = max(wh.completion_rate, completion_rate)
+            wh.save(update_fields=['watch_time', 'completion_rate', 'updated_at'])
+
+    # Milestone AI olayları
+    if milestones:
+        try:
+            from apps.ai.views import record_event
+            for ms in milestones:
+                record_event('watch_milestone', video=video,
+                             user=request.user if request.user.is_authenticated else None,
+                             payload={'milestone': ms})
+        except Exception:
+            pass
+
+    return Response({'ok': True})
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_watch_history(request):
