@@ -1297,6 +1297,36 @@ export function AdminVideos() {
                       {video.isPremium && <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-yellow-800/50 text-yellow-400 bg-yellow-900/20">Premium</span>}
                       {video.isPPV && <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-blue-800/50 text-blue-400 bg-blue-900/20">PPV</span>}
                       {video.type !== "video" && <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-[#333] text-[#888] bg-[#222]">{video.type}</span>}
+                      {/* İndirme durumu rozeti */}
+                      {(() => {
+                        const dl = dlStatuses[video.id];
+                        if (!dl) return null;
+                        if (dl.isLocal)
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border border-green-700/40 text-green-400 bg-green-900/20">
+                              <Check className="h-2.5 w-2.5" /> Yerel
+                            </span>
+                          );
+                        if (dl.status === "downloading")
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border border-blue-700/40 text-blue-400 bg-blue-900/20">
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" /> {dl.percent}%
+                            </span>
+                          );
+                        if (dl.status === "pending")
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border border-yellow-700/40 text-yellow-400 bg-yellow-900/20">
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" /> Başlıyor
+                            </span>
+                          );
+                        if (dl.status?.startsWith("error"))
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border border-red-700/40 text-red-400 bg-red-900/20">
+                              <AlertCircle className="h-2.5 w-2.5" /> Hata
+                            </span>
+                          );
+                        return null;
+                      })()}
                     </div>
                   </div>
 
