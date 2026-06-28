@@ -37,6 +37,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
     const containerRef = useRef<HTMLDivElement>(null);
     const progressRef = useRef<HTMLDivElement>(null);
     const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const seekingTouchRef = useRef(false);
 
     const [playing, setPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -73,6 +74,8 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       setCurrentTime(0);
       setDuration(0);
       setBuffered(0);
+      setHlsLevels([]);
+      setCurrentLevel(-1);
       hlsRef.current?.destroy();
       hlsRef.current = null;
 
@@ -81,10 +84,14 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       if (isHls) {
         if (Hls.isSupported()) {
           const hls = new Hls({
-            enableWorker: false,
+            enableWorker: true,
             lowLatencyMode: false,
             maxBufferLength: 60,
             maxMaxBufferLength: 120,
+            // Agresif otomatik kurtarma
+            fragLoadingMaxRetry: 6,
+            manifestLoadingMaxRetry: 3,
+            levelLoadingMaxRetry: 4,
           });
           hlsRef.current = hls;
           hls.loadSource(src);
@@ -95,10 +102,35 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           });
           hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => setCurrentLevel(data.level));
           hls.on(Hls.Events.ERROR, (_, data) => {
-            if (data.fatal) setError("Video yüklenemedi. Lütfen tekrar deneyin.");
+            if (data.fatal) {
+              // Fatal hatalarda kurtarma dene
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  hls.startLoad();
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  hls.recoverMediaError();
+                  break;
+                default:
+                  // Kurtarılamaz — native fallback dene
+                  hlsRef.current?.destroy();
+                  hlsRef.current = null;
+                  if (vid.canPlayType("application/vnd.apple.mpegurl")) {
+                    vid.src = src;
+                  } else {
+                    setError("Video yüklenemedi. Lütfen tekrar deneyin.");
+                  }
+                  break;
+              }
+            }
+            // non-fatal hatalar: hls.js kendi kendine kurtarır, bir şey yapma
           });
         } else if (vid.canPlayType("application/vnd.apple.mpegurl")) {
+          // iOS Safari — native HLS
           vid.src = src;
+        } else {
+          setError("Bu tarayıcı HLS video formatını desteklemiyor.");
+          setLoading(false);
         }
       } else {
         vid.src = src;
@@ -118,8 +150,18 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       const onPause = () => setPlaying(false);
       const onWaiting = () => setLoading(true);
       const onCanPlay = () => setLoading(false);
+      const onLoadStart = () => setLoading(true);
       const onEnded_ = () => { setPlaying(false); onEnded?.(); };
-      const onError = () => setError("Video oynatılamadı.");
+      const onError = () => {
+        // Hata kodu 4 = MEDIA_ERR_SRC_NOT_SUPPORTED
+        const code = vid.error?.code;
+        if (code === 4) {
+          setError("Bu video formatı desteklenmiyor.");
+        } else {
+          setError("Video oynatılamadı.");
+        }
+        setLoading(false);
+      };
 
       const onTimeUpdate_ = () => {
         setCurrentTime(vid.currentTime);
@@ -140,6 +182,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       vid.addEventListener("waiting", onWaiting);
       vid.addEventListener("canplay", onCanPlay);
       vid.addEventListener("canplaythrough", onCanPlay);
+      vid.addEventListener("loadstart", onLoadStart);
       vid.addEventListener("ended", onEnded_);
       vid.addEventListener("error", onError);
       vid.addEventListener("timeupdate", onTimeUpdate_);
@@ -151,6 +194,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
         vid.removeEventListener("waiting", onWaiting);
         vid.removeEventListener("canplay", onCanPlay);
         vid.removeEventListener("canplaythrough", onCanPlay);
+        vid.removeEventListener("loadstart", onLoadStart);
         vid.removeEventListener("ended", onEnded_);
         vid.removeEventListener("error", onError);
         vid.removeEventListener("timeupdate", onTimeUpdate_);
@@ -159,9 +203,19 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
     }, [onEnded, onTimeUpdate, onLoadedMetadata]);
 
     useEffect(() => {
-      const onFsChange = () => setFullscreen(!!document.fullscreenElement);
+      const onFsChange = () => setFullscreen(
+        !!(document.fullscreenElement ||
+          (document as any).webkitFullscreenElement ||
+          (document as any).mozFullScreenElement)
+      );
       document.addEventListener("fullscreenchange", onFsChange);
-      return () => document.removeEventListener("fullscreenchange", onFsChange);
+      document.addEventListener("webkitfullscreenchange", onFsChange);
+      document.addEventListener("mozfullscreenchange", onFsChange);
+      return () => {
+        document.removeEventListener("fullscreenchange", onFsChange);
+        document.removeEventListener("webkitfullscreenchange", onFsChange);
+        document.removeEventListener("mozfullscreenchange", onFsChange);
+      };
     }, []);
 
     useEffect(() => {
@@ -204,26 +258,54 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
     }, []);
 
     const toggleFullscreen = useCallback(() => {
-      if (!document.fullscreenElement) {
-        containerRef.current?.requestFullscreen().catch(() => {});
+      const el = containerRef.current as any;
+      if (!el) return;
+      const fsEl = document.fullscreenElement || (document as any).webkitFullscreenElement;
+      if (!fsEl) {
+        (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen)?.call(el);
       } else {
-        document.exitFullscreen().catch(() => {});
+        (document.exitFullscreen || (document as any).webkitExitFullscreen || (document as any).mozCancelFullScreen)
+          ?.call(document);
       }
     }, []);
 
-    const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Progress bar seek hesaplaması — mouse ve touch için ortak
+    const seekToPosition = useCallback((clientX: number) => {
       const vid = videoRef.current;
       const bar = progressRef.current;
       if (!vid || !bar || !duration) return;
       const rect = bar.getBoundingClientRect();
-      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       vid.currentTime = ratio * duration;
     }, [duration]);
 
+    const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+      seekToPosition(e.clientX);
+    }, [seekToPosition]);
+
     const handleProgressDrag = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
       if (e.buttons !== 1) return;
-      handleProgressClick(e);
-    }, [handleProgressClick]);
+      seekToPosition(e.clientX);
+    }, [seekToPosition]);
+
+    // ─── Touch event'leri (mobil seek) ───────────────────────────────────────
+    const handleProgressTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+      seekingTouchRef.current = true;
+      setSeeking(true);
+      seekToPosition(e.touches[0].clientX);
+      resetHideTimer();
+    }, [seekToPosition, resetHideTimer]);
+
+    const handleProgressTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+      if (!seekingTouchRef.current) return;
+      e.preventDefault();
+      seekToPosition(e.touches[0].clientX);
+    }, [seekToPosition]);
+
+    const handleProgressTouchEnd = useCallback(() => {
+      seekingTouchRef.current = false;
+      setSeeking(false);
+    }, []);
 
     const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const vid = videoRef.current;
@@ -253,6 +335,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
         onMouseMove={resetHideTimer}
         onMouseLeave={() => { if (!seeking) setShowControls(false); }}
         onMouseEnter={() => setShowControls(true)}
+        onTouchStart={resetHideTimer}
         onClick={(e) => { if ((e.target as HTMLElement).closest("[data-controls]")) return; togglePlay(); }}
         onDoubleClick={toggleFullscreen}
       >
@@ -262,6 +345,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           poster={poster}
           playsInline
           preload="metadata"
+          crossOrigin="anonymous"
           {...(isProtected ? {
             controlsList: "nodownload noremoteplayback",
             disablePictureInPicture: true,
@@ -285,7 +369,13 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
             <p className="text-white text-sm font-medium">{error}</p>
             <button
               data-controls
-              onClick={(e) => { e.stopPropagation(); setError(null); setLoading(true); const v = videoRef.current; if (v) { v.load(); v.play().catch(() => {}); } }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setError(null);
+                setLoading(true);
+                const v = videoRef.current;
+                if (v) { v.load(); v.play().catch(() => {}); }
+              }}
               className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs px-4 py-2 rounded-full border border-white/20 transition-colors"
             >
               <RotateCcw className="h-3.5 w-3.5" /> Tekrar Dene
@@ -305,7 +395,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           </div>
         )}
 
-        {/* Merkez büyük play butonu (duraklatıldığında ve kontroller görünürken) */}
+        {/* Merkez büyük play butonu (duraklatıldığında) */}
         {!playing && !loading && !error && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-16 h-16 rounded-full bg-black/60 border border-white/20 flex items-center justify-center backdrop-blur-sm">
@@ -327,31 +417,36 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
 
           <div className="relative px-3 pb-2 pt-1">
-            {/* Progress Bar */}
+            {/* Progress Bar — mouse + touch destekli */}
             <div
               ref={progressRef}
-              className="w-full h-1 mb-3 rounded-full bg-white/20 cursor-pointer relative group/bar"
+              className="w-full h-4 mb-2 flex items-center cursor-pointer relative group/bar touch-none"
               onClick={handleProgressClick}
               onMouseMove={handleProgressDrag}
               onMouseDown={() => setSeeking(true)}
               onMouseUp={() => setSeeking(false)}
               onMouseLeave={() => setSeeking(false)}
+              onTouchStart={handleProgressTouchStart}
+              onTouchMove={handleProgressTouchMove}
+              onTouchEnd={handleProgressTouchEnd}
             >
-              {/* Buffer */}
-              <div
-                className="absolute left-0 top-0 h-full rounded-full bg-white/30 transition-none"
-                style={{ width: `${bufferProgress * 100}%` }}
-              />
-              {/* Progress */}
-              <div
-                className="absolute left-0 top-0 h-full rounded-full bg-white transition-none"
-                style={{ width: `${progress * 100}%` }}
-              />
-              {/* Thumb */}
-              <div
-                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow opacity-0 group-hover/bar:opacity-100 transition-opacity"
-                style={{ left: `calc(${progress * 100}% - 6px)` }}
-              />
+              <div className="w-full h-1 rounded-full bg-white/20 relative group-hover/bar:h-1.5 transition-all">
+                {/* Buffer */}
+                <div
+                  className="absolute left-0 top-0 h-full rounded-full bg-white/30 transition-none"
+                  style={{ width: `${bufferProgress * 100}%` }}
+                />
+                {/* Progress */}
+                <div
+                  className="absolute left-0 top-0 h-full rounded-full bg-white transition-none"
+                  style={{ width: `${progress * 100}%` }}
+                />
+                {/* Thumb */}
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow opacity-0 group-hover/bar:opacity-100 transition-opacity"
+                  style={{ left: `calc(${progress * 100}% - 6px)` }}
+                />
+              </div>
             </div>
 
             {/* Controls Row */}
@@ -408,7 +503,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
                       step={0.05}
                       value={muted ? 0 : volume}
                       onChange={handleVolumeChange}
-                      className="w-20 accent-white cursor-pointer"
+                      className="accent-white cursor-pointer"
                       style={{ writingMode: "vertical-lr", direction: "rtl", height: "72px", width: "4px", appearance: "slider-vertical" } as React.CSSProperties}
                     />
                   </div>

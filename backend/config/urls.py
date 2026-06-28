@@ -106,7 +106,11 @@ def _serve_media(request, path):
             resp['Content-Length'] = content_length
             resp['Content-Range'] = f'bytes {range_start}-{range_end}/{file_size}'
             resp['Accept-Ranges'] = 'bytes'
-            resp['Cache-Control'] = 'no-cache'
+            resp['Cache-Control'] = 'public, max-age=3600'
+            resp['Access-Control-Allow-Origin'] = '*'
+            resp['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS'
+            resp['Access-Control-Allow-Headers'] = 'Range, Content-Type'
+            resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
             return resp
 
         except Exception:
@@ -127,7 +131,11 @@ def _serve_media(request, path):
     )
     resp['Content-Length'] = file_size
     resp['Accept-Ranges'] = 'bytes'
-    resp['Cache-Control'] = 'no-cache'
+    resp['Cache-Control'] = 'public, max-age=3600'
+    resp['Access-Control-Allow-Origin'] = '*'
+    resp['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS'
+    resp['Access-Control-Allow-Headers'] = 'Range, Content-Type'
+    resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
     return resp
 
 urlpatterns += [re_path(r'^media/(?P<path>.*)$', _serve_media)]
