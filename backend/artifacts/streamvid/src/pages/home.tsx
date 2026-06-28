@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Flame, Eye, Clock, ThumbsUp, Crown, Star,
-  ChevronRight, Play, Users, SlidersHorizontal,
-  Sparkles, TrendingUp, BarChart2,
+  ChevronRight, Play, Users,
+  Sparkles, TrendingUp, BarChart2, SlidersHorizontal,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -366,7 +366,6 @@ interface HomeFilter {
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState<HomeFilter | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [homeFilters, setHomeFilters] = useState<HomeFilter[]>([]);
   const { settings } = usePublicSiteSettings();
 
@@ -471,80 +470,61 @@ export default function Home() {
 
       <div className="max-w-[1600px] mx-auto px-3 md:px-6 py-4 space-y-10">
 
-        {/* Filtre bar — kategoriler + API filtreleri */}
-        {ffVideos !== "disabled" && (
+        {/* Filtre bar — her zaman görünür, yatay kaydırmalı pill'ler */}
+        {ffVideos !== "disabled" && (homeFilters.length > 0 || visibleCategories.length > 0) && (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-3 px-3">
-            {/* Filtre toggle butonu — yalnızca filtre varsa göster */}
-            {(homeFilters.length > 0 || visibleCategories.length > 0) && (
-              <Button
-                onClick={() => { setShowFilters(v => !v); if (showFilters) { setActiveFilter(null); setActiveCategory(null); } }}
-                variant="ghost"
-                size="sm"
+            {/* Tümü */}
+            <button
+              onClick={() => { setActiveFilter(null); setActiveCategory(null); }}
+              className={cn(
+                "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
+                !activeFilter && !activeCategory
+                  ? "bg-primary text-white border-primary"
+                  : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
+              )}
+            >
+              Tümü
+            </button>
+
+            {/* Admin panelinden eklenen özel filtreler */}
+            {homeFilters.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => {
+                  if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
+                  setActiveFilter(f);
+                  setActiveCategory(f.type === "category" && f.categoryId ? f.categoryId : null);
+                }}
                 className={cn(
-                  "shrink-0 text-[#888] hover:text-white border h-8 px-3",
-                  showFilters ? "bg-primary/10 text-primary border-primary/30" : "border-[#333] hover:border-[#555]"
+                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border flex items-center gap-1.5",
+                  activeFilter?.id === f.id
+                    ? "bg-primary text-white border-primary"
+                    : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
                 )}
               >
-                <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />
-                Filtre
-              </Button>
-            )}
-            {showFilters && (
-              <>
-                {/* Tümü */}
-                <button
-                  onClick={() => { setActiveFilter(null); setActiveCategory(null); }}
-                  className={cn(
-                    "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
-                    !activeFilter && !activeCategory
-                      ? "bg-primary text-white border-primary"
-                      : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
-                  )}
-                >
-                  Tümü
-                </button>
+                <span>{f.icon}</span>
+                <span>{f.label}</span>
+              </button>
+            ))}
 
-                {/* Admin panelinden eklenen filtreler */}
-                {homeFilters.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => {
-                      if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
-                      setActiveFilter(f);
-                      setActiveCategory(f.type === "category" && f.categoryId ? f.categoryId : null);
-                    }}
-                    className={cn(
-                      "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border flex items-center gap-1.5",
-                      activeFilter?.id === f.id
-                        ? "bg-primary text-white border-primary"
-                        : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
-                    )}
-                  >
-                    <span>{f.icon}</span>
-                    <span>{f.label}</span>
-                  </button>
-                ))}
-
-                {/* Mevcut kategoriler (filtre olmayan) */}
-                {visibleCategories.slice(0, 10).map((cat: Category) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setActiveFilter(null);
-                      setActiveCategory(activeCategory === cat.id ? null : cat.id);
-                    }}
-                    className={cn(
-                      "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
-                      activeCategory === cat.id && !activeFilter
-                        ? "bg-primary text-white border-primary"
-                        : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
-                    )}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </>
-            )}
+            {/* Kategoriler */}
+            {visibleCategories.slice(0, 12).map((cat: Category) => (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setActiveFilter(null);
+                  setActiveCategory(activeCategory === cat.id ? null : cat.id);
+                }}
+                className={cn(
+                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
+                  activeCategory === cat.id && !activeFilter
+                    ? "bg-primary text-white border-primary"
+                    : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
+                )}
+              >
+                {cat.name}
+              </button>
+            ))}
           </div>
         )}
 
