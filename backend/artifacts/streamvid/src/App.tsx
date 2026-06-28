@@ -31,6 +31,7 @@ const VideoWatch       = lazy(() => import("@/pages/video-watch"));
 const Login            = lazy(() => import("@/pages/login"));
 const Register         = lazy(() => import("@/pages/register"));
 const Profile          = lazy(() => import("@/pages/profile"));
+const PublicProfile    = lazy(() => import("@/pages/public-profile"));
 const Notifications    = lazy(() => import("@/pages/notifications"));
 const Playlists        = lazy(() => import("@/pages/playlists"));
 const PlaylistDetail   = lazy(() => import("@/pages/playlist-detail"));
@@ -93,6 +94,7 @@ function RouterInner() {
         <Route path="/videos/:id" component={gated("videos", VideoWatch)} />
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
+        <Route path="/profile/:username" component={PublicProfile} />
         <Route path="/profile" component={Profile} />
         <Route path="/notifications" component={gated("notifications", Notifications)} />
         <Route path="/playlists" component={gated("playlists", Playlists)} />
