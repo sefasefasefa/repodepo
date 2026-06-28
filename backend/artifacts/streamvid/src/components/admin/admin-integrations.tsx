@@ -648,6 +648,14 @@ const EMPTY_FORM = {
 
 type CatFilter = "all" | "adult";
 
+const HIDDEN_KEY = "admin_hidden_platforms";
+function loadHidden(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]")); } catch { return new Set(); }
+}
+function saveHidden(s: Set<string>) {
+  localStorage.setItem(HIDDEN_KEY, JSON.stringify([...s]));
+}
+
 export function AdminIntegrations() {
   const { toast } = useToast();
   const [integrations, setIntegrations] = useState<any[]>([]);
@@ -663,6 +671,23 @@ export function AdminIntegrations() {
   const [showApiKey, setShowApiKey]     = useState(false);
   const [editingInt, setEditingInt]     = useState<any>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [hiddenPlatforms, setHiddenPlatforms] = useState<Set<string>>(loadHidden);
+  const [showHidden, setShowHidden]     = useState(false);
+
+  const hideCard = (platformId: string) => {
+    setHiddenPlatforms(prev => {
+      const next = new Set(prev);
+      next.add(platformId);
+      saveHidden(next);
+      return next;
+    });
+  };
+
+  const restoreAll = () => {
+    setHiddenPlatforms(new Set());
+    saveHidden(new Set());
+    setShowHidden(false);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -747,10 +772,11 @@ export function AdminIntegrations() {
     }
   };
 
-  const remove = async (id: string) => {
+  const remove = async (id: string, platformId?: string) => {
     try {
       await apiFetch(`/admin/integrations/${id}`, { method: "DELETE" });
       setIntegrations((p) => p.filter((i) => i.id !== id));
+      if (platformId) hideCard(platformId);
       toast({ title: "Silindi" });
     } catch (e: any) {
       toast({ title: "Hata", description: e.message, variant: "destructive" });
@@ -785,8 +811,11 @@ export function AdminIntegrations() {
   const visiblePlatforms = PLATFORMS.filter(p => {
     const matchCat = catFilter === "all" || p.cat === catFilter;
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
+    const isHidden = hiddenPlatforms.has(p.id) && !showHidden;
+    return matchCat && matchSearch && !isHidden;
   });
+
+  const hiddenCount = PLATFORMS.filter(p => hiddenPlatforms.has(p.id)).length;
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -827,6 +856,19 @@ export function AdminIntegrations() {
             {f === "all" ? `Tümü (${PLATFORMS.length})` : `+18 Platformlar (${PLATFORMS.filter(p => p.cat === "adult").length})`}
           </button>
         ))}
+        {hiddenCount > 0 && (
+          <button onClick={() => setShowHidden(p => !p)}
+            className={cn("px-3 py-1.5 rounded-lg text-xs border transition-all",
+              showHidden ? "border-red-500/50 bg-red-900/20 text-red-400" : "border-[#2a2a2a] bg-[#1a1a1a] text-[#666] hover:border-[#444]")}>
+            {showHidden ? "Gizlenenleri Sakla" : `${hiddenCount} gizli platform`}
+          </button>
+        )}
+        {hiddenCount > 0 && showHidden && (
+          <button onClick={restoreAll}
+            className="px-3 py-1.5 rounded-lg text-xs border border-[#2a2a2a] bg-[#1a1a1a] text-[#666] hover:border-primary/40 hover:text-primary transition-all">
+            Tümünü Geri Getir
+          </button>
+        )}
       </div>
 
       {/* Platform kartları — aktif olanlar öne */}
@@ -840,13 +882,16 @@ export function AdminIntegrations() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
           {visiblePlatforms.map((p) => {
             const added = integrations.find((i) => i.platform === p.id);
+            const isHiddenCard = hiddenPlatforms.has(p.id);
             return (
               <div key={p.id}
                 className={cn(
-                  "border rounded-xl p-3 transition-all flex flex-col gap-2",
+                  "group border rounded-xl p-3 transition-all flex flex-col gap-2 relative",
                   added
                     ? `${p.bg} border-white/10`
-                    : "bg-[#1a1a1a] border-[#2a2a2a] opacity-70 hover:opacity-100"
+                    : isHiddenCard
+                      ? "bg-[#111] border-[#222] opacity-50"
+                      : "bg-[#1a1a1a] border-[#2a2a2a] opacity-70 hover:opacity-100"
                 )}>
                 {/* Üst: logo + isim */}
                 <div className="flex items-center gap-2">
@@ -898,20 +943,42 @@ export function AdminIntegrations() {
                           ? <RefreshCw className="h-2.5 w-2.5 animate-spin" />
                           : <Link2 className="h-2.5 w-2.5" />}
                       </button>
-                      <button onClick={() => remove(added.id)}
-                        title="Entegrasyonu sil"
+                      <button onClick={() => remove(added.id, p.id)}
+                        title="Entegrasyonu sil ve kartı gizle"
                         className="p-1.5 rounded bg-red-900/30 hover:bg-red-900/60 text-red-400 transition-colors">
                         <Trash2 className="h-2.5 w-2.5" />
                       </button>
                     </div>
                   </>
-                ) : (
-                  /* Eklenmemiş kart — sadece ekle butonu */
+                ) : isHiddenCard ? (
+                  /* Gizli kart (showHidden modunda görünür) */
                   <button
-                    onClick={() => openAdd(p.id, p.name)}
-                    className="w-full text-[9px] py-1.5 rounded bg-[#222] hover:bg-primary/20 hover:text-primary text-[#666] transition-colors mt-auto">
-                    + Ekle
+                    onClick={() => {
+                      setHiddenPlatforms(prev => {
+                        const next = new Set(prev);
+                        next.delete(p.id);
+                        saveHidden(next);
+                        return next;
+                      });
+                    }}
+                    className="w-full text-[9px] py-1.5 rounded bg-[#1a1a1a] hover:bg-primary/10 hover:text-primary text-[#444] transition-colors mt-auto">
+                    ↩ Geri Getir
                   </button>
+                ) : (
+                  /* Eklenmemiş kart — ekle butonu + hover'da gizle */
+                  <div className="flex gap-1 mt-auto">
+                    <button
+                      onClick={() => openAdd(p.id, p.name)}
+                      className="flex-1 text-[9px] py-1.5 rounded bg-[#222] hover:bg-primary/20 hover:text-primary text-[#666] transition-colors">
+                      + Ekle
+                    </button>
+                    <button
+                      onClick={() => hideCard(p.id)}
+                      title="Kartı gizle"
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded bg-[#222] hover:bg-red-900/40 text-[#555] hover:text-red-400 transition-all">
+                      <Trash2 className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
                 )}
               </div>
             );
