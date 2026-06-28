@@ -4,7 +4,7 @@ import { useGetVideo, useGetRelatedVideos, useLikeVideo, useListComments, useCre
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, Languages, Download, Check, SlidersHorizontal, ExternalLink } from "lucide-react";
+import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, Languages, Download, Check, SlidersHorizontal, ExternalLink, RefreshCw } from "lucide-react";
 import { ReportModal } from "@/components/report-modal";
 import { TokenTipModal } from "@/components/token-tip-modal";
 import { CustomRequestModal } from "@/components/custom-request-modal";
@@ -142,7 +142,7 @@ function resolveEmbedFromUrl(rawUrl: string): string | null {
   return null;
 }
 
-function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }) {
+function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players: PlayerSource[]; onRefreshPlayers?: () => void }) {
   const showWatermark: boolean = !!video.watermarkEnabled;
   const screenProt = useScreenProtectionState();
   const videoProps = getVideoProtectionProps(screenProt);
@@ -295,9 +295,20 @@ function VideoPlayer({ video, players }: { video: any; players: PlayerSource[] }
         />
       )}
       {/* Sağlayıcılar — videonun ÜSTÜNDE */}
-      {allSources.length > 1 && (
+      {allSources.length > 0 && (
         <div className="bg-[#161616] border border-[#252525] rounded-xl p-3">
-          <p className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-2">Sağlayıcılar</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-semibold text-[#555] uppercase tracking-wider">Sağlayıcılar</p>
+            {onRefreshPlayers && (
+              <button
+                onClick={onRefreshPlayers}
+                title="Sağlayıcıları yenile"
+                className="text-[#555] hover:text-white transition-colors p-0.5"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             {allSources.map((src, idx) => (
               <button
@@ -606,11 +617,15 @@ export default function VideoWatch() {
     }
   };
 
-  useEffect(() => {
+  const fetchPlayers = () => {
     if (!videoId) return;
-    fetch(`/api/videos/${videoId}/players`).then(r => r.json()).then(d => setPlayers(d.players || []));
+    fetch(`/api/videos/${videoId}/players`).then(r => r.json()).then(d => setPlayers(d.players || [])).catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchPlayers();
     fetch(`/api/videos/${videoId}/view`, { method: "POST" }).catch(() => {});
-  }, [videoId]);
+  }, [videoId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user || !video?.creator?.id) return;
@@ -769,7 +784,7 @@ export default function VideoWatch() {
           ) : isLocked ? (
             <PremiumPaywall video={video} isPPV={!!video.isPPV} isLoggedIn={!!user} onLoginClick={() => setLocation("/login")} />
           ) : (
-            <VideoPlayer video={video} players={players} />
+            <VideoPlayer video={video} players={players} onRefreshPlayers={fetchPlayers} />
           )}
           <div className="flex items-start gap-2">
             <h1 className="text-xl md:text-2xl font-bold flex-1">{video.title}</h1>

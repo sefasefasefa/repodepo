@@ -153,19 +153,36 @@ def _sync_player(job, remote_url: str):
         from apps.videos.models import VideoPlayer
         provider_key = (job.site.adapter or "").lower()
         display_name = _PROVIDER_DISPLAY_NAMES.get(provider_key) or job.site.adapter or "Harici"
-        # Aynı video + aynı sağlayıcı için mevcut kaydı güncelle; yoksa oluştur
-        VideoPlayer.objects.update_or_create(
-            video=job.video,
-            label=display_name,
-            defaults={
-                "embed_url": remote_url,
-                "player_type": "iframe",
-                "is_default": False,
-                "sort_order": 10,
-            },
-        )
-    except Exception:
-        pass  # Player senkronizasyonu crosspost başarısını etkilemez
+
+        # Aynı video + label kombinasyonu için birden fazla kayıt olabilir
+        # (önceki crosspost denemeleri); update_or_create MultipleObjectsReturned
+        # fırlatır, bu yüzden filter + update / create kullan
+        qs = VideoPlayer.objects.filter(video=job.video, label=display_name)
+        count = qs.count()
+        if count > 1:
+            # Fazla kayıtları temizle, sadece birini tut
+            keep_id = qs.order_by("id").values_list("id", flat=True).last()
+            qs.exclude(id=keep_id).delete()
+            qs = VideoPlayer.objects.filter(id=keep_id)
+
+        if count >= 1:
+            qs.update(
+                embed_url=remote_url,
+                player_type="iframe",
+                sort_order=10,
+            )
+        else:
+            VideoPlayer.objects.create(
+                video=job.video,
+                label=display_name,
+                embed_url=remote_url,
+                player_type="iframe",
+                is_default=False,
+                sort_order=10,
+            )
+    except Exception as exc:
+        import logging
+        logging.getLogger("crosspost").warning("_sync_player hata: %s", exc)
 
 
 def _success(job, remote_url: str = "", response_text: str = ""):
