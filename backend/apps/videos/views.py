@@ -54,6 +54,64 @@ def _resolve_video(video_id, qs=None):
     return base.filter(slug=vid_str).first()
 
 
+def _resolve_cloudmail_url(url):
+    """
+    cloud.mail.ru paylaşım linkini direkt CDN URL'ine çevirir.
+    Sonucu 40 dakika cache'de tutar (CDN token ömrü ~60 dk).
+    """
+    import urllib.parse
+    import requests as _rq
+
+    if not url or 'cloud.mail.ru/public/' not in url:
+        return url
+
+    cache_key = f'cloudmail_cdn_{hash(url)}'
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        headers = {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/120.0.0.0 Safari/537.36'
+            ),
+        }
+        session = _rq.Session()
+        page = session.get(url, headers=headers, timeout=15)
+        if page.status_code != 200:
+            return url
+
+        base_match = re.search(
+            r'"weblink_view"\s*:\s*\{"count"\s*:\s*"\d+"\s*,\s*"url"\s*:\s*"([^"]+)"',
+            page.text
+        )
+        if not base_match:
+            return url
+
+        base_url = base_match.group(1)
+        parsed = urllib.parse.urlparse(url)
+        path_parts = parsed.path.split('/public/', 1)
+        if len(path_parts) < 2:
+            return url
+
+        weblink_path = path_parts[1]
+        cdn_url = base_url + weblink_path
+        cdn_resp = session.get(cdn_url, headers=headers, stream=True,
+                               timeout=20, allow_redirects=True)
+
+        ct = cdn_resp.headers.get('Content-Type', '')
+        if cdn_resp.status_code == 200 and ('video' in ct or 'octet' in ct):
+            resolved = cdn_resp.url
+            cache.set(cache_key, resolved, 40 * 60)  # 40 dakika
+            return resolved
+    except Exception:
+        pass
+
+    return url
+
+
 def enrich_video(v, user=None):
     liked = False
     bookmarked = False
@@ -64,6 +122,8 @@ def enrich_video(v, user=None):
     cat = v.category
     creator = v.creator
 
+    video_url = _resolve_cloudmail_url(v.video_url) if v.video_url else v.video_url
+
     return {
         'id': v.id,
         'uuid': str(v.uuid),
@@ -71,7 +131,7 @@ def enrich_video(v, user=None):
         'title': v.title,
         'description': v.description,
         'thumbnailUrl': v.thumbnail_url,
-        'videoUrl': v.video_url,
+        'videoUrl': video_url,
         'hlsUrl': v.hls_url,
         'duration': v.duration,
         'viewCount': v.view_count,
