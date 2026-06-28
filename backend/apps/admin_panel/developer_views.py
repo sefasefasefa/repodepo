@@ -2,8 +2,7 @@
 import json
 import time
 import secrets
-import urllib.request
-import urllib.error
+import requests as _requests
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -387,9 +386,21 @@ def admin_integration_test(request, integration_id):
         return Response({'ok': True, 'info': {'message': 'Kimlik bilgileri kaydedildi (API test desteklenmiyor)'}})
     try:
         url = url_fn(i)
-        req = urllib.request.Request(url, headers={'User-Agent': 'Hotpulse/1.0'})
-        with urllib.request.urlopen(req, timeout=8) as r:
-            data = json.loads(r.read().decode())
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; Hotpulse/1.0)',
+            'Accept': 'application/json',
+        }
+        resp = _requests.get(url, headers=headers, timeout=10, verify=True)
+        if resp.status_code == 401:
+            return Response({'ok': False, 'error': 'API anahtarı geçersiz veya yetkisiz (401)'})
+        if resp.status_code == 403:
+            return Response({'ok': False, 'error': 'Erişim reddedildi — API anahtarını kontrol et (403)'})
+        if not resp.ok:
+            return Response({'ok': False, 'error': f'Sunucu hatası: HTTP {resp.status_code}'})
+        try:
+            data = resp.json()
+        except Exception:
+            return Response({'ok': True, 'info': {'message': 'Bağlantı başarılı (JSON yanıtı yok)'}})
         status_val = data.get('status') or data.get('code') or data.get('statusCode')
         if str(status_val) == '200' or status_val == 200 or data.get('ok') or data.get('success'):
             result = data.get('result') or data.get('data') or {}
@@ -399,8 +410,12 @@ def admin_integration_test(request, integration_id):
                     info[field] = result[field]
             return Response({'ok': True, 'info': info or {'message': 'Bağlantı başarılı'}})
         return Response({'ok': False, 'error': data.get('msg') or data.get('message') or 'Kimlik bilgileri geçersiz'})
-    except urllib.error.HTTPError as e:
-        return Response({'ok': False, 'error': f'HTTP {e.code}: {e.reason}'})
+    except _requests.exceptions.SSLError:
+        return Response({'ok': False, 'error': 'SSL/TLS bağlantı hatası — platform sertifikasını reddetti'})
+    except _requests.exceptions.ConnectionError:
+        return Response({'ok': False, 'error': 'Bağlantı kurulamadı — platform erişilemez veya IP engellendi'})
+    except _requests.exceptions.Timeout:
+        return Response({'ok': False, 'error': 'Bağlantı zaman aşımına uğradı (10 sn)'})
     except Exception as e:
         return Response({'ok': False, 'error': str(e)})
 
