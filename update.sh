@@ -30,6 +30,9 @@ sleep 1
 
 # ── 2. Kodu cek (conflict varsa remote ustu al) ────────────────────────
 echo "[2/6] Git pull..."
+# Windows'ta gc otomatik calisirken pack dosyalari kilitlenip
+# "Should I try again?" sorusu cikiyor — gc.auto=0 ile engellenir.
+git config gc.auto 0
 git fetch origin
 if ! git merge --ff-only origin/main 2>/dev/null; then
     echo "   Yerel degisiklikler var, remote ustu aliniyor..."
