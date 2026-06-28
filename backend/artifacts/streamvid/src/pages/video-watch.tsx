@@ -470,6 +470,7 @@ export default function VideoWatch() {
   const [shareCopied, setShareCopied] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const [autoCategory, setAutoCategory] = useState<{ categoryId: number; name: string; slug: string } | null>(null);
 
   const token = typeof window !== "undefined" ? (localStorage.getItem("token") ?? "") : "";
 
@@ -482,6 +483,25 @@ export default function VideoWatch() {
     if (!slug || videoId === slug) return;
     window.history.replaceState(null, "", `/videos/${slug}`);
   }, [video, videoId]);
+
+  /* ── Otomatik kategori tespiti ─────────────────────────────────────────── */
+  useEffect(() => {
+    if (!video) return;
+    fetch("/api/auto-categorize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: video.title || "",
+        description: (video as any).description || "",
+        tags: (video as any).tags || [],
+      }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.suggestion) setAutoCategory(d.suggestion);
+      })
+      .catch(() => {});
+  }, [video?.id]);
 
   /* ── SEO meta tag'leri ─────────────────────────────────────────────────── */
   useEffect(() => {
@@ -881,12 +901,30 @@ export default function VideoWatch() {
             <div className="px-4 pt-4 pb-3">
               <p className="text-[#888] font-medium">{video.viewCount?.toLocaleString()} görüntülenme • {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}</p>
             </div>
-            {video.category && (
-              <div className="border-t border-[#2a2a2a] px-4 py-2.5 flex items-center gap-2">
-                <span className="text-[#666] text-xs">Kategori</span>
-                <span className="inline-flex items-center gap-1 bg-primary/15 text-primary text-xs font-semibold px-2.5 py-1 rounded-full border border-primary/25">
-                  {video.category.name}
-                </span>
+            {(video.category || autoCategory) && (
+              <div className="border-t border-[#2a2a2a] px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                {video.category && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#666] text-xs shrink-0">Kategori</span>
+                    <button
+                      onClick={() => setLocation(`/categories/${video.category.slug || video.category.id}`)}
+                      className="inline-flex items-center gap-1 bg-primary/15 text-primary text-xs font-semibold px-2.5 py-1 rounded-full border border-primary/25 hover:bg-primary/25 transition-colors"
+                    >
+                      {video.category.name}
+                    </button>
+                  </div>
+                )}
+                {autoCategory && autoCategory.categoryId !== video.category?.id && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#666] text-xs shrink-0">Otomatik</span>
+                    <button
+                      onClick={() => setLocation(`/categories/${autoCategory.slug || autoCategory.categoryId}`)}
+                      className="inline-flex items-center gap-1 bg-[#2a2a2a] text-[#aaa] text-xs font-semibold px-2.5 py-1 rounded-full border border-[#333] hover:border-primary/40 hover:text-primary transition-colors"
+                    >
+                      {autoCategory.name}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             <div className="px-4 pb-4 pt-2">
