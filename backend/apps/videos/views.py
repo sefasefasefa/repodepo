@@ -144,6 +144,7 @@ def enrich_video(v, user=None):
         'scheduledPublishAt': v.scheduled_publish_at.isoformat() if v.scheduled_publish_at else None,
         'tags': v.tags or [],
         'categoryId': v.category_id,
+        'categoryIds': list(v.categories.values_list('id', flat=True)),
         'category': {
             'id': cat.id, 'name': cat.name, 'slug': cat.slug,
             'iconUrl': cat.icon_url, 'videoCount': cat.video_count
@@ -190,6 +191,7 @@ def enrich_videos_bulk(videos, user=None):
             'isPublished': v.is_published,
             'tags': v.tags or [],
             'categoryId': v.category_id,
+            'categoryIds': list(v.categories.values_list('id', flat=True)),
             'category': {
                 'id': cat.id, 'name': cat.name, 'slug': cat.slug,
                 'iconUrl': cat.icon_url, 'videoCount': cat.video_count
@@ -563,6 +565,13 @@ def create_video(request):
         category_id=data.get('categoryId', data.get('category_id')),
         watermark_enabled=data.get('watermarkEnabled', data.get('watermark_enabled', False)),
     )
+    # M2M kategoriler
+    category_ids = data.get('categoryIds') or []
+    if category_ids:
+        from apps.videos.models import Category as _Cat
+        video.categories.set(_Cat.objects.filter(id__in=category_ids))
+    elif video.category_id:
+        video.categories.set([video.category_id])
     from django.db.models import F
     from django.contrib.auth import get_user_model as _get_user_model
     _get_user_model().objects.filter(id=user.id).update(video_count=F('video_count') + 1)
@@ -643,6 +652,11 @@ def update_video(request, video_id):
         if value is not None:
             setattr(video, field, value)
     video.save()
+    # M2M kategoriler güncelle
+    category_ids_upd = data.get('categoryIds')
+    if category_ids_upd is not None:
+        from apps.videos.models import Category as _Cat2
+        video.categories.set(_Cat2.objects.filter(id__in=category_ids_upd))
     # Category-assignment signal for the AI trainer
     new_cat = data.get('categoryId', data.get('category_id'))
     if new_cat is not None:

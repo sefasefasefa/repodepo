@@ -236,14 +236,23 @@ export default function UploadPage() {
     }
   }, [user, isCreator, token]);
 
-  // Admin: yapılandırılmış crosspost sitelerini yükle
+  // Çoklu kategori seçimi (yerel state)
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+
+  const toggleCategory = (id: number) => {
+    setSelectedCategoryIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  // Creator/Admin: yapılandırılmış crosspost sitelerini yükle
   useEffect(() => {
-    if (!isAdmin || !token) return;
+    if (!isCreator || !token) return;
     fetch("/api/cross-post/sites", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) setConfiguredSites(d.sites ?? []); })
       .catch(() => {});
-  }, [isAdmin, token]);
+  }, [isCreator, token]);
 
   const uploadForm = useForm<z.infer<typeof uploadSchema>>({
     resolver: zodResolver(uploadSchema),
@@ -341,18 +350,19 @@ export default function UploadPage() {
         isPremium: values.isPremium,
         isPPV: values.isPPV,
         ppvPrice: values.isPPV && values.ppvPrice ? parseFloat(values.ppvPrice) : undefined,
-        categoryId: values.categoryId ? Number(values.categoryId) : undefined,
+        categoryId: selectedCategoryIds[0] || undefined,
+        categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
         scheduledPublishAt: scheduleEnabled && scheduleValue ? new Date(scheduleValue).toISOString() : null,
-        saveToOwnPlayer: isAdmin ? ownPlayerEnabled : true,
-        crossPostSiteIds: isAdmin && crosspostEnabled && crosspostMode === "select" ? urlCrosspostSiteIds : undefined,
-        autoCrossPost: isAdmin ? (crosspostEnabled && crosspostMode === "all") : true,
+        saveToOwnPlayer: isCreator ? ownPlayerEnabled : true,
+        crossPostSiteIds: isCreator && crosspostEnabled && crosspostMode === "select" ? urlCrosspostSiteIds : undefined,
+        autoCrossPost: isCreator ? (crosspostEnabled && crosspostMode === "all") : false,
       };
       const res = await createVideoMutation.mutateAsync({ data: payload });
       if (res) {
         const videoPath = `/videos/${(res as any).uuid || (res as any).id}`;
         const videoId = (res as any).id as number;
         // Crosspost aktifse yönlendirme yapma, durumu göster
-        if (isAdmin && crosspostEnabled) {
+        if (isCreator && crosspostEnabled) {
           setCreatedVideoPath(videoPath);
           setCrosspostVideoId(videoId);
           startCrosspostPolling(videoId);
@@ -407,7 +417,8 @@ export default function UploadPage() {
             isPremium: values.isPremium,
             isPPV: values.isPPV,
             ppvPrice: values.isPPV && values.ppvPrice ? parseFloat(values.ppvPrice) : undefined,
-            categoryId: values.categoryId ? Number(values.categoryId) : undefined,
+            categoryId: selectedCategoryIds[0] || undefined,
+            categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
             scheduledPublishAt,
           },
         });
@@ -942,44 +953,56 @@ export default function UploadPage() {
                 )}
               />
 
-              {/* Kategori seçimi + otomatik öneri */}
-              <FormField control={uploadForm.control} name="categoryId"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between mb-1">
-                      <FormLabel className="mb-0">Kategori</FormLabel>
-                      {suggestLoading && (
-                        <span className="text-[11px] text-[#555] flex items-center gap-1">
-                          <Sparkles className="h-3 w-3 animate-pulse text-primary/60" /> Analiz ediliyor...
-                        </span>
-                      )}
-                      {!suggestLoading && autoSuggest && (
-                        <button
-                          type="button"
-                          onClick={() => uploadForm.setValue("categoryId", String(autoSuggest.categoryId))}
-                          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 transition-all"
-                        >
-                          <Sparkles className="h-3 w-3" />
-                          Öneri: <strong>{autoSuggest.name}</strong>
-                          <span className="text-[10px] opacity-70">({Math.round(autoSuggest.confidence * 100)}%)</span>
-                        </button>
-                      )}
-                    </div>
-                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                      <FormControl>
-                        <SelectTrigger className="bg-input/50"><SelectValue placeholder="Kategori seç..." /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">Kategorisiz</SelectItem>
-                        {categories.map((cat: any) => (
-                          <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+              {/* Çoklu kategori seçimi + otomatik öneri */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm font-medium leading-none">Kategori</label>
+                  {suggestLoading && (
+                    <span className="text-[11px] text-[#555] flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 animate-pulse text-primary/60" /> Analiz ediliyor...
+                    </span>
+                  )}
+                  {!suggestLoading && autoSuggest && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const id = Number(autoSuggest.categoryId);
+                        if (!selectedCategoryIds.includes(id)) toggleCategory(id);
+                      }}
+                      className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 transition-all"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Öneri: <strong>{autoSuggest.name}</strong>
+                      <span className="text-[10px] opacity-70">({Math.round(autoSuggest.confidence * 100)}%)</span>
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((cat: any) => {
+                    const selected = selectedCategoryIds.includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => toggleCategory(cat.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                          selected
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-input/50 text-foreground/70 border-border hover:border-primary/50 hover:text-foreground"
+                        }`}
+                      >
+                        {cat.name}
+                      </button>
+                    );
+                  })}
+                  {categories.length === 0 && (
+                    <span className="text-xs text-[#555]">Kategori yükleniyor...</span>
+                  )}
+                </div>
+                {selectedCategoryIds.length > 0 && (
+                  <p className="text-[11px] text-primary/70">{selectedCategoryIds.length} kategori seçildi</p>
                 )}
-              />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={uploadForm.control} name="type"
@@ -1187,8 +1210,8 @@ export default function UploadPage() {
                 )}
               </div>
 
-              {/* Yayın Seçenekleri — sadece admin */}
-              {isAdmin && (
+              {/* Yayın Seçenekleri — creator ve admin */}
+              {isCreator && (
                 <div className="pt-4 border-t border-border space-y-2">
                   <p className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-1">Yayın Seçenekleri</p>
 

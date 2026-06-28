@@ -61,6 +61,11 @@ class Video(models.Model):
         blank=True,
         related_name='videos'
     )
+    categories = models.ManyToManyField(
+        Category,
+        blank=True,
+        related_name='videos_m2m'
+    )
     watermark_enabled = models.BooleanField(default=False)
     MODERATION_CHOICES = [
         ('pending', 'Pending'),
