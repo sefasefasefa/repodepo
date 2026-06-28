@@ -475,6 +475,60 @@ export default function VideoWatch() {
 
   const isCreatorOrAdmin = user && video && ((user as any).role === "admin" || (video.creator && (user as any).id === video.creator.id));
 
+  /* ── URL normalizasyonu: /videos/7 veya /videos/<uuid> → /videos/slug ──── */
+  useEffect(() => {
+    if (!video) return;
+    const slug: string = (video as any).slug || "";
+    if (!slug || videoId === slug) return;
+    window.history.replaceState(null, "", `/videos/${slug}`);
+  }, [video, videoId]);
+
+  /* ── SEO meta tag'leri ─────────────────────────────────────────────────── */
+  useEffect(() => {
+    if (!video) return;
+    const title: string = video.title || "Video";
+    const desc: string = ((video as any).description || title).slice(0, 160);
+    const image: string = video.thumbnailUrl || "";
+    const slug: string = (video as any).slug || videoId;
+    const canonical = `${window.location.origin}/videos/${slug}`;
+
+    document.title = `${title} — Soci`;
+
+    const setMeta = (sel: string, attr: string, key: string, val: string) => {
+      let el = document.querySelector(sel);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", val);
+    };
+
+    setMeta('meta[name="description"]', "name", "description", desc);
+    setMeta('meta[property="og:title"]', "property", "og:title", title);
+    setMeta('meta[property="og:description"]', "property", "og:description", desc);
+    setMeta('meta[property="og:type"]', "property", "og:type", "video.other");
+    setMeta('meta[property="og:url"]', "property", "og:url", canonical);
+    if (image) setMeta('meta[property="og:image"]', "property", "og:image", image);
+    setMeta('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
+    setMeta('meta[name="twitter:title"]', "name", "twitter:title", title);
+    setMeta('meta[name="twitter:description"]', "name", "twitter:description", desc);
+    if (image) setMeta('meta[name="twitter:image"]', "name", "twitter:image", image);
+
+    let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "canonical";
+      document.head.appendChild(link);
+    }
+    link.href = canonical;
+
+    return () => {
+      document.title = "Soci";
+      document.querySelector('link[rel="canonical"]')?.remove();
+    };
+  }, [video, videoId]);
+
   useEffect(() => {
     const t = localStorage.getItem("token");
     if (!t) return;
