@@ -513,8 +513,21 @@ def stream_video(request, video_id):
 
     # Doğrudan HTTP URL proxy'si (cloud.mail.ru olmayan)
     if url and 'cloud.mail.ru/public/' not in url:
-        import mimetypes
+        import re as _re
         import urllib.parse as _up
+
+        # Doğrudan video dosyası mı? (.mp4, .m3u8, .webm vb.)
+        # Eğer öyleyse → tarayıcıyı 302 ile oraya yönlendir.
+        # Proxy'leme YAPMIYORUZ çünkü:
+        #   - IP-locked secure token'lar sunucu IP'sinden geçince geçersiz sayılır
+        #   - Tarayıcı kendi IP'siyle bağlanırsa token çalışır
+        _clean = url.split('?')[0].split('#')[0]
+        _is_direct_file = bool(_re.search(r'\.(mp4|m3u8|webm|ogg|ogv|mov|ts|mkv|avi|flv|wmv|mpg|mpeg)$', _clean, _re.I))
+        if _is_direct_file:
+            from django.http import HttpResponseRedirect
+            return HttpResponseRedirect(url)
+
+        import mimetypes
         _proxy_headers = {
             'User-Agent': (
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
@@ -530,7 +543,6 @@ def stream_video(request, video_id):
         try:
             import requests as _rq
             upstream = _rq.get(url, headers=_proxy_headers, stream=True, timeout=20, allow_redirects=True)
-            # Redirect'leri takip et — son URL'i al
             final_url = upstream.url
             ctype = upstream.headers.get('Content-Type', 'video/mp4')
             if not ctype.startswith('video/') and not ctype.startswith('application/'):
