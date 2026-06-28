@@ -30,12 +30,44 @@ sleep 1
 
 # ── 2. Kodu cek (conflict varsa remote ustu al) ────────────────────────
 echo "[2/6] Git pull..."
-# Windows'ta antivirus yeni pack dosyalarini kilitler; Git "Should I try again?" sorar.
-# GIT_TERMINAL_PROMPT=0 → Git interaktif soru soramaz, hata verir; || true ile devam edilir.
-# Fetch'in kendisi (yeni objeler) tamamlanir; sadece cleanup basar — bu kabul edilebilir.
 git config gc.auto 0
+git config gc.autopacklimit 0
+git config maintenance.auto false
 git config core.fscache true
-GIT_TERMINAL_PROMPT=0 git -c gc.auto=0 -c maintenance.auto=false fetch origin 2>&1 || true
+
+if [ "$OS" = "windows" ]; then
+    # Windows'ta antivirus pack dosyalarini kilitler; git gc adiminda
+    # "Should I try again?" sorar ve script takilir.
+    # Cozum: fetch'i arka planda calistir, gc adiminda takilirsaa zorla sonlandir.
+    # Fetch (yeni objeler indirme) onceden tamamlanir; sadece cleanup kesilir.
+
+    # Onceki kalan git.exe islemleri temizle
+    taskkill //F //IM git.exe 2>/dev/null || true
+    sleep 1
+    git maintenance unregister --force 2>/dev/null || true
+
+    # Fetch'i arka planda baslat
+    git -c gc.auto=0 -c gc.autopacklimit=0 -c maintenance.auto=false \
+        -c receive.autogc=false fetch origin &
+    GIT_BG=$!
+
+    # En fazla 90 saniye bekle; gc adiminda takilirsaa zorla kes
+    ELAPSED=0
+    while kill -0 "$GIT_BG" 2>/dev/null; do
+        sleep 2
+        ELAPSED=$((ELAPSED + 2))
+        if [ $ELAPSED -ge 90 ]; then
+            echo "   [UYARI] git gc takildi, atlanyor (yeni kodlar zaten indirildi)..."
+            kill -9 "$GIT_BG" 2>/dev/null || true
+            taskkill //F //IM git.exe 2>/dev/null || true
+            sleep 1
+            break
+        fi
+    done
+else
+    git fetch origin
+fi
+
 if ! git merge --ff-only origin/main 2>/dev/null; then
     echo "   Yerel degisiklikler var, remote ustu aliniyor..."
     git reset --hard origin/main
