@@ -556,6 +556,52 @@ function SeoBoolField({ label, desc, k, settings, setSettings }: {
   );
 }
 
+function PingSitemapButton({ token }: { token: string }) {
+  const [status, setStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
+  const [results, setResults] = useState<any>(null);
+
+  const ping = async () => {
+    setStatus("loading");
+    try {
+      const r = await fetch("/api/seo/ping-sitemap", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json();
+      setResults(d.results);
+      setStatus(d.allSuccess ? "ok" : "err");
+    } catch {
+      setStatus("err");
+    }
+  };
+
+  return (
+    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-white">Sitemap Ping</p>
+          <p className="text-xs text-[#555]">Bing ve Yandex'e sitemap adresini bildir</p>
+        </div>
+        <button onClick={ping} disabled={status === "loading"}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white transition-all">
+          {status === "loading" ? "Gönderiliyor..." : "Ping Gönder"}
+        </button>
+      </div>
+      {results && (
+        <div className="space-y-1">
+          {Object.entries(results).map(([engine, r]: any) => (
+            <div key={engine} className="flex items-center gap-2">
+              <span className={r.success ? "text-green-400" : "text-red-400"} style={{ fontSize: 10 }}>
+                {r.success ? "✓" : "✗"} {engine.charAt(0).toUpperCase() + engine.slice(1)}: {r.message}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── SeoTab ───────────────────────────────────────────────────────────────────
 function SeoTab() {
   const { token } = useAuth() as any;
@@ -708,14 +754,32 @@ function SeoTab() {
       {activeSection === "analytics" && (
         <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
           <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2"><BarChart2 className="h-3.5 w-3.5 text-green-400" /> Analytics & Search Console</p>
-          <SeoField label="Google Analytics ID" k="googleAnalyticsId" placeholder="G-XXXXXXXXXX veya UA-XXXXXXXX-X" hint="Google Analytics 4 Measurement ID. Boş bırakılırsa tracking yapılmaz." {...sp} />
-          <SeoField label="Google Search Console Doğrulama" k="googleSearchConsole" placeholder="google1234567890abcdef.html" hint="Search Console'dan alınan doğrulama metası veya dosya adı." {...sp} />
-          <SeoBoolField label="Sitemap.xml" desc="Arama motorları için XML sitemap oluştur" k="sitemapEnabled" {...sp} />
-          <SeoBoolField label="Yapısal Veri (Schema.org)" desc="JSON-LD ile zengin snippet desteği" k="structuredDataEnabled" {...sp} />
-          <SeoSelectField label="Schema.org Türü" k="schemaOrgType" hint="Sitenizi Google'a tanımlayan yapısal veri türü." options={[
-            { v: "Organization", l: "Organization" }, { v: "WebSite", l: "WebSite" },
-            { v: "VideoObject", l: "VideoObject" }, { v: "Person", l: "Person" },
-          ]} {...sp} />
+          <SeoField label="Google Analytics ID" k="googleAnalyticsId" placeholder="G-XXXXXXXXXX" hint="Google Analytics 4 Measurement ID. Boş bırakılırsa tracking yapılmaz." {...sp} />
+          <SeoField label="Google Search Console Doğrulama" k="googleSearchConsole" placeholder="abc123xyz..." hint="Search Console → HTML Meta Tag yöntemindeki content değeri." {...sp} />
+
+          <div className="border-t border-[#2a2a2a] pt-4">
+            <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2 mb-3">
+              <Globe className="h-3.5 w-3.5 text-blue-400" /> Bing & Yandex Doğrulama
+            </p>
+            <div className="space-y-3">
+              <SeoField label="Bing Doğrulama Kodu" k="bingVerification" placeholder="1A2B3C4D5E6F7890..." hint="bing.com/webmasters → Site ekle → HTML Meta Tag → content değeri." {...sp} />
+              <SeoField label="Yandex Doğrulama Kodu" k="yandexVerification" placeholder="a1b2c3d4e5f6g7h8..." hint="webmaster.yandex.com → Site ekle → Meta Tag → content değeri." {...sp} />
+              <PingSitemapButton token={token} />
+            </div>
+          </div>
+
+          <div className="border-t border-[#2a2a2a] pt-4">
+            <p className="text-xs font-bold text-[#666] uppercase tracking-wider flex items-center gap-2 mb-3">
+              <BarChart2 className="h-3.5 w-3.5 text-purple-400" /> Yapısal Veri
+            </p>
+            <SeoBoolField label="Sitemap.xml" desc="Arama motorları için XML sitemap oluştur" k="sitemapEnabled" {...sp} />
+            <SeoBoolField label="Yapısal Veri (Schema.org)" desc="JSON-LD ile zengin snippet desteği" k="structuredDataEnabled" {...sp} />
+            <SeoSelectField label="Schema.org Türü" k="schemaOrgType" hint="Sitenizi Google'a tanımlayan yapısal veri türü." options={[
+              { v: "Organization", l: "Organization" }, { v: "WebSite", l: "WebSite" },
+              { v: "VideoObject", l: "VideoObject" }, { v: "Person", l: "Person" },
+            ]} {...sp} />
+          </div>
+
           {settings.googleAnalyticsId && (
             <div className="bg-green-500/5 border border-green-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
               <BarChart2 className="h-3.5 w-3.5 text-green-400 shrink-0" />
