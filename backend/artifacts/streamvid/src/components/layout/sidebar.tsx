@@ -139,7 +139,7 @@ export function Sidebar() {
     { label: "Streetwear", href: "/search?q=streetwear" },
   ];
 
-  const topCategories = ["18-25", "Plus Size", "Fitness", "Commercial", "Vintage", "Haute Couture", "Swimwear", "Editorial", "Podyum", "Lingerie"];
+  const topCategories = [...categories].sort((a, b) => (b.videoCount ?? 0) - (a.videoCount ?? 0)).slice(0, 12);
 
   const communityItems = [
     { icon: Shield, label: "Güven & Güvenlik", href: "/help" },
@@ -233,12 +233,16 @@ export function Sidebar() {
           )}
           {nav("top-cats").enabled && topCatsExpanded && ffCategories !== "disabled" && (
             <div className="bg-[#161616]">
-              {topCategories.map(cat => (
-                <Row key={cat} icon={PlayCircle} label={cat} href={`/search?q=${encodeURIComponent(cat)}`} onClick={onClose} sub featureKey="categories" />
-              ))}
+              {topCategories.length === 0 ? (
+                <div className="px-9 py-3 text-[13px] text-[#555]">Kategori yok</div>
+              ) : (
+                topCategories.map((cat: any) => (
+                  <Row key={cat.id} icon={TrendingUp} label={`${cat.name}${cat.videoCount > 0 ? ` (${cat.videoCount})` : ''}`} href={`/categories/${cat.slug}`} onClick={onClose} sub featureKey="categories" />
+                ))
+              )}
               <Link href="/categories" onClick={onClose}>
-                <div className="flex items-center justify-center py-3 border-b border-[#2c2c2c]">
-                  <ChevronDown className="h-5 w-5 text-[#888]" />
+                <div className="flex items-center justify-center gap-1.5 py-3 border-b border-[#2c2c2c] text-[12px] text-[#555] hover:text-[#888] transition-colors">
+                  <ChevronDown className="h-4 w-4" /> Tümünü Gör
                 </div>
               </Link>
             </div>

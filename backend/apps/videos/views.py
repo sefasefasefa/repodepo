@@ -627,7 +627,7 @@ def list_categories(request):
     cached = cache.get('categories:all_v2')
     if cached is not None:
         return Response(cached)
-    cats = Category.objects.all().order_by('name')
+    cats = Category.objects.all().order_by('-video_count', 'name')
     result = [
         {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
         for c in cats
