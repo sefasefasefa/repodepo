@@ -316,21 +316,31 @@ def admin_integration_detail(request, integration_id):
         i.delete()
         return Response({'message': 'Silindi'})
     d = request.data
+    changed = []
     if 'autoUpload' in d:
         i.auto_upload = bool(d['autoUpload'])
+        changed.append('auto_upload')
     if 'isActive' in d:
         i.is_active = bool(d['isActive'])
+        changed.append('is_active')
     if d.get('name'):
-        i.name = d['name']
+        i.name = str(d['name']).strip()
+        changed.append('name')
     if d.get('login') is not None:
-        i.login = d['login']
+        i.login = d['login'] or None
+        changed.append('login')
     if d.get('key') is not None:
-        i.key = d['key']
+        i.key = d['key'] or None
+        changed.append('key')
     if d.get('apiKey') is not None:
-        i.api_key = d['apiKey']
+        i.api_key = d['apiKey'] or None
+        changed.append('api_key')
     if d.get('email') is not None:
-        i.email = d['email']
-    i.save()
+        i.email = d['email'] or None
+        changed.append('email')
+    if changed:
+        i.save(update_fields=changed)
+    i.refresh_from_db()
     return Response({'integration': _fmt_integration(i)})
 
 

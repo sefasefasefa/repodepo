@@ -34,7 +34,6 @@ urlpatterns = [
     path('api/', include('apps.ai.urls')),
     path('api/', include('apps.devices.urls')),
     path('api/', include('apps.core.urls')),
-    path('api/', include('apps.documents.urls')),
     path('api/healthz', include('apps.core.health_urls')),
 ]
 

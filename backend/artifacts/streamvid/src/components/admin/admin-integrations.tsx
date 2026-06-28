@@ -718,8 +718,9 @@ export function AdminIntegrations() {
             autoUpload: form.autoUpload,
           }),
         });
-        setIntegrations((p) => p.map((i) => (i.id === editId ? d.integration : i)));
+        setIntegrations((p) => p.map((i) => (i.id === editId ? { ...i, ...d.integration } : i)));
         toast({ title: "Güncellendi", description: `${form.name} entegrasyonu güncellendi.` });
+        apiFetch("/admin/integrations").then(r => setIntegrations(r.integrations || [])).catch(() => {});
       } else {
         const d = await apiFetch("/admin/integrations", { method: "POST", body: JSON.stringify(form) });
         setIntegrations((p) => [...p, d.integration]);

@@ -10,7 +10,7 @@ import {
   History, Bookmark, Bell, PlusCircle, LayoutDashboard,
   ShieldAlert, LogIn, BarChart3, Smartphone, TrendingUp,
   Heart, UserCheck, Tv, ShoppingBag, BookOpen, Settings2, Radio, Download,
-  Trophy, MessageSquare, Crown, Share2, Wrench, FileText,
+  Trophy, MessageSquare, Crown, Share2, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -270,11 +270,6 @@ export function Sidebar() {
               <Row icon={Users} label={nav("community").label} expandable expanded={communityExpanded} onToggle={() => setCommunityExpanded(p => !p)} />
               {communityExpanded && <CommunityGrid items={communityItems} onClose={onClose} />}
             </>
-          )}
-
-          {/* Araçlar */}
-          {user && (
-            <Row icon={FileText} label="PDF Analizi" href="/pdf-analyzer" onClick={onClose} active={location === "/pdf-analyzer"} />
           )}
 
           {/* Hesabım */}
