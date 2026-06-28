@@ -206,14 +206,14 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
       const isExternal = effectiveUrl.startsWith("http://") || effectiveUrl.startsWith("https://");
       const isCloud    = effectiveUrl.includes("cloud.mail.ru/public/");
 
-      // Yerel dosya → doğrudan sun
+      // Yerel dosya → doğrudan sun; her zaman varsayılan (başka cihazlardan da erişilebilir)
       if (!isExternal) {
-        return { id: 0, playerName: "Kendi Oynatıcı", directUrl: effectiveUrl, isDefault: players.length === 0, quality: "HD", language: "TR" };
+        return { id: 0, playerName: "Kendi Oynatıcı", directUrl: effectiveUrl, isDefault: true, quality: "HD", language: "TR" };
       }
 
-      // cloud.mail.ru → proxy stream (indirme tamamlanana kadar)
+      // cloud.mail.ru → proxy stream (indirme tamamlanana kadar); her zaman varsayılan
       if (isCloud) {
-        return { id: 0, playerName: "Kendi Oynatıcı", directUrl: `/api/videos/${video.id}/stream`, isDefault: players.length === 0, quality: "HD", language: "TR" };
+        return { id: 0, playerName: "Kendi Oynatıcı", directUrl: `/api/videos/${video.id}/stream`, isDefault: true, quality: "HD", language: "TR" };
       }
 
       // Doğrudan video dosyası (.mp4, .m3u8, .webm vb.) → tarayıcı direkt oynatır,
