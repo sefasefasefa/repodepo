@@ -4,7 +4,7 @@ import { useGetVideo, useGetRelatedVideos, useLikeVideo, useListComments, useCre
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, Languages, Download, Check, SlidersHorizontal, ExternalLink, RefreshCw } from "lucide-react";
+import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, Languages, Download, Check, SlidersHorizontal, ExternalLink, RefreshCw, Loader2 } from "lucide-react";
 import { ReportModal } from "@/components/report-modal";
 import { TokenTipModal } from "@/components/token-tip-modal";
 import { CustomRequestModal } from "@/components/custom-request-modal";
@@ -310,6 +310,12 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
               })()}
               <WatermarkOverlay videoWatermarkEnabled={showWatermark} />
               {isDirectVideo && <SubtitleOverlay videoId={video.id} videoRef={videoRef} />}
+              {(video as any).hlsStatus === 'processing' && (
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/70 text-blue-400 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-blue-500/30 pointer-events-none z-10">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  HLS işleniyor...
+                </div>
+              )}
             </div>
           </ScreenProtectionOverlay>
         </div>
@@ -373,6 +379,23 @@ export default function VideoWatch() {
     if (!slug || videoId === slug) return;
     window.history.replaceState(null, "", `/videos/${slug}`);
   }, [video, videoId]);
+
+  /* ── HLS dönüştürme polling: tamamlanınca video'yu yenile ────────────── */
+  useEffect(() => {
+    const status = (video as any)?.hlsStatus;
+    if (status !== "processing" && status !== "pending") return;
+    const iv = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/videos/${videoId}/hls-status`);
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.status === "ready") {
+          queryClient.invalidateQueries({ queryKey: getGetVideoQueryKey(videoId as any) });
+        }
+      } catch { /* sessizce yoksay */ }
+    }, 5000);
+    return () => clearInterval(iv);
+  }, [(video as any)?.hlsStatus, videoId, queryClient]);
 
   /* ── Otomatik kategori tespiti ─────────────────────────────────────────── */
   useEffect(() => {

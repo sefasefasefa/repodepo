@@ -31,6 +31,14 @@ class Video(models.Model):
     thumbnail_url = models.TextField(null=True, blank=True)
     video_url = models.TextField(null=True, blank=True)
     hls_url = models.TextField(null=True, blank=True)
+    HLS_STATUS_CHOICES = [
+        ('none',       'Dönüştürülmedi'),
+        ('pending',    'Bekliyor'),
+        ('processing', 'İşleniyor'),
+        ('ready',      'Hazır'),
+        ('failed',     'Başarısız'),
+    ]
+    hls_status = models.CharField(max_length=20, choices=HLS_STATUS_CHOICES, default='none')
     duration = models.IntegerField(null=True, blank=True)
     view_count = models.IntegerField(default=0)
     like_count = models.IntegerField(default=0)

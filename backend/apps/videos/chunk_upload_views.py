@@ -206,6 +206,17 @@ def chunk_complete(request):
     )
     User.objects.filter(id=request.user.id).update(video_count=F('video_count') + 1)
 
+    # HLS dönüştürme — arka planda başlat
+    try:
+        from .hls_converter import start_hls_conversion
+        start_hls_conversion(
+            video_db_id=video.id,
+            input_path=final_path,
+            video_uuid=str(video.uuid),
+        )
+    except Exception:
+        pass
+
     # Crosspost dağıtımı
     crosspost_site_ids_raw = request.data.get('crosspostSiteIds')
     auto_cross = request.data.get('autoCrossPost', False)

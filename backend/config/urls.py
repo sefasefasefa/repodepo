@@ -1,6 +1,11 @@
 import os
 import re
 import mimetypes
+
+# HLS dosya türleri için MIME tipi kaydı
+mimetypes.add_type("application/vnd.apple.mpegurl", ".m3u8")
+mimetypes.add_type("video/mp2t", ".ts")
+
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
@@ -84,7 +89,7 @@ def _serve_media(request, path):
                 resp['Content-Range'] = f'bytes */{file_size}'
                 return resp
 
-            chunk_size = 65536  # 64 KB
+            chunk_size = 524288  # 512 KB
 
             def file_iterator(filepath, start, end):
                 with open(filepath, 'rb') as f:

@@ -98,6 +98,8 @@ urlpatterns = [
     path('recommendations/profile', ex2.recommendations_profile),
     # URL resolver (cloud.mail.ru vb.)
     path('resolve-url', views.resolve_video_url),
+    # HLS dönüştürme durumu
+    path('videos/<str:video_id>/hls-status', views.video_hls_status),
     # cloud.mail.ru stream proxy
     path('videos/<str:video_id>/stream', views.stream_video),
     # cloud.mail.ru → sunucuya indir

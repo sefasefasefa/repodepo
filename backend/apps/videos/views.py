@@ -131,6 +131,7 @@ def enrich_video(v, user=None):
         'thumbnailUrl': v.thumbnail_url,
         'videoUrl': v.video_url,
         'hlsUrl': v.hls_url,
+        'hlsStatus': getattr(v, 'hls_status', 'none'),
         'duration': v.duration,
         'viewCount': v.view_count,
         'likeCount': v.like_count,
@@ -365,6 +366,20 @@ def get_video(request, video_id):
     if not v:
         return Response({'error': 'Video not found'}, status=404)
     return Response(enrich_video(v, request.user))
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def video_hls_status(request, video_id):
+    """HLS dönüştürme durumunu ve URL'yi döndürür. Polling için kullanılır."""
+    from .utils import resolve_video
+    video = resolve_video(video_id)
+    if not video:
+        return Response({'error': 'Video bulunamadı'}, status=404)
+    return Response({
+        'status': getattr(video, 'hls_status', 'none'),
+        'hlsUrl': video.hls_url,
+    })
 
 
 @api_view(['GET'])
