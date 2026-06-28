@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { ResumeBanner } from "@/components/video/resume-banner";
-import { clearWatchProgress, loadWatchProgress, saveWatchProgress, touchWatchHistory } from "@/lib/watch-progress";
+import { clearWatchProgress, loadWatchProgress, markVideoFinished, saveWatchProgress, touchWatchHistory } from "@/lib/watch-progress";
 
 interface PlayerSource {
   id: number;
@@ -210,7 +210,10 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
     setResumePrompt({ currentTime: saved.currentTime, progress: saved.currentTime / Math.max(saved.duration || dur || 1, 1) });
   }, [video.id, video.duration]);
 
-  const handleEnded = useCallback(() => { clearWatchProgress(video.id); }, [video.id]);
+  const handleEnded = useCallback(() => {
+    const saved = loadWatchProgress(video.id);
+    markVideoFinished(video.id, saved?.duration ?? 0);
+  }, [video.id]);
 
   if (!allSources.length) {
     return (

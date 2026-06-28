@@ -765,10 +765,15 @@ def record_view(request, video_id):
     completion_rate = request.data.get('completionRate', request.data.get('completion_rate', 0))
     if request.user.is_authenticated:
         wh, created = WatchHistory.objects.get_or_create(user=request.user, video=video)
-        if not created:
-            wh.watch_time = watch_time
-            wh.completion_rate = completion_rate
-            wh.save()
+        # Her iki durumda da watch_time ve completion_rate güncelle
+        update_wt = int(watch_time or 0)
+        update_cr = int(completion_rate or 0)
+        if update_wt > 0 or update_cr > 0:
+            # Sadece daha büyük değer gelirse güncelle (geri alma)
+            if update_wt >= wh.watch_time or update_cr >= wh.completion_rate:
+                wh.watch_time = update_wt
+                wh.completion_rate = update_cr
+                wh.save(update_fields=['watch_time', 'completion_rate', 'updated_at'])
     # AI training signal — fire-and-forget; never break view recording
     try:
         from apps.ai.views import record_event
