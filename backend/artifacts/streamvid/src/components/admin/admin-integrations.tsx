@@ -662,6 +662,7 @@ export function AdminIntegrations() {
   const [showKey, setShowKey]           = useState(false);
   const [showApiKey, setShowApiKey]     = useState(false);
   const [editingInt, setEditingInt]     = useState<any>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -679,6 +680,7 @@ export function AdminIntegrations() {
 
   const openAdd = (platformId?: string, platformName?: string) => {
     setEditId(null);
+    setConfirmDelete(false);
     setForm({ ...EMPTY_FORM, platform: platformId ?? "streamtape", name: platformName ?? "" });
     setShowKey(false);
     setShowApiKey(false);
@@ -688,6 +690,7 @@ export function AdminIntegrations() {
   const openEdit = (int: any) => {
     setEditId(int.id);
     setEditingInt(int);
+    setConfirmDelete(false);
     setForm({
       platform: int.platform,
       name: int.name,
@@ -700,6 +703,13 @@ export function AdminIntegrations() {
     setShowKey(false);
     setShowApiKey(false);
     setShowAdd(true);
+  };
+
+  const closeModal = () => {
+    setShowAdd(false);
+    setEditId(null);
+    setEditingInt(null);
+    setConfirmDelete(false);
   };
 
   const save = async () => {
@@ -936,7 +946,7 @@ export function AdminIntegrations() {
       {/* Modal — Ekle / Düzenle */}
       {showAdd && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-          onClick={(e) => e.target === e.currentTarget && (setShowAdd(false), setEditId(null), setEditingInt(null))}>
+          onClick={(e) => e.target === e.currentTarget && closeModal()}>
           <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
 
             {/* Başlık */}
@@ -1111,12 +1121,43 @@ export function AdminIntegrations() {
               )}
             </div>
 
-            <div className="flex gap-2 mt-5">
+            {/* Silme onayı */}
+            {confirmDelete && editId && (
+              <div className="mt-4 bg-red-950/40 border border-red-800/50 rounded-xl p-3">
+                <p className="text-sm text-red-300 font-medium mb-3">
+                  Bu entegrasyonu silmek istediğine emin misin?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      await remove(editId);
+                      closeModal();
+                    }}
+                    className="flex-1 bg-red-600 hover:bg-red-500 text-white font-medium py-2 rounded-lg text-sm transition-colors">
+                    Evet, Sil
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="flex-1 bg-[#222] hover:bg-[#2a2a2a] text-[#aaa] font-medium py-2 rounded-lg text-sm transition-colors">
+                    Vazgeç
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-4">
+              {editId && !confirmDelete && (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="px-3 py-2.5 rounded-lg bg-red-950/40 hover:bg-red-900/50 border border-red-800/40 text-red-400 transition-colors">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
               <button onClick={save} disabled={!form.name || saving}
                 className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
                 {saving ? "Kaydediliyor..." : editId ? "Güncelle" : "Kaydet"}
               </button>
-              <button onClick={() => { setShowAdd(false); setEditId(null); setEditingInt(null); }}
+              <button onClick={closeModal}
                 className="flex-1 bg-[#222] hover:bg-[#2a2a2a] text-[#aaa] font-medium py-2.5 rounded-lg text-sm transition-colors">
                 İptal
               </button>
