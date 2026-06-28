@@ -36,42 +36,28 @@ git config maintenance.auto false
 git config core.fscache true
 
 if [ "$OS" = "windows" ]; then
-    # Kok neden: Windows Defender .git/objects/pack dosyalarini kilitliyor.
-    # Cozum 1 (kalici): .git klasorunu Defender taramasindan cikar.
-    GITDIR="$(cd .git && pwd -W 2>/dev/null || pwd)"
-    echo "   Windows Defender istisna ekleniyor: $GITDIR"
-    powershell.exe -NonInteractive -Command \
-        "Add-MpPreference -ExclusionPath '$GITDIR'" 2>/dev/null || true
+    # KOK NEDEN: git gc, eski pack dosyasini silmeye calisirken
+    # Windows Defender dosyayi kilitli tuttugundan "Should I try again?" sorar.
+    # Hicbir env degiskeni (GIT_TERMINAL_PROMPT, gc.auto vb.) bunu engelleyemez
+    # cunku git CONIN$ aygitini dogrudan acar.
+    #
+    # COZUM: pack dosyalarini cozup loose object yap, sonra pack'leri sil.
+    # gc yeni pack olusturur ama silecek ESKI PACK KALMAZ → soru cikamaz.
 
-    # Cozum 2: Kilitli kalan eski pack dosyalarini simdiden sil.
-    # (Sunucu durduktan sonra Defender birka? saniyede kilidi birakir.)
-    sleep 2
-    ls -t .git/objects/pack/*.pack 2>/dev/null | tail -n +2 | while read f; do
-        base="${f%.pack}"
-        rm -f "$f" "${base}.idx" "${base}.bitmap" "${base}.rev" 2>/dev/null || true
+    echo "   Pack dosyalari cozuluyor (Windows kilitleme sorunu icin)..."
+    for packfile in .git/objects/pack/*.pack; do
+        [ -f "$packfile" ] || continue
+        git unpack-objects < "$packfile" 2>/dev/null || true
     done
+    # Artik gereksiz pack dosyalarini sil
+    rm -f .git/objects/pack/*.pack \
+          .git/objects/pack/*.idx \
+          .git/objects/pack/*.bitmap \
+          .git/objects/pack/*.rev 2>/dev/null || true
+    echo "   Pack dosyalari temizlendi."
 
-    # Kalan git.exe islemleri temizle, maintenance'i kaldir
-    taskkill //F //IM git.exe 2>/dev/null || true
-    sleep 1
     git maintenance unregister --force 2>/dev/null || true
-
-    # Fetch'i arka planda calistir; gc adiminda takilirsaa 90s sonra zorla kes
-    git -c gc.auto=0 -c gc.autopacklimit=0 -c maintenance.auto=false \
-        -c receive.autogc=false fetch origin &
-    GIT_BG=$!
-    ELAPSED=0
-    while kill -0 "$GIT_BG" 2>/dev/null; do
-        sleep 2
-        ELAPSED=$((ELAPSED + 2))
-        if [ $ELAPSED -ge 90 ]; then
-            echo "   [UYARI] git gc takildi, atlanyor (yeni kodlar zaten indirildi)..."
-            kill -9 "$GIT_BG" 2>/dev/null || true
-            taskkill //F //IM git.exe 2>/dev/null || true
-            sleep 1
-            break
-        fi
-    done
+    git -c gc.auto=0 -c gc.autopacklimit=0 -c maintenance.auto=false fetch origin
 else
     git fetch origin
 fi
