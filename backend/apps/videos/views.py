@@ -122,8 +122,6 @@ def enrich_video(v, user=None):
     cat = v.category
     creator = v.creator
 
-    video_url = _resolve_cloudmail_url(v.video_url) if v.video_url else v.video_url
-
     return {
         'id': v.id,
         'uuid': str(v.uuid),
@@ -131,7 +129,7 @@ def enrich_video(v, user=None):
         'title': v.title,
         'description': v.description,
         'thumbnailUrl': v.thumbnail_url,
-        'videoUrl': video_url,
+        'videoUrl': v.video_url,
         'hlsUrl': v.hls_url,
         'duration': v.duration,
         'viewCount': v.view_count,

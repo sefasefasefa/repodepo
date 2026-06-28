@@ -355,8 +355,14 @@ export default function UploadPage() {
           setLocation(videoPath);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      const msg =
+        e?.response?.data?.error ||
+        e?.data?.error ||
+        e?.message ||
+        "Video eklenemedi. Lütfen tekrar deneyin.";
+      toast.error(msg);
     }
   };
 
