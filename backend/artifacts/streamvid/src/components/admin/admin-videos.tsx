@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useListVideos, useDeleteVideo, useUpdateVideo, useListCategories } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Video, Trash2, Edit2, Eye, EyeOff, Search, ChevronLeft, ChevronRight,
+  Video, Trash2, Edit2, Eye, EyeOff, Search, ChevronLeft, ChevronRight, ChevronDown,
   Crown, Plus, X, Loader2, Link, Image, Upload, Share2, Check,
   AlertCircle, PlayCircle, RefreshCw, ExternalLink, Grid3x3, Download,
 } from "lucide-react";
@@ -983,6 +983,8 @@ export function AdminVideos() {
   const [bulkFetching, setBulkFetching] = useState(false);
   const [bulkFetchResult, setBulkFetchResult] = useState<string | null>(null);
   const [jobSummary, setJobSummary] = useState<Record<string, any[]>>({});
+  const [dlStatuses, setDlStatuses] = useState<Record<number, { status: string | null; percent: number; isLocal: boolean; title: string }>>({});
+  const [showDlPanel, setShowDlPanel] = useState(true);
 
   const { data, isLoading } = useListVideos({ page, limit: 20 } as any);
   const { data: catsData } = useListCategories();
@@ -1015,6 +1017,42 @@ export function AdminVideos() {
   }, [jobSummary]);
 
   const videos = data?.videos ?? [];
+
+  // ── İndirme durumu polling ────────────────────────────────────────
+  useEffect(() => {
+    if (!videos.length) return;
+    const token = localStorage.getItem("token");
+
+    // Harici URL'li videoları bul
+    const externalVideos = videos.filter((v: any) => {
+      const url = v.hlsUrl || v.videoUrl || "";
+      return url.startsWith("http://") || url.startsWith("https://");
+    });
+    if (!externalVideos.length) return;
+
+    const fetchAll = async () => {
+      const updates: Record<number, { status: string | null; percent: number; isLocal: boolean; title: string }> = {};
+      await Promise.all(externalVideos.map(async (v: any) => {
+        try {
+          const res = await fetch(`/api/videos/${v.id}/fetch-status`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!res.ok) return;
+          const d = await res.json();
+          updates[v.id] = { status: d.status ?? null, percent: d.percent ?? 0, isLocal: d.isLocal ?? false, title: v.title };
+        } catch { /* sessizce geç */ }
+      }));
+      setDlStatuses(prev => ({ ...prev, ...updates }));
+    };
+
+    fetchAll();
+    const interval = setInterval(() => {
+      // Hâlâ devam eden indirme varsa polling sürdür
+      const hasActive = Object.values(dlStatuses).some(s => s.status === "downloading" || s.status === "pending");
+      if (hasActive || !Object.keys(dlStatuses).length) fetchAll();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [videos.length, page]);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / 20);
   const categories = Array.isArray(catsData) ? catsData : (catsData as any)?.categories ?? [];
@@ -1134,6 +1172,77 @@ export function AdminVideos() {
       {bulkFetchResult && (
         <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg px-4 py-2.5 text-blue-300 text-xs font-medium">
           ✓ {bulkFetchResult}
+        </div>
+      )}
+
+      {/* İndirme Durumu Paneli */}
+      {Object.keys(dlStatuses).length > 0 && (
+        <div className="bg-[#0d1f35] border border-blue-500/20 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setShowDlPanel(p => !p)}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Download className="h-4 w-4 text-blue-400" />
+              <span className="text-sm font-semibold text-blue-300">Sunucu İndirme Durumu</span>
+              <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold">
+                {Object.values(dlStatuses).filter(s => s.status === "downloading" || s.status === "pending").length} aktif
+                {" · "}
+                {Object.values(dlStatuses).filter(s => s.isLocal).length}/{Object.keys(dlStatuses).length} tamamlandı
+              </span>
+            </div>
+            <ChevronDown className={cn("h-4 w-4 text-blue-400 transition-transform", !showDlPanel && "-rotate-90")} />
+          </button>
+          {showDlPanel && (
+            <div className="border-t border-blue-500/10 divide-y divide-blue-500/10">
+              {Object.entries(dlStatuses).map(([id, info]) => {
+                const isActive = info.status === "downloading" || info.status === "pending";
+                const isDone = info.isLocal || info.status === "done";
+                const isError = info.status?.startsWith("error");
+                return (
+                  <div key={id} className="flex items-center gap-3 px-4 py-2.5">
+                    {/* Durum ikonu */}
+                    <div className="shrink-0">
+                      {isDone
+                        ? <Check className="h-4 w-4 text-green-400" />
+                        : isError
+                          ? <AlertCircle className="h-4 w-4 text-red-400" />
+                          : isActive
+                            ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
+                            : <Download className="h-4 w-4 text-[#555]" />}
+                    </div>
+                    {/* Başlık + progress */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white truncate">{info.title}</p>
+                      {isActive && (
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="flex-1 h-1 bg-blue-900/50 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-400 rounded-full transition-all duration-500"
+                              style={{ width: `${info.status === "pending" ? 3 : info.percent}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-blue-400 font-bold tabular-nums shrink-0">
+                            {info.status === "pending" ? "Başlıyor..." : `${info.percent}%`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Durum etiketi */}
+                    <div className="shrink-0">
+                      {isDone
+                        ? <span className="text-[10px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full font-bold border border-green-500/20">Yerel ✓</span>
+                        : isError
+                          ? <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/20">Hata</span>
+                          : isActive
+                            ? <span className="text-[10px] bg-blue-500/15 text-blue-400 px-2 py-0.5 rounded-full font-bold border border-blue-500/20">İndiriliyor</span>
+                            : <span className="text-[10px] bg-[#1a1a1a] text-[#555] px-2 py-0.5 rounded-full font-bold border border-[#2a2a2a]">Bekleniyor</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
