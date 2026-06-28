@@ -54,7 +54,7 @@ function resolveEmbedFromUrl(rawUrl: string): string | null {
     const host = u.hostname.replace(/^www\./, '');
     const parts = u.pathname.split('/').filter(Boolean);
     const iframe = (src: string, extra = '') =>
-      `<iframe src="${src}" width="100%" height="100%" frameborder="0" scrolling="no" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer" ${extra} style="width:100%;height:100%;border:0;pointer-events:all"></iframe>`;
+      `<iframe src="${src}" width="100%" height="100%" frameborder="0" scrolling="no" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer-when-downgrade" ${extra} style="width:100%;height:100%;border:0;pointer-events:all"></iframe>`;
 
     // StreamTape: /v/ID/... veya /e/ID → /e/ID
     if (host === 'streamtape.com' || host === 'streamtape.to' || host === 'streamtape.net' || host === 'streamta.pe') {
