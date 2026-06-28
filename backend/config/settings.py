@@ -6,7 +6,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-key-in-production-123456789')
+SECRET_KEY = os.environ.get('SECRET_KEY') or os.environ.get('SESSION_SECRET', 'django-insecure-change-this-key-in-production-123456789')
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
