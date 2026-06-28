@@ -84,6 +84,40 @@ function LimitCard({ icon: Icon, label, value, color }: { icon: any; label: stri
   );
 }
 
+function CloudMailResolveButton({ url, token, onResolved }: { url: string; token: string; onResolved: (url: string) => void }) {
+  const [loading, setLoading] = useState(false);
+
+  const resolve = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/resolve-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        onResolved(data.url);
+        toast.success('Direkt video URL\'si başarıyla çözümlendi!');
+      } else {
+        toast.error(data.error || 'URL çözümlenemedi');
+      }
+    } catch {
+      toast.error('Bağlantı hatası');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button type="button" onClick={resolve} disabled={loading} size="sm"
+      className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white gap-1.5">
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+      {loading ? 'Çözümleniyor...' : 'Çöz'}
+    </Button>
+  );
+}
+
 export default function UploadPage() {
   const { user, token } = useAuth() as any;
   const [, setLocation] = useLocation();
@@ -1011,7 +1045,18 @@ export default function UploadPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Video URL</FormLabel>
-                    <FormControl><Input placeholder="https://..." {...field} className="bg-input/50" /></FormControl>
+                    <div className="flex gap-2 items-start">
+                      <FormControl className="flex-1">
+                        <Input placeholder="https://... veya cloud.mail.ru/public/..." {...field} className="bg-input/50" />
+                      </FormControl>
+                      {field.value && field.value.includes('cloud.mail.ru/public/') && (
+                        <CloudMailResolveButton
+                          url={field.value}
+                          token={token}
+                          onResolved={(resolvedUrl) => field.onChange(resolvedUrl)}
+                        />
+                      )}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

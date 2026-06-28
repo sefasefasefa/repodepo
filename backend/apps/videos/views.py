@@ -1210,3 +1210,76 @@ def distribute_video(request, video_id):
 
     _distribute_video_background(video.id)
     return Response({'message': f'{count} sağlayıcıya dağıtım başlatıldı', 'count': count})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def resolve_video_url(request):
+    """
+    Verilen URL'yi doğrudan oynatılabilir video URL'sine çözümler.
+    Şu an desteklenen: cloud.mail.ru paylaşım linkleri.
+    """
+    import urllib.parse
+    import requests as _requests
+
+    raw_url = (request.data.get('url') or '').strip()
+    if not raw_url:
+        return Response({'error': 'URL gerekli'}, status=400)
+
+    # ── cloud.mail.ru ────────────────────────────────────────────────────────
+    if 'cloud.mail.ru/public/' in raw_url:
+        try:
+            headers = {
+                'User-Agent': (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/120.0.0.0 Safari/537.36'
+                ),
+                'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+            }
+            session = _requests.Session()
+
+            # Paylaşım sayfasını al
+            page = session.get(raw_url, headers=headers, timeout=15)
+            page.raise_for_status()
+            html = page.text
+
+            # weblink_view base URL'ini HTML'deki JSON'dan çıkart
+            base_match = re.search(
+                r'"weblink_view"\s*:\s*\{"count"\s*:\s*"\d+"\s*,\s*"url"\s*:\s*"([^"]+)"',
+                html
+            )
+            if not base_match:
+                return Response({'error': 'cloud.mail.ru CDN adresi bulunamadı'}, status=422)
+
+            base_url = base_match.group(1)  # e.g. https://cloclo62.cloud.mail.ru/weblink/view/
+
+            # Weblink path = URL'deki /public/ sonrası kısım
+            parsed = urllib.parse.urlparse(raw_url)
+            path_parts = parsed.path.split('/public/', 1)
+            if len(path_parts) < 2:
+                return Response({'error': 'Geçersiz cloud.mail.ru linki'}, status=422)
+
+            weblink_path = path_parts[1]  # e.g. 7g3t/haM7PhGho/Video.mp4
+
+            # CDN URL'ini oluştur ve GET yap (redirect'i takip et)
+            cdn_url = base_url + weblink_path
+            cdn_resp = session.get(cdn_url, headers=headers, stream=True, timeout=20, allow_redirects=True)
+
+            ct = cdn_resp.headers.get('Content-Type', '')
+            if cdn_resp.status_code == 200 and ('video' in ct or 'octet' in ct):
+                return Response({'url': cdn_resp.url, 'contentType': ct})
+
+            return Response(
+                {'error': f'CDN erişimi başarısız: HTTP {cdn_resp.status_code}'},
+                status=422
+            )
+
+        except Exception as exc:
+            return Response({'error': f'Çözümleme hatası: {str(exc)}'}, status=500)
+
+    # ── Desteklenmeyen ───────────────────────────────────────────────────────
+    return Response(
+        {'error': 'Bu URL türü desteklenmiyor. Şu an sadece cloud.mail.ru linkleri çözümlenir.'},
+        status=400
+    )

@@ -96,4 +96,6 @@ urlpatterns = [
     # Recommendations
     path('recommendations/for-you', ex2.recommendations_for_you),
     path('recommendations/profile', ex2.recommendations_profile),
+    # URL resolver (cloud.mail.ru vb.)
+    path('resolve-url', views.resolve_video_url),
 ]
