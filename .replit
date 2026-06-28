@@ -49,3 +49,4 @@ build = ["bash", "-c", "cd backend && pip install -r requirements.txt && pnpm in
 [userenv.shared]
 DEBUG = "True"
 SECRET_KEY = "dv#o+!knmn#g&$euhkb&r1g#r@=z1w_x4m%qg7520s8inrl8r5"
+SITE_URL = "hotpulse.me"
