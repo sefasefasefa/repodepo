@@ -11,4 +11,6 @@ urlpatterns = [
     path('cross-post/jobs', views.jobs_list),
     path('cross-post/jobs/summary', views.jobs_summary),
     path('cross-post/jobs/<int:job_id>/retry', views.job_retry),
+    path('cross-post/admin/monitor', views.admin_monitor),
+    path('cross-post/admin/jobs/<int:job_id>/retry', views.admin_job_retry),
 ]

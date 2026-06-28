@@ -258,6 +258,93 @@ def jobs_summary(request):
     return Response({'summary': result})
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_monitor(request):
+    """
+    Admin: Tüm kullanıcıların crosspost job'larını video bazında gruplar.
+    Her video için her sağlayıcının en son job durumunu döner.
+    """
+    if getattr(request.user, 'role', '') != 'admin':
+        return Response({'error': 'yetkisiz'}, status=403)
+
+    qs = (CrossPostJob.objects
+          .select_related('site', 'video', 'user')
+          .order_by('-created_at')[:2000])
+
+    # Her (video_id, site_id) için en son job'u tut
+    seen: set = set()
+    videos_map: dict = {}
+
+    for j in qs:
+        key = (j.video_id, j.site_id)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        vid_id = str(j.video_id)
+        if vid_id not in videos_map:
+            v = j.video
+            videos_map[vid_id] = {
+                'videoId': j.video_id,
+                'videoTitle': (v.title if v else '') or '(İsimsiz)',
+                'videoThumb': (v.thumbnail_url if v else '') or '',
+                'videoUrl': f'/videos/{j.video_id}',
+                'creatorUsername': (j.user.username if j.user else '') or '',
+                'providers': [],
+            }
+
+        site = j.site
+        videos_map[vid_id]['providers'].append({
+            'jobId': j.id,
+            'provider': (site.name if site else '?'),
+            'providerKey': (site.provider_key if site else ''),
+            'status': j.status,
+            'remoteUrl': j.remote_url or '',
+            'error': (j.response_text or '')[:200],
+            'attempts': j.attempts,
+            'color': (site.provider_color if site else '#555') or '#555',
+            'letter': (site.provider_letter if site else '?') or '?',
+            'updatedAt': j.finished_at.isoformat() if j.finished_at else (j.created_at.isoformat() if j.created_at else None),
+        })
+
+    # Özet istatistikler
+    all_statuses = [p['status'] for v in videos_map.values() for p in v['providers']]
+    stats = {
+        'totalVideos': len(videos_map),
+        'totalJobs': len(all_statuses),
+        'success': all_statuses.count('success'),
+        'failed': all_statuses.count('failed'),
+        'running': all_statuses.count('running'),
+        'pending': all_statuses.count('pending'),
+        'skipped': all_statuses.count('skipped'),
+    }
+
+    # En son güncellenen videolar önce gelsin
+    videos_list = list(videos_map.values())
+
+    return Response({'videos': videos_list, 'stats': stats})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_job_retry(request, job_id):
+    """Admin: Herhangi bir kullanıcının job'unu yeniden dene."""
+    if getattr(request.user, 'role', '') != 'admin':
+        return Response({'error': 'yetkisiz'}, status=403)
+    try:
+        job = CrossPostJob.objects.select_related('site', 'video').get(id=job_id)
+    except CrossPostJob.DoesNotExist:
+        return Response({'error': 'Bulunamadı'}, status=404)
+    if job.status not in ('failed', 'skipped'):
+        return Response({'error': 'Yalnızca başarısız/atlanan işler yeniden denenir'}, status=400)
+    from .dispatcher import _run_job
+    job.status = 'pending'
+    job.save(update_fields=['status'])
+    _run_job(job)
+    return Response({'job': job.to_dict()})
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def job_retry(request, job_id):

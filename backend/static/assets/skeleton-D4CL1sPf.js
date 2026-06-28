@@ -1,0 +1,1 @@
+import{j as m}from"./react-query-BS7tmDKE.js";import{f as o}from"./index-DEXZyLid.js";function a({className:r,...e}){return m.jsx("div",{className:o("animate-pulse rounded-md bg-primary/10",r),...e})}export{a as S};

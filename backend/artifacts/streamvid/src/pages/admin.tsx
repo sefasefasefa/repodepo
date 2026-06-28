@@ -27,7 +27,8 @@ import AdminGiftSubscriptions from "@/components/admin/admin-gift-subscriptions"
 import AdminLinkModeration from "@/components/admin/admin-link-moderation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminFeatureFlags } from "@/components/admin/admin-feature-flags";
-import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Bitcoin, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft } from "lucide-react";
+import AdminCrosspostMonitor from "@/components/admin/admin-crosspost-monitor";
+import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Bitcoin, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -58,6 +59,7 @@ const TABS = [
   { id: "gifts",        label: "Hediye Abonelik",    icon: Gift },
   { id: "link-mod",     label: "Link Moderasyon",    icon: AlertTriangle },
   { id: "features",     label: "Özellikler",          icon: ToggleLeft },
+  { id: "crosspost-monitor", label: "Crosspost İzleme", icon: RadioTower },
 ];
 
 function StatCard({ label, value, sub, icon: Icon, color }: { label: string; value: any; sub?: string; icon: any; color?: string }) {
@@ -196,6 +198,7 @@ export default function Admin() {
             {tab === "gifts" && <AdminGiftSubscriptions />}
             {tab === "link-mod" && <AdminLinkModeration />}
             {tab === "features" && <AdminFeatureFlags />}
+            {tab === "crosspost-monitor" && <AdminCrosspostMonitor />}
             {tab === "health" && (
               <div className="space-y-6 max-w-5xl">
                 <h1 className="text-2xl font-bold">Sağlık Monitörü</h1>
