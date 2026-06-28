@@ -1,0 +1,102 @@
+Already up to date
+Done in 2.3s using pnpm v11.9.0
+$ vite build --config vite.config.ts
+vite v7.3.3 building client environment for production...
+✓ 3689 modules transformed.
+dist/public/index.html                                      5.01 kB
+dist/public/assets/index-CLFP66ke.css                     254.40 kB
+dist/public/assets/skeleton-DxkmMvm_.js                     0.22 kB
+dist/public/assets/label-Dp8RTFW-.js                        0.44 kB
+dist/public/assets/textarea-Bo19PXVi.js                     0.53 kB
+dist/public/assets/badge-CDabnm8q.js                        0.80 kB
+dist/public/assets/link-filter-CCJRzgw1.js                  0.91 kB
+dist/public/assets/tabs--RUpNtDB.js                         1.17 kB
+dist/public/assets/button-DCONFcoI.js                       1.39 kB
+dist/public/assets/watch-progress-lRiSNh98.js               1.64 kB
+dist/public/assets/screen-protection-overlay-CstSCAGl.js    2.06 kB
+dist/public/assets/creators-BOsJL2kK.js                     2.42 kB
+dist/public/assets/use-screen-protection-CfJfeS0U.js        2.49 kB
+dist/public/assets/developer-C6MzZO-U.js                    2.73 kB
+dist/public/assets/video-card-z3XWXewg.js                   3.25 kB
+dist/public/assets/index-D2n8ztvH.js                        3.58 kB
+dist/public/assets/notifications-BpMK7dL-.js                3.72 kB
+dist/public/assets/not-found-CNFWpx8o.js                    3.77 kB
+dist/public/assets/categories-yP-k8XCd.js                   4.33 kB
+dist/public/assets/playlist-detail-DXoF2tf-.js              4.35 kB
+dist/public/assets/pricing-CD8tznBt.js                      4.81 kB
+dist/public/assets/bookmarks-B74f4UgC.js                    5.21 kB
+dist/public/assets/category-detail-D4YYECTT.js              5.32 kB
+dist/public/assets/register-C-43RkE6.js                     5.34 kB
+dist/public/assets/live-streams-ho4Noj18.js                 5.56 kB
+dist/public/assets/history-CBibQAKN.js                      5.76 kB
+dist/public/assets/custom-request-modal-DoLnbkEm.js         5.85 kB
+dist/public/assets/leaderboard-Bnuci9l3.js                  6.52 kB
+dist/public/assets/my-requests-C7a0K_iH.js                  6.62 kB
+dist/public/assets/custom-page-Cb3GEXj1.js                  6.74 kB
+dist/public/assets/search-DajHDbXZ.js                       7.17 kB
+dist/public/assets/playlists-NhiIrcqY.js                    7.35 kB
+dist/public/assets/live-watch-C9RbG9A0.js                   7.42 kB
+dist/public/assets/login-C2T5mGSY.js                        8.36 kB
+dist/public/assets/shorts-CcVWto1j.js                       8.38 kB
+dist/public/assets/subscriptions-D7ArOxEY.js                9.02 kB
+dist/public/assets/videos-DyZhmjgL.js                       9.13 kB
+dist/public/assets/creator-profile-ClCQHVOu.js              9.48 kB
+dist/public/assets/crosspost-jobs-Cv_30Pam.js               9.98 kB
+dist/public/assets/become-creator-Cv-5I7cR.js              10.67 kB
+dist/public/assets/public-profile-qxrtyR9i.js              10.77 kB
+dist/public/assets/affiliate-CrNHPIzY.js                   11.27 kB
+dist/public/assets/routing-Bzd4TU89.js                     13.20 kB
+dist/public/assets/payment-0QHhyGPm.js                     13.29 kB
+dist/public/assets/stories-B5EPqoLc.js                     14.98 kB
+dist/public/assets/downloads-DN93aom_.js                   16.03 kB
+dist/public/assets/profile-BaZINAzG.js                     19.77 kB
+dist/public/assets/home-DUiYwcJs.js                        20.82 kB
+dist/public/assets/match-rooms-1DM731j-.js                 20.88 kB
+dist/public/assets/messages-BSM5USJ4.js                    23.93 kB
+dist/public/assets/react-query-BS7tmDKE.js                 39.93 kB
+dist/public/assets/icons-D7rcC71D.js                       45.53 kB
+dist/public/assets/utils-BdEa6iqF.js                       49.55 kB
+dist/public/assets/app-layout-CPWqJmbi.js                  57.25 kB
+dist/public/assets/creator-dashboard-BX4xQFbc.js           60.12 kB
+dist/public/assets/upload-DDgbwoqC.js                      82.54 kB
+dist/public/assets/form-Kd82x-HL.js                        85.94 kB
+dist/public/assets/video-watch-CiOTbqRd.js                100.73 kB
+dist/public/assets/ui-radix-B7D3ahvu.js                   117.87 kB
+dist/public/assets/index-BFJNjzlK.js                      247.90 kB
+dist/public/assets/charts-Bo3zW_R_.js                     443.32 kB
+dist/public/assets/hls-DkI61o3c.js                        522.13 kB
+dist/public/assets/admin-DLmqkjyE.js                      593.96 kB
+✓ built in 56.98s
+   Statik dosyalar kopyalaniyor...
+   Frontend build tamamlandi.
+[5/6] Veritabani migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, tokens, videos
+Running migrations:
+  No migrations to apply.
+[6/6] Statik dosyalar toplaniyor...
+
+Guncelleme tamamlandi! Sunucu baslatiliyor...
+
+Windows: Donanim analiz ediliyor...
+
+  Donanim  : 3 CPU cekirdek, 4095MB GB RAM
+  Threads  : 24  (cpu_core x8, min=16, max=64)
+  Conn Lmt : 579  (RAM'e gore otomatik)
+  Timeout  : 120 s
+
+Waitress sunucusu baslatiliyor (port 8000)...
+INFO 2026-06-29 00:56:05,386 wasyncore Serving on http://0.0.0.0:8000
+ERROR 2026-06-29 00:57:59,095 log Bad Gateway: /api/videos/15/stream
+ERROR 2026-06-29 00:58:00,166 log Bad Gateway: /api/videos/15/stream
+ERROR 2026-06-29 00:58:01,100 log Bad Gateway: /api/videos/15/stream
+ERROR 2026-06-29 00:58:02,034 log Bad Gateway: /api/videos/15/stream
+ERROR 2026-06-29 00:58:04,430 log Bad Gateway: /api/videos/15/stream
+ERROR 2026-06-29 00:58:05,367 log Bad Gateway: /api/videos/15/stream
+WARNING 2026-06-29 00:58:47,002 log Not Found: /api/videos/15/stream
+WARNING 2026-06-29 00:58:47,149 log Not Found: /api/videos/15/heatmap
+WARNING 2026-06-29 00:58:47,162 log Not Found: /api/videos/15/stream
+ERROR 2026-06-29 00:58:47,958 log Bad Gateway: /api/videos/16/stream
+ERROR 2026-06-29 00:58:49,159 log Bad Gateway: /api/videos/16/stream
+ERROR 2026-06-29 00:58:50,077 log Bad Gateway: /api/videos/16/stream
+ERROR 2026-06-29 00:58:51,053 log Bad Gateway: /api/videos/16/stream
