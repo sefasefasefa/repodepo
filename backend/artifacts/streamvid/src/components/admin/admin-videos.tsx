@@ -983,8 +983,9 @@ export function AdminVideos() {
   const [bulkFetching, setBulkFetching] = useState(false);
   const [bulkFetchResult, setBulkFetchResult] = useState<string | null>(null);
   const [jobSummary, setJobSummary] = useState<Record<string, any[]>>({});
-  const [dlStatuses, setDlStatuses] = useState<Record<number, { status: string | null; percent: number; isLocal: boolean; title: string }>>({});
+  const [dlStatuses, setDlStatuses] = useState<Record<number, { status: string | null; percent: number; isLocal: boolean; title: string; errorMessage?: string | null }>>({});
   const [showDlPanel, setShowDlPanel] = useState(true);
+  const [retrying, setRetrying] = useState<Record<number, boolean>>({});
 
   const { data, isLoading } = useListVideos({ page, limit: 20 } as any);
   const { data: catsData } = useListCategories();
@@ -1031,7 +1032,7 @@ export function AdminVideos() {
     if (!externalVideos.length) return;
 
     const fetchAll = async () => {
-      const updates: Record<number, { status: string | null; percent: number; isLocal: boolean; title: string }> = {};
+      const updates: Record<number, { status: string | null; percent: number; isLocal: boolean; title: string; errorMessage?: string | null }> = {};
       await Promise.all(externalVideos.map(async (v: any) => {
         try {
           const res = await fetch(`/api/videos/${v.id}/fetch-status`, {
@@ -1039,7 +1040,7 @@ export function AdminVideos() {
           });
           if (!res.ok) return;
           const d = await res.json();
-          updates[v.id] = { status: d.status ?? null, percent: d.percent ?? 0, isLocal: d.isLocal ?? false, title: v.title };
+          updates[v.id] = { status: d.status ?? null, percent: d.percent ?? 0, isLocal: d.isLocal ?? false, title: v.title, errorMessage: d.errorMessage ?? null };
         } catch { /* sessizce geç */ }
       }));
       setDlStatuses(prev => ({ ...prev, ...updates }));
@@ -1211,7 +1212,7 @@ export function AdminVideos() {
                             ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
                             : <Download className="h-4 w-4 text-[#555]" />}
                     </div>
-                    {/* Başlık + progress */}
+                    {/* Başlık + progress + hata mesajı */}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-white truncate">{info.title}</p>
                       {isActive && (
@@ -1227,13 +1228,41 @@ export function AdminVideos() {
                           </span>
                         </div>
                       )}
+                      {isError && info.errorMessage && (
+                        <p className="text-[10px] text-red-400/80 mt-0.5 truncate" title={info.errorMessage}>
+                          {info.errorMessage.length > 80 ? info.errorMessage.slice(0, 80) + "…" : info.errorMessage}
+                        </p>
+                      )}
                     </div>
-                    {/* Durum etiketi */}
-                    <div className="shrink-0">
+                    {/* Durum etiketi + retry */}
+                    <div className="shrink-0 flex items-center gap-1.5">
                       {isDone
                         ? <span className="text-[10px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full font-bold border border-green-500/20">Yerel ✓</span>
                         : isError
-                          ? <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/20">Hata</span>
+                          ? <>
+                              <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/20">Hata</span>
+                              <button
+                                disabled={retrying[Number(id)]}
+                                onClick={async () => {
+                                  setRetrying(p => ({ ...p, [Number(id)]: true }));
+                                  try {
+                                    const token = localStorage.getItem("token");
+                                    await fetch(`/api/videos/${id}/fetch-from-url`, {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                                    });
+                                    setDlStatuses(p => ({ ...p, [Number(id)]: { ...p[Number(id)], status: "pending", percent: 0, errorMessage: null } }));
+                                  } finally {
+                                    setRetrying(p => ({ ...p, [Number(id)]: false }));
+                                  }
+                                }}
+                                title="Yeniden dene"
+                                className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/20 hover:bg-orange-500/25 transition-colors disabled:opacity-50"
+                              >
+                                {retrying[Number(id)] ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <RefreshCw className="h-2.5 w-2.5" />}
+                                Tekrar
+                              </button>
+                            </>
                           : isActive
                             ? <span className="text-[10px] bg-blue-500/15 text-blue-400 px-2 py-0.5 rounded-full font-bold border border-blue-500/20">İndiriliyor</span>
                             : <span className="text-[10px] bg-[#1a1a1a] text-[#555] px-2 py-0.5 rounded-full font-bold border border-[#2a2a2a]">Bekleniyor</span>}

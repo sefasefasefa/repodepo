@@ -1978,11 +1978,16 @@ def fetch_video_status(request, video_id):
     if local:
         status_val = 'done'
 
+    error_msg = None
+    if status_val and str(status_val).startswith('error:'):
+        error_msg = str(status_val)[len('error:'):]
+
     return Response({
         'status': status_val,
         'percent': pct,
         'isLocal': local,
         'videoUrl': video.video_url,
+        'errorMessage': error_msg,
     })
 
 
