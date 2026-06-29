@@ -982,6 +982,8 @@ export function AdminVideos() {
   const [distributeResult, setDistributeResult] = useState<Record<number, string>>({});
   const [bulkFetching, setBulkFetching] = useState(false);
   const [bulkFetchResult, setBulkFetchResult] = useState<string | null>(null);
+  const [thumbGenerating, setThumbGenerating] = useState(false);
+  const [thumbResult, setThumbResult] = useState<string | null>(null);
   const [jobSummary, setJobSummary] = useState<Record<string, any[]>>({});
   const [dlStatuses, setDlStatuses] = useState<Record<number, { status: string | null; percent: number; isLocal: boolean; title: string; errorMessage?: string | null }>>({});
   const [showDlPanel, setShowDlPanel] = useState(true);
@@ -1165,6 +1167,33 @@ export function AdminVideos() {
             {bulkFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
             <span className="hidden sm:inline">{bulkFetching ? "İndiriliyor..." : "Tümünü İndir"}</span>
           </button>
+          <button
+            onClick={async () => {
+              if (thumbGenerating) return;
+              setThumbGenerating(true);
+              setThumbResult(null);
+              try {
+                const token = localStorage.getItem("token");
+                const res = await fetch("/api/videos/bulk-generate-thumbnails", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                });
+                const d = await res.json().catch(() => ({}));
+                setThumbResult(d.message || "Thumbnail üretimi başlatıldı");
+                setTimeout(() => setThumbResult(null), 8000);
+              } catch {
+                setThumbResult("Hata oluştu");
+              } finally {
+                setThumbGenerating(false);
+              }
+            }}
+            disabled={thumbGenerating}
+            title="Thumbnail'i olmayan tüm videolar için otomatik üret"
+            className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3 rounded-lg bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-600/30 transition-colors shrink-0 disabled:opacity-50"
+          >
+            {thumbGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Image className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">{thumbGenerating ? "Üretiliyor..." : "Thumbnail Üret"}</span>
+          </button>
           <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-white text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-colors shrink-0">
             <Plus className="h-3.5 w-3.5" /><span className="hidden sm:inline">Video </span>Ekle
           </button>
@@ -1173,6 +1202,11 @@ export function AdminVideos() {
       {bulkFetchResult && (
         <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg px-4 py-2.5 text-blue-300 text-xs font-medium">
           ✓ {bulkFetchResult}
+        </div>
+      )}
+      {thumbResult && (
+        <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg px-4 py-2.5 text-emerald-300 text-xs font-medium">
+          ✓ {thumbResult}
         </div>
       )}
 

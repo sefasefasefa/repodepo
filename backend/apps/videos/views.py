@@ -2153,3 +2153,36 @@ def bulk_fetch_all_videos(request):
         'queued': queued,
         'skipped': skipped,
     })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_generate_thumbnails(request):
+    """
+    Thumbnail'i olmayan tüm videolar için ffmpeg ile otomatik thumbnail üretir.
+    Sadece admin/moderator kullanabilir.
+    """
+    if request.user.role not in ('admin', 'moderator'):
+        return Response({'error': 'Admin yetkisi gerekli'}, status=403)
+
+    from apps.videos.thumbnail_utils import auto_generate_thumbnail_async
+
+    videos = Video.objects.filter(thumbnail_url__isnull=True).exclude(
+        thumbnail_url=''
+    ) | Video.objects.filter(thumbnail_url='')
+
+    queued = 0
+    skipped = 0
+    for video in videos:
+        url = video.video_url or video.hls_url or ''
+        if not url:
+            skipped += 1
+            continue
+        auto_generate_thumbnail_async(video)
+        queued += 1
+
+    return Response({
+        'message': f'{queued} video için thumbnail üretimi başlatıldı',
+        'queued': queued,
+        'skipped': skipped,
+    })

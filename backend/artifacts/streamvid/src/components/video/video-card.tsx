@@ -1,15 +1,22 @@
 import { Link } from "wouter";
+import { useRef, useState, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Video } from "@workspace/api-client-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Play } from "lucide-react";
+import { Play, Volume2, VolumeX } from "lucide-react";
 
 interface VideoCardProps {
   video: Video;
 }
 
 export function VideoCard({ video }: VideoCardProps) {
+  const [previewing, setPreviewing] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressActive = useRef(false);
+
   const formatDuration = (seconds?: number | null): string | null => {
     if (!seconds || seconds <= 0 || !Number.isFinite(seconds)) return null;
     const h = Math.floor(seconds / 3600);
@@ -25,27 +32,124 @@ export function VideoCard({ video }: VideoCardProps) {
     return views.toString();
   };
 
+  const previewUrl = (video as any).videoUrl || (video as any).hlsUrl || "";
+  const canPreview = !!previewUrl;
+
+  const startPreview = useCallback(() => {
+    if (!canPreview) return;
+    setPreviewing(true);
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = 0;
+        videoRef.current.play().catch(() => {});
+      }
+    }, 50);
+  }, [canPreview]);
+
+  const stopPreview = useCallback(() => {
+    setPreviewing(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  }, []);
+
+  // Desktop: hover
+  const handleMouseEnter = useCallback(() => {
+    if (canPreview) startPreview();
+  }, [canPreview, startPreview]);
+
+  const handleMouseLeave = useCallback(() => {
+    stopPreview();
+  }, [stopPreview]);
+
+  // Mobile: basılı tut (long-press)
+  const handleTouchStart = useCallback(() => {
+    longPressActive.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressActive.current = true;
+      startPreview();
+    }, 500);
+  }, [startPreview]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    if (longPressActive.current) {
+      stopPreview();
+      longPressActive.current = false;
+    }
+  }, [stopPreview]);
+
+  const toggleMute = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const next = !muted;
+    setMuted(next);
+    if (videoRef.current) videoRef.current.muted = next;
+  }, [muted]);
+
+  const videoHref = `/videos/${(video as any).slug || (video as any).uuid || video.id}`;
+
   return (
     <div className="flex flex-col gap-2 group">
-      <Link href={`/videos/${(video as any).slug || (video as any).uuid || video.id}`}>
-        <div className="relative aspect-video rounded-xl overflow-hidden bg-muted cursor-pointer touch-manipulation">
+      <Link href={videoHref}>
+        <div
+          className="relative aspect-video rounded-xl overflow-hidden bg-muted cursor-pointer touch-manipulation select-none"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+        >
+          {/* Thumbnail */}
           {video.thumbnailUrl ? (
             <img
               src={video.thumbnailUrl}
               alt={video.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-105 ${previewing ? "opacity-0" : "opacity-100"}`}
               loading="lazy"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-secondary/50 group-hover:bg-secondary transition-colors">
+            <div className={`w-full h-full flex items-center justify-center bg-secondary/50 transition-colors ${previewing ? "opacity-0" : "opacity-100 group-hover:bg-secondary"}`}>
               <Play className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground opacity-50" />
             </div>
           )}
+
+          {/* Video önizleme */}
+          {canPreview && (
+            <video
+              ref={videoRef}
+              src={previewUrl}
+              muted={muted}
+              loop
+              playsInline
+              preload="none"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${previewing ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            />
+          )}
+
+          {/* Ses butonu — önizleme aktifken */}
+          {previewing && canPreview && (
+            <button
+              onClick={toggleMute}
+              onTouchEnd={toggleMute}
+              className="absolute bottom-7 right-1.5 z-10 bg-black/60 backdrop-blur-sm rounded-full p-1 hover:bg-black/80 transition-colors"
+              aria-label={muted ? "Sesi aç" : "Sesi kapat"}
+            >
+              {muted
+                ? <VolumeX className="h-3 w-3 text-white" />
+                : <Volume2 className="h-3 w-3 text-white" />
+              }
+            </button>
+          )}
+
+          {/* Süre */}
           {formatDuration(video.duration) && (
             <div className="absolute bottom-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium text-white backdrop-blur-sm">
               {formatDuration(video.duration)}
             </div>
           )}
+
           {video.isPremium && (
             <div className="absolute top-1.5 right-1.5">
               <Badge variant="default" className="bg-primary text-primary-foreground border-none text-[10px] px-1.5 py-0">
@@ -55,6 +159,7 @@ export function VideoCard({ video }: VideoCardProps) {
           )}
         </div>
       </Link>
+
       <div className="flex gap-2 items-start">
         <Link href={`/creators/${video.creator.id}`}>
           <Avatar className="h-7 w-7 sm:h-8 sm:w-8 mt-0.5 cursor-pointer border border-border/50 shrink-0 touch-manipulation">
@@ -63,7 +168,7 @@ export function VideoCard({ video }: VideoCardProps) {
           </Avatar>
         </Link>
         <div className="flex flex-col overflow-hidden min-w-0">
-          <Link href={`/videos/${(video as any).slug || (video as any).uuid || video.id}`}>
+          <Link href={videoHref}>
             <h3 className="font-semibold text-xs sm:text-sm leading-snug line-clamp-2 hover:text-primary transition-colors cursor-pointer touch-manipulation" title={video.title}>
               {video.title}
             </h3>
