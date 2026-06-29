@@ -1857,34 +1857,46 @@ def _download_any_url_to_server(video_id):
             origin  = f'{parsed.scheme}://{parsed.netloc}'
             referer = origin + '/'
 
-            header_variants = [
-                # 1) Tam tarayıcı taklidi — Referer + Origin kendi CDN'i
-                {
+            # Bilinen CDN'ler için özel Referer listesi
+            known_referers = [referer]
+            host = parsed.netloc.lower()
+            # vwfastdelivery, leakvids, voe gibi CDN'ler için popüler kaynak siteleri dene
+            if any(k in host for k in ['fastdelivery', 'fast-delivery', 'vwfast', 'leakvid', 'voe', 'vidoza', 'streamtape', 'doodstream']):
+                known_referers += [
+                    'https://vidoza.net/',
+                    'https://voe.sx/',
+                    'https://leakvids.com/',
+                    'https://streamtape.com/',
+                    'https://doodstream.com/',
+                    '',  # Referer yok
+                ]
+            else:
+                known_referers.append('')  # Referer yok
+
+            header_variants = []
+            for ref in known_referers:
+                h = {
                     'User-Agent': UA,
                     'Accept': 'video/webm,video/ogg,video/*;q=0.9,*/*;q=0.8',
                     'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-                    'Referer': referer,
-                    'Origin': origin,
                     'Sec-Fetch-Dest': 'video',
                     'Sec-Fetch-Mode': 'no-cors',
-                    'Sec-Fetch-Site': 'same-origin',
                     'Range': 'bytes=0-',
-                },
-                # 2) Referer olmadan sade istek
-                {
-                    'User-Agent': UA,
-                    'Accept': 'video/*,*/*',
-                    'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
-                },
-                # 3) Curl taklidi
-                {
-                    'User-Agent': 'curl/7.88.1',
-                    'Accept': '*/*',
-                },
-            ]
+                }
+                if ref:
+                    h['Referer'] = ref
+                    h['Origin'] = ref.rstrip('/')
+                    h['Sec-Fetch-Site'] = 'cross-site'
+                else:
+                    h['Sec-Fetch-Site'] = 'none'
+                header_variants.append(h)
+            # Curl taklidi son çare olarak ekle
+            header_variants.append({'User-Agent': 'curl/7.88.1', 'Accept': '*/*'})
+
             if extra_headers:
                 header_variants.insert(0, {**header_variants[0], **extra_headers})
 
+            last_status = 0
             last_err = ''
             for hdrs in header_variants:
                 try:
@@ -1893,16 +1905,61 @@ def _download_any_url_to_server(video_id):
                         timeout=180, allow_redirects=True,
                         verify=True,
                     )
-                    # 206 Partial Content da başarı sayılır
                     if r.status_code in (200, 206):
                         return r, ''
-                    # 410 Gone — dosya silinmiş, denemeye gerek yok
                     if r.status_code == 410:
-                        return None, f'Dosya artık mevcut değil (410 Gone) — kaynak sunucudan silinmiş olabilir'
+                        return None, 'Dosya artık mevcut değil (410 Gone) — kaynak sunucudan silinmiş olabilir'
+                    last_status = r.status_code
                     last_err = f'HTTP {r.status_code}'
                 except Exception as e:
                     last_err = f'{type(e).__name__}: {e}'
+
+            # Tüm header denemeleri başarısız — yt-dlp ile dene
             return None, last_err
+
+        def _try_ytdlp(url, upload_dir, ck_pct):
+            """yt-dlp ile indirmeyi dener. (local_path, local_url, hata_str) döner."""
+            import subprocess, glob as _glob, shutil
+            ytdlp_bin = shutil.which('yt-dlp') or 'yt-dlp'
+            import tempfile
+            tmp_dir = tempfile.mkdtemp(prefix='ytdl_')
+            try:
+                out_tmpl = os.path.join(tmp_dir, '%(id)s.%(ext)s')
+                cmd = [
+                    ytdlp_bin,
+                    '--no-playlist',
+                    '--no-warnings',
+                    '--quiet',
+                    '--no-part',
+                    '--format', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                    '--output', out_tmpl,
+                    url,
+                ]
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+                if proc.returncode != 0:
+                    err = (proc.stderr or proc.stdout or '').strip()[-300:] or 'yt-dlp başarısız'
+                    return None, None, f'yt-dlp: {err}'
+
+                files = _glob.glob(os.path.join(tmp_dir, '*'))
+                if not files:
+                    return None, None, 'yt-dlp: dosya üretilmedi'
+
+                src = files[0]
+                ext = os.path.splitext(src)[1] or '.mp4'
+                import uuid as _uuid2
+                fname = f'{_uuid2.uuid4().hex}{ext}'
+                dest = os.path.join(upload_dir, fname)
+                shutil.move(src, dest)
+                return dest, f'/media/uploads/{fname}', ''
+            except subprocess.TimeoutExpired:
+                return None, None, 'yt-dlp: indirme zaman aşımı (10 dk)'
+            except Exception as e:
+                return None, None, f'yt-dlp: {type(e).__name__}: {e}'
+            finally:
+                try:
+                    import shutil as _sh; _sh.rmtree(tmp_dir, ignore_errors=True)
+                except Exception:
+                    pass
 
         try:
             video = Video.objects.get(id=video_id)
@@ -1918,54 +1975,63 @@ def _download_any_url_to_server(video_id):
                 if resolved and resolved != raw_url:
                     raw_url = resolved
 
-            resp, err = _try_fetch(raw_url)
-            if resp is None:
-                cache.set(ck_status, f'error:{err}', 7200)
-                return
-
-            total = int(resp.headers.get('Content-Length', 0)) or 0
-            ct    = resp.headers.get('Content-Type', 'video/mp4').split(';')[0].strip().lower()
-
-            # Uzantı: önce URL yoluna bak, sonra content-type'a
-            ext = '.mp4'
-            url_path = urlparse(resp.url).path.lower()
-            for x in ['.mp4', '.webm', '.mkv', '.ogv', '.ogg', '.ts']:
-                if url_path.endswith(x):
-                    ext = x
-                    break
-            else:
-                ct_map = {
-                    'video/webm': '.webm', 'video/x-matroska': '.mkv',
-                    'video/ogg': '.ogv', 'video/mp2t': '.ts',
-                }
-                ext = ct_map.get(ct, '.mp4')
-
-            filename   = f'{_uuid.uuid4().hex}{ext}'
             upload_dir = os.path.join(_s.MEDIA_ROOT, 'uploads')
             os.makedirs(upload_dir, exist_ok=True)
-            local_path = os.path.join(upload_dir, filename)
-            local_url  = f'/media/uploads/{filename}'
 
-            downloaded = 0
-            with open(local_path, 'wb') as fh:
-                for chunk in resp.iter_content(chunk_size=512 * 1024):
-                    if chunk:
-                        fh.write(chunk)
-                        downloaded += len(chunk)
-                        if total:
-                            pct = int(downloaded * 100 / total)
-                            cache.set(ck_pct, pct, 7200)
+            resp, http_err = _try_fetch(raw_url)
 
-            # Boş dosya indiyse hata ver
-            if downloaded == 0:
-                try:
-                    os.remove(local_path)
-                except Exception:
-                    pass
-                cache.set(ck_status, 'error:Sunucu boş yanıt döndürdü — URL geçersiz olabilir', 7200)
-                return
+            if resp is not None:
+                # ── Doğrudan HTTP indirme ─────────────────────────────────────
+                total = int(resp.headers.get('Content-Length', 0)) or 0
+                ct    = resp.headers.get('Content-Type', 'video/mp4').split(';')[0].strip().lower()
 
-            # Video kaydını güncelle (hem video_url hem hls_url temizle)
+                ext = '.mp4'
+                url_path = urlparse(resp.url).path.lower()
+                for x in ['.mp4', '.webm', '.mkv', '.ogv', '.ogg', '.ts']:
+                    if url_path.endswith(x):
+                        ext = x
+                        break
+                else:
+                    ct_map = {
+                        'video/webm': '.webm', 'video/x-matroska': '.mkv',
+                        'video/ogg': '.ogv', 'video/mp2t': '.ts',
+                    }
+                    ext = ct_map.get(ct, '.mp4')
+
+                filename   = f'{_uuid.uuid4().hex}{ext}'
+                local_path = os.path.join(upload_dir, filename)
+                local_url  = f'/media/uploads/{filename}'
+
+                downloaded = 0
+                with open(local_path, 'wb') as fh:
+                    for chunk in resp.iter_content(chunk_size=512 * 1024):
+                        if chunk:
+                            fh.write(chunk)
+                            downloaded += len(chunk)
+                            if total:
+                                pct = int(downloaded * 100 / total)
+                                cache.set(ck_pct, pct, 7200)
+
+                if downloaded == 0:
+                    try:
+                        os.remove(local_path)
+                    except Exception:
+                        pass
+                    # HTTP başarısız gibi davran, yt-dlp'ye düş
+                    resp = None
+                    http_err = 'Sunucu boş yanıt döndürdü'
+
+            if resp is None:
+                # ── yt-dlp fallback ───────────────────────────────────────────
+                cache.set(ck_status, 'downloading', 7200)
+                cache.set(ck_pct, 1, 7200)
+                local_path, local_url, ytdlp_err = _try_ytdlp(raw_url, upload_dir, ck_pct)
+                if local_path is None:
+                    combined = f'{http_err} | yt-dlp: {ytdlp_err}' if http_err else ytdlp_err
+                    cache.set(ck_status, f'error:{combined}', 7200)
+                    return
+
+            # ── Başarı ───────────────────────────────────────────────────────
             Video.objects.filter(id=video_id).update(video_url=local_url, hls_url=None)
             cache.set(ck_pct, 100, 7200)
             cache.set(ck_status, 'done', 7200)
