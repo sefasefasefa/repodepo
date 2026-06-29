@@ -134,7 +134,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# WhiteNoise: geliştirmede dosyaları cache'le, her istekte yeniden tarama
+# WhiteNoise: /assets/*, /favicon.*, /mining-worker.js gibi kök URL'leri
+# doğrudan middleware'den sun (Django URL routing'e düşmeden).
+# staticfiles/ altındaki gzip varyantları otomatik kullanılır.
+WHITENOISE_ROOT = str(BASE_DIR / 'staticfiles')
 WHITENOISE_AUTOREFRESH = False
 WHITENOISE_MAX_AGE = 31536000  # 1 yıl (hash'li dosyalar için)
 

@@ -155,16 +155,42 @@ from django.http import FileResponse, HttpResponse, Http404
 
 def _serve_from_static(request, path):
     """Serve files referenced at root (e.g. /assets/*, /favicon.svg, /mining-worker.js).
-    Checks STATICFILES_DIRS first (original Vite build filenames), then STATIC_ROOT."""
+    WhiteNoise (WHITENOISE_ROOT) normally handles these before URL routing runs —
+    this view is a fallback only. Adds long-lived cache headers for hashed assets."""
+    import gzip as _gzip
+
+    accept_enc = request.META.get('HTTP_ACCEPT_ENCODING', '')
+    want_gzip = 'gzip' in accept_enc
+
     candidates = list(settings.STATICFILES_DIRS) + [settings.STATIC_ROOT]
     for root in candidates:
         root = str(root)
         full = os.path.normpath(os.path.join(root, path))
         if not full.startswith(root):
             continue
-        if os.path.exists(full) and os.path.isfile(full):
-            content_type, _ = mimetypes.guess_type(full)
-            return FileResponse(open(full, 'rb'), content_type=content_type or 'application/octet-stream')
+        if not os.path.exists(full) or not os.path.isfile(full):
+            continue
+
+        content_type, _ = mimetypes.guess_type(full)
+        content_type = content_type or 'application/octet-stream'
+
+        # Content-hash'li dosyalar (e.g. index-CJg2NGgO.js) → 1 yıl cache
+        import re as _re
+        is_hashed = bool(_re.search(r'-[A-Za-z0-9_]{8,}\.(js|css|woff2?|png|svg|jpg)$', path))
+        cache_ctrl = 'public, max-age=31536000, immutable' if is_hashed else 'public, max-age=3600'
+
+        # Gzip varsa sun
+        gz_path = full + '.gz'
+        if want_gzip and os.path.exists(gz_path):
+            resp = FileResponse(open(gz_path, 'rb'), content_type=content_type)
+            resp['Content-Encoding'] = 'gzip'
+            resp['Vary'] = 'Accept-Encoding'
+            resp['Cache-Control'] = cache_ctrl
+            return resp
+
+        resp = FileResponse(open(full, 'rb'), content_type=content_type)
+        resp['Cache-Control'] = cache_ctrl
+        return resp
     raise Http404
 
 
