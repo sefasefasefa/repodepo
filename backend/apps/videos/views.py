@@ -1919,19 +1919,13 @@ def _download_any_url_to_server(video_id):
 
         def _try_ytdlp(url, upload_dir, ck_pct):
             """yt-dlp ile indirmeyi dener. (local_path, local_url, hata_str) döner."""
-            import subprocess, glob as _glob, shutil
-            ytdlp_bin = (
-                shutil.which('yt-dlp')
-                or '/home/runner/workspace/.pythonlibs/bin/yt-dlp'
-            )
-            if not os.path.isfile(ytdlp_bin):
-                return None, None, 'yt-dlp binary bulunamadı'
+            import subprocess, glob as _glob, shutil, sys
             import tempfile
             tmp_dir = tempfile.mkdtemp(prefix='ytdl_')
             try:
                 out_tmpl = os.path.join(tmp_dir, '%(id)s.%(ext)s')
                 cmd = [
-                    ytdlp_bin,
+                    sys.executable, '-m', 'yt_dlp',
                     '--no-playlist',
                     '--no-warnings',
                     '--quiet',
