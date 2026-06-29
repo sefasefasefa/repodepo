@@ -244,11 +244,13 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
   const handleLoadedMetadata = useCallback((dur: number) => {
     if (dur && Number.isFinite(dur) && dur > 0 && !video.duration) {
       const tok = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      fetch(`/api/videos/${video.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
-        body: JSON.stringify({ duration: Math.round(dur) }),
-      }).catch(() => {});
+      if (tok) {
+        fetch(`/api/videos/${video.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+          body: JSON.stringify({ duration: Math.round(dur) }),
+        }).catch(() => {});
+      }
     }
     if (resumeSeeked.current) return;
     const saved = loadWatchProgress(video.id);

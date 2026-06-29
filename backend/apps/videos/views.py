@@ -121,6 +121,11 @@ def enrich_video(v, user=None):
 
     cat = v.category
     creator = v.creator
+    # prefetch_related ile yüklendiyse ekstra sorgu yapma
+    try:
+        cat_ids = [c.id for c in v.categories.all()]
+    except Exception:
+        cat_ids = []
 
     return {
         'id': v.id,
@@ -144,7 +149,7 @@ def enrich_video(v, user=None):
         'scheduledPublishAt': v.scheduled_publish_at.isoformat() if v.scheduled_publish_at else None,
         'tags': v.tags or [],
         'categoryId': v.category_id,
-        'categoryIds': list(v.categories.values_list('id', flat=True)),
+        'categoryIds': cat_ids,
         'category': {
             'id': cat.id, 'name': cat.name, 'slug': cat.slug,
             'iconUrl': cat.icon_url, 'videoCount': cat.video_count
@@ -171,6 +176,11 @@ def enrich_videos_bulk(videos, user=None):
     for v in videos:
         cat = v.category
         creator = v.creator
+        # prefetch_related ile yüklendiyse ekstra sorgu yapma
+        try:
+            cat_ids = [c.id for c in v.categories.all()]
+        except Exception:
+            cat_ids = []
         result.append({
             'id': v.id,
             'uuid': str(v.uuid),
@@ -191,7 +201,7 @@ def enrich_videos_bulk(videos, user=None):
             'isPublished': v.is_published,
             'tags': v.tags or [],
             'categoryId': v.category_id,
-            'categoryIds': list(v.categories.values_list('id', flat=True)),
+            'categoryIds': cat_ids,
             'category': {
                 'id': cat.id, 'name': cat.name, 'slug': cat.slug,
                 'iconUrl': cat.icon_url, 'videoCount': cat.video_count
@@ -216,6 +226,18 @@ def auto_publish_scheduled():
     ).update(is_published=True)
 
 
+def _maybe_auto_publish():
+    """auto_publish_scheduled'i her istekte çalıştırmak yerine 5 dakikada bir çalıştır."""
+    ck = 'auto_publish_last_run'
+    if cache.get(ck):
+        return
+    cache.set(ck, True, 300)
+    try:
+        auto_publish_scheduled()
+    except Exception:
+        pass
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_videos(request):
@@ -230,8 +252,17 @@ def list_videos(request):
     min_views = request.query_params.get('minViews')
     min_likes = request.query_params.get('minLikes')
 
-    auto_publish_scheduled()
-    qs = Video.objects.filter(is_published=True).select_related('creator', 'category')
+    _maybe_auto_publish()
+
+    # Anonim kullanıcılar için 90 saniye önbellek
+    is_anon = not request.user.is_authenticated
+    if is_anon and page == 1 and not creator_id:
+        ck = f'list_videos:{sort}:{category_id}:{video_type}:{is_premium}:{limit}:{min_views}:{min_likes}'
+        cached = cache.get(ck)
+        if cached is not None:
+            return Response(cached)
+
+    qs = Video.objects.filter(is_published=True).select_related('creator', 'category').prefetch_related('categories')
     if category_id:
         qs = qs.filter(category_id=category_id)
     if video_type:
@@ -260,10 +291,13 @@ def list_videos(request):
 
     total = qs.count()
     videos = list(qs[offset:offset + limit])
-    return Response({
-        'videos': enrich_videos_bulk(videos, request.user),
+    result = {
+        'videos': enrich_videos_bulk(videos, None if is_anon else request.user),
         'total': total, 'page': page, 'limit': limit,
-    })
+    }
+    if is_anon and page == 1 and not creator_id:
+        cache.set(ck, result, 90)
+    return Response(result)
 
 
 @api_view(['GET'])
@@ -277,13 +311,13 @@ def get_feed(request):
         cached = cache.get(ck)
         if cached is not None:
             return Response(cached)
-        qs = Video.objects.filter(is_published=True, type='video').select_related('creator', 'category').order_by('-created_at')
+        qs = Video.objects.filter(is_published=True, type='video').select_related('creator', 'category').prefetch_related('categories').order_by('-created_at')
         total = qs.count()
         videos = list(qs[:limit])
         result = {'videos': enrich_videos_bulk(videos, None), 'total': total, 'page': 1, 'limit': limit}
         cache.set(ck, result, 90)
         return Response(result)
-    qs = Video.objects.filter(is_published=True, type='video').select_related('creator', 'category').order_by('-created_at')
+    qs = Video.objects.filter(is_published=True, type='video').select_related('creator', 'category').prefetch_related('categories').order_by('-created_at')
     total = qs.count()
     videos = list(qs[offset:offset + limit])
     return Response({
@@ -302,11 +336,11 @@ def get_trending(request):
         cached = cache.get(ck)
         if cached is not None:
             return Response(cached)
-        qs = Video.objects.filter(is_published=True).select_related('creator', 'category').order_by('-view_count', '-like_count')[:limit]
+        qs = Video.objects.filter(is_published=True).select_related('creator', 'category').prefetch_related('categories').order_by('-view_count', '-like_count')[:limit]
         result = {'videos': enrich_videos_bulk(list(qs), None)}
         cache.set(ck, result, 120)
         return Response(result)
-    qs = Video.objects.filter(is_published=True).select_related('creator', 'category').order_by('-view_count', '-like_count')[:limit]
+    qs = Video.objects.filter(is_published=True).select_related('creator', 'category').prefetch_related('categories').order_by('-view_count', '-like_count')[:limit]
     return Response({'videos': enrich_videos_bulk(list(qs), request.user)})
 
 
@@ -321,13 +355,13 @@ def get_shorts(request):
         cached = cache.get(ck)
         if cached is not None:
             return Response(cached)
-        qs = Video.objects.filter(is_published=True, type='short').select_related('creator', 'category').order_by('-created_at')
+        qs = Video.objects.filter(is_published=True, type='short').select_related('creator', 'category').prefetch_related('categories').order_by('-created_at')
         total = qs.count()
         videos = list(qs[:limit])
         result = {'videos': enrich_videos_bulk(videos, None), 'total': total}
         cache.set(ck, result, 90)
         return Response(result)
-    qs = Video.objects.filter(is_published=True, type='short').select_related('creator', 'category').order_by('-created_at')
+    qs = Video.objects.filter(is_published=True, type='short').select_related('creator', 'category').prefetch_related('categories').order_by('-created_at')
     total = qs.count()
     videos = list(qs[offset:offset + limit])
     return Response({'videos': enrich_videos_bulk(videos, request.user), 'total': total})
