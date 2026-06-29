@@ -132,7 +132,11 @@ PASSWORD_HASHERS = [
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
+# WhiteNoise: geliştirmede dosyaları cache'le, her istekte yeniden tarama
+WHITENOISE_AUTOREFRESH = False
+WHITENOISE_MAX_AGE = 31536000  # 1 yıl (hash'li dosyalar için)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

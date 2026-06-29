@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
+    "deploy": "vite build --config vite.config.ts && node -e \"const fs=require('fs'),path=require('path');const dest='../../static/assets';if(fs.existsSync(dest))fs.rmSync(dest,{recursive:true});fs.mkdirSync(dest,{recursive:true});fs.readdirSync('dist/public/assets').forEach(f=>fs.copyFileSync('dist/public/assets/'+f,dest+'/'+f));console.log('Deployed to static/assets')\"",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
