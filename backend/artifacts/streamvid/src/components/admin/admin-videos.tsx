@@ -1132,12 +1132,12 @@ export function AdminVideos() {
       {activeTab === "videos" && <>
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2"><Video className="h-5 w-5 text-primary" /> Video Yönetimi</h1>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-base sm:text-xl font-bold flex items-center gap-2"><Video className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" /><span className="truncate">Video Yönetimi</span></h1>
           <p className="text-xs text-[#555] mt-0.5">{total} video · Sayfa {page}/{Math.max(1, totalPages)}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={async () => {
               if (bulkFetching) return;
@@ -1159,14 +1159,14 @@ export function AdminVideos() {
               }
             }}
             disabled={bulkFetching}
-            title="Tüm harici URL'li videoları sunucuya indir (embed kullanma)"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs font-semibold hover:bg-blue-600/30 transition-colors shrink-0 disabled:opacity-50"
+            title="Tüm harici URL'li videoları sunucuya indir"
+            className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs font-semibold hover:bg-blue-600/30 transition-colors shrink-0 disabled:opacity-50"
           >
             {bulkFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            {bulkFetching ? "İndiriliyor..." : "Tümünü Sunucuya İndir"}
+            <span className="hidden sm:inline">{bulkFetching ? "İndiriliyor..." : "Tümünü İndir"}</span>
           </button>
-          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors shrink-0">
-            <Plus className="h-3.5 w-3.5" /> Video Ekle
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-white text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-colors shrink-0">
+            <Plus className="h-3.5 w-3.5" /><span className="hidden sm:inline">Video </span>Ekle
           </button>
         </div>
       </div>
@@ -1201,72 +1201,73 @@ export function AdminVideos() {
                 const isDone = info.isLocal || info.status === "done";
                 const isError = info.status?.startsWith("error");
                 return (
-                  <div key={id} className="flex items-center gap-3 px-4 py-2.5">
-                    {/* Durum ikonu */}
-                    <div className="shrink-0">
+                  <div key={id} className="px-4 py-2.5 space-y-1.5">
+                    {/* Üst satır: ikon + başlık + durum rozeti */}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="shrink-0">
+                        {isDone
+                          ? <Check className="h-4 w-4 text-green-400" />
+                          : isError
+                            ? <AlertCircle className="h-4 w-4 text-red-400" />
+                            : isActive
+                              ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
+                              : <Download className="h-4 w-4 text-[#555]" />}
+                      </div>
+                      <p className="text-xs font-medium text-white truncate flex-1 min-w-0">{info.title}</p>
+                      {/* Durum rozeti */}
                       {isDone
-                        ? <Check className="h-4 w-4 text-green-400" />
-                        : isError
-                          ? <AlertCircle className="h-4 w-4 text-red-400" />
-                          : isActive
-                            ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
-                            : <Download className="h-4 w-4 text-[#555]" />}
+                        ? <span className="text-[10px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full font-bold border border-green-500/20 shrink-0">Yerel ✓</span>
+                        : isActive
+                          ? <span className="text-[10px] bg-blue-500/15 text-blue-400 px-2 py-0.5 rounded-full font-bold border border-blue-500/20 shrink-0">İndiriliyor</span>
+                          : !isError
+                            ? <span className="text-[10px] bg-[#1a1a1a] text-[#555] px-2 py-0.5 rounded-full font-bold border border-[#2a2a2a] shrink-0">Bekleniyor</span>
+                            : null}
                     </div>
-                    {/* Başlık + progress + hata mesajı */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white truncate">{info.title}</p>
-                      {isActive && (
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="flex-1 h-1 bg-blue-900/50 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-blue-400 rounded-full transition-all duration-500"
-                              style={{ width: `${info.status === "pending" ? 3 : info.percent}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-blue-400 font-bold tabular-nums shrink-0">
-                            {info.status === "pending" ? "Başlıyor..." : `${info.percent}%`}
-                          </span>
+                    {/* İlerleme çubuğu */}
+                    {isActive && (
+                      <div className="flex items-center gap-2 pl-6">
+                        <div className="flex-1 h-1 bg-blue-900/50 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{ width: `${info.status === "pending" ? 3 : info.percent}%` }} />
                         </div>
-                      )}
-                      {isError && info.errorMessage && (
-                        <p className="text-[10px] text-red-400/80 mt-0.5 truncate" title={info.errorMessage}>
-                          {info.errorMessage.length > 80 ? info.errorMessage.slice(0, 80) + "…" : info.errorMessage}
-                        </p>
-                      )}
-                    </div>
-                    {/* Durum etiketi + retry */}
-                    <div className="shrink-0 flex items-center gap-1.5">
-                      {isDone
-                        ? <span className="text-[10px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full font-bold border border-green-500/20">Yerel ✓</span>
-                        : isError
-                          ? <>
-                              <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/20">Hata</span>
-                              <button
-                                disabled={retrying[Number(id)]}
-                                onClick={async () => {
-                                  setRetrying(p => ({ ...p, [Number(id)]: true }));
-                                  try {
-                                    const token = localStorage.getItem("token");
-                                    await fetch(`/api/videos/${id}/fetch-from-url`, {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                                    });
-                                    setDlStatuses(p => ({ ...p, [Number(id)]: { ...p[Number(id)], status: "pending", percent: 0, errorMessage: null } }));
-                                  } finally {
-                                    setRetrying(p => ({ ...p, [Number(id)]: false }));
-                                  }
-                                }}
-                                title="Yeniden dene"
-                                className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/20 hover:bg-orange-500/25 transition-colors disabled:opacity-50"
-                              >
-                                {retrying[Number(id)] ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <RefreshCw className="h-2.5 w-2.5" />}
-                                Tekrar
-                              </button>
-                            </>
-                          : isActive
-                            ? <span className="text-[10px] bg-blue-500/15 text-blue-400 px-2 py-0.5 rounded-full font-bold border border-blue-500/20">İndiriliyor</span>
-                            : <span className="text-[10px] bg-[#1a1a1a] text-[#555] px-2 py-0.5 rounded-full font-bold border border-[#2a2a2a]">Bekleniyor</span>}
-                    </div>
+                        <span className="text-[10px] text-blue-400 font-bold tabular-nums shrink-0">
+                          {info.status === "pending" ? "Başlıyor..." : `${info.percent}%`}
+                        </span>
+                      </div>
+                    )}
+                    {/* Hata satırı: mesaj + Hata rozeti + Tekrar butonu */}
+                    {isError && (
+                      <div className="flex items-center gap-2 pl-6 flex-wrap">
+                        {info.errorMessage && (
+                          <p className="text-[10px] text-red-400/80 truncate flex-1 min-w-0" title={info.errorMessage}>
+                            {info.errorMessage.length > 60 ? info.errorMessage.slice(0, 60) + "…" : info.errorMessage}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                          <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/20">Hata</span>
+                          <button
+                            disabled={retrying[Number(id)]}
+                            onClick={async () => {
+                              setRetrying(p => ({ ...p, [Number(id)]: true }));
+                              try {
+                                const token = localStorage.getItem("token");
+                                await fetch(`/api/videos/${id}/fetch-from-url`, {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                                });
+                                setDlStatuses(p => ({ ...p, [Number(id)]: { ...p[Number(id)], status: "pending", percent: 0, errorMessage: null } }));
+                              } finally {
+                                setRetrying(p => ({ ...p, [Number(id)]: false }));
+                              }
+                            }}
+                            title="Yeniden dene"
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/20 hover:bg-orange-500/25 transition-colors disabled:opacity-50"
+                          >
+                            {retrying[Number(id)] ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <RefreshCw className="h-2.5 w-2.5" />}
+                            Tekrar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1423,37 +1424,37 @@ export function AdminVideos() {
               </div>
 
               {/* Action bar */}
-              <div className="flex items-center gap-1 px-3 pb-3 flex-wrap">
+              <div className="flex items-center gap-1 px-3 pb-3 overflow-x-auto scrollbar-none">
                 {/* Edit */}
-                <button onClick={() => setEditId(editId === video.id ? null : video.id)} title="Düzenle" className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors", editId === video.id ? "bg-primary/20 text-primary" : "bg-[#222] text-[#777] hover:text-white hover:bg-[#2a2a2a]")}>
+                <button onClick={() => setEditId(editId === video.id ? null : video.id)} title="Düzenle" className={cn("flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0", editId === video.id ? "bg-primary/20 text-primary" : "bg-[#222] text-[#777] hover:text-white hover:bg-[#2a2a2a]")}>
                   <Edit2 className="h-3 w-3" /> <span className="hidden sm:inline">Düzenle</span>
                 </button>
 
                 {/* Publish toggle */}
-                <button onClick={() => handleToggle(video, "isPublished", !video.isPublished)} title={video.isPublished ? "Gizle" : "Yayınla"} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#222] text-[#777] hover:text-white hover:bg-[#2a2a2a] transition-colors">
+                <button onClick={() => handleToggle(video, "isPublished", !video.isPublished)} title={video.isPublished ? "Gizle" : "Yayınla"} className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-[#222] text-[#777] hover:text-white hover:bg-[#2a2a2a] transition-colors shrink-0">
                   {video.isPublished ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                   <span className="hidden sm:inline">{video.isPublished ? "Gizle" : "Yayınla"}</span>
                 </button>
 
                 {/* Premium toggle */}
-                <button onClick={() => handleToggle(video, "isPremium", !video.isPremium)} title={video.isPremium ? "Premium Kaldır" : "Premium Yap"} className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors", video.isPremium ? "bg-yellow-900/30 text-yellow-400 hover:bg-yellow-900/50" : "bg-[#222] text-[#777] hover:text-yellow-400 hover:bg-[#2a2a2a]")}>
+                <button onClick={() => handleToggle(video, "isPremium", !video.isPremium)} title={video.isPremium ? "Premium Kaldır" : "Premium Yap"} className={cn("flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0", video.isPremium ? "bg-yellow-900/30 text-yellow-400 hover:bg-yellow-900/50" : "bg-[#222] text-[#777] hover:text-yellow-400 hover:bg-[#2a2a2a]")}>
                   <Crown className="h-3 w-3" /> <span className="hidden sm:inline">{video.isPremium ? "Premium ✓" : "Premium"}</span>
                 </button>
 
                 {/* Players / sources */}
-                <button onClick={() => setPlayersVideoId(video.id)} title="Oynatıcılar" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#222] text-[#777] hover:text-primary hover:bg-[#2a2a2a] transition-colors">
+                <button onClick={() => setPlayersVideoId(video.id)} title="Oynatıcılar" className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-[#222] text-[#777] hover:text-primary hover:bg-[#2a2a2a] transition-colors shrink-0">
                   <PlayCircle className="h-3 w-3" /> <span className="hidden sm:inline">Oynatıcılar</span>
                 </button>
 
                 {/* Distribute */}
-                <button onClick={() => handleDistribute(video)} disabled={distributing === video.id} title="Sağlayıcılara Dağıt" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#222] text-[#777] hover:text-green-400 hover:bg-green-900/20 disabled:opacity-50 transition-colors">
+                <button onClick={() => handleDistribute(video)} disabled={distributing === video.id} title="Sağlayıcılara Dağıt" className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-[#222] text-[#777] hover:text-green-400 hover:bg-green-900/20 disabled:opacity-50 transition-colors shrink-0">
                   {distributing === video.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
                   <span className="hidden sm:inline">Dağıt</span>
                 </button>
 
                 {/* Video URL link */}
                 {(video.videoUrl || video.hlsUrl) && (
-                  <a href={video.videoUrl || video.hlsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#222] text-[#777] hover:text-white hover:bg-[#2a2a2a] transition-colors">
+                  <a href={video.videoUrl || video.hlsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-[#222] text-[#777] hover:text-white hover:bg-[#2a2a2a] transition-colors shrink-0">
                     <ExternalLink className="h-3 w-3" /> <span className="hidden sm:inline">URL</span>
                   </a>
                 )}
