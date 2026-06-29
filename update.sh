@@ -17,14 +17,116 @@ case "$(uname -s)" in
     *) OS="linux" ;;
 esac
 
+# ══════════════════════════════════════════════════════════════════════
+# [0] LINUX: Nginx + HTTPS kurulumu (sadece ilk seferinde, sonra atlar)
+# ══════════════════════════════════════════════════════════════════════
+if [ "$OS" = "linux" ]; then
+
+    # Domain adini .env dosyasindan oku
+    ENV_FILE="backend/.env"
+    DOMAIN=""
+    if [ -f "$ENV_FILE" ]; then
+        RAW=$(grep -E "^ALLOWED_HOSTS=" "$ENV_FILE" | cut -d= -f2 | tr -d ' ')
+        # Virgülle ayrılmış listeden ilk www olmayan, localhost olmayan domaini al
+        for d in $(echo "$RAW" | tr ',' ' '); do
+            case "$d" in
+                localhost|127.*|0.0.0.0|"") continue ;;
+                www.*) DOMAIN="$d"; break ;;
+                *) DOMAIN="$d" ;;
+            esac
+        done
+    fi
+
+    # Domain bulunamazsa sor
+    if [ -z "$DOMAIN" ]; then
+        echo ""
+        echo "   [?] Domain adi bulunamadi. Ornek: hotpulse.me"
+        read -rp "   Domain adini girin: " DOMAIN
+    fi
+
+    # www. ve kök domain her ikisini de hazirla
+    DOMAIN_BARE="${DOMAIN#www.}"
+    DOMAIN_WWW="www.${DOMAIN_BARE}"
+    NGINX_CONF="/etc/nginx/sites-available/hotpulse"
+    NGINX_ENABLED="/etc/nginx/sites-enabled/hotpulse"
+    CERT_PATH="/etc/letsencrypt/live/${DOMAIN_BARE}/fullchain.pem"
+
+    # ── Nginx yuklu degil ise kur ─────────────────────────────────────
+    if ! command -v nginx &>/dev/null; then
+        echo "[0] Nginx + Certbot kuruluyor..."
+        apt-get update -qq
+        apt-get install -y -qq nginx certbot python3-certbot-nginx
+        echo "   Nginx kuruldu."
+    fi
+
+    # ── Nginx site config yoksa olustur ──────────────────────────────
+    if [ ! -f "$NGINX_CONF" ]; then
+        echo "[0] Nginx yapılandırması oluşturuluyor..."
+        cat > "$NGINX_CONF" <<NGINXCONF
+server {
+    listen 80;
+    server_name ${DOMAIN_BARE} ${DOMAIN_WWW};
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300;
+        proxy_connect_timeout 300;
+    }
+
+    client_max_body_size 500M;
+}
+NGINXCONF
+
+        # Eski default site'i devre disi birak
+        rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
+
+        # Yeni config'i aktif et
+        ln -sf "$NGINX_CONF" "$NGINX_ENABLED"
+        nginx -t && systemctl enable nginx && systemctl restart nginx
+        echo "   Nginx yapılandırması tamamlandı (${DOMAIN_BARE})."
+    fi
+
+    # ── SSL sertifikasi yoksa al ──────────────────────────────────────
+    if [ ! -f "$CERT_PATH" ]; then
+        echo "[0] SSL sertifikası alınıyor (Let's Encrypt)..."
+        echo "   Domain: ${DOMAIN_BARE} ve ${DOMAIN_WWW}"
+        echo ""
+        certbot --nginx \
+            -d "${DOMAIN_BARE}" \
+            -d "${DOMAIN_WWW}" \
+            --non-interactive \
+            --agree-tos \
+            --redirect \
+            -m "admin@${DOMAIN_BARE}" 2>/dev/null || \
+        certbot --nginx \
+            -d "${DOMAIN_BARE}" \
+            --non-interactive \
+            --agree-tos \
+            --redirect \
+            -m "admin@${DOMAIN_BARE}"
+        echo "   HTTPS aktif! https://${DOMAIN_BARE}"
+    fi
+
+fi
+# ══════════════════════════════════════════════════════════════════════
+
 # ── 1. Sunucuyu durdur ──────────────────────────────────────────────
 echo "[1/6] Sunucu durduruluyor..."
 if [ "$OS" = "windows" ]; then
     taskkill //F //IM python.exe 2>/dev/null || true
     taskkill //F //IM waitress-serve.exe 2>/dev/null || true
 else
-    pkill -f "gunicorn" 2>/dev/null || true
-    pkill -f "waitress" 2>/dev/null || true
+    # Systemd servisi varsa onu durdur, yoksa direkt pkill
+    if systemctl is-active --quiet hotpulse 2>/dev/null; then
+        systemctl stop hotpulse
+    else
+        pkill -f "gunicorn" 2>/dev/null || true
+        pkill -f "waitress" 2>/dev/null || true
+    fi
 fi
 sleep 1
 
@@ -96,4 +198,16 @@ cd ..
 echo ""
 echo "Guncelleme tamamlandi! Sunucu baslatiliyor..."
 echo ""
-exec ./start.sh
+
+# ── Sunucuyu baslat ────────────────────────────────────────────────
+if [ "$OS" = "linux" ]; then
+    # Systemd servisi varsa onu kullan (daha guvenilir)
+    if systemctl list-unit-files hotpulse.service &>/dev/null 2>&1; then
+        systemctl start hotpulse
+        echo "Sunucu baslatildi (systemd). HTTPS aktif: https://${DOMAIN:-hotpulse.me}"
+    else
+        exec ./start.sh
+    fi
+else
+    exec ./start.sh
+fi
