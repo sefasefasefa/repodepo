@@ -240,6 +240,22 @@ def list_users(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def get_user_by_id(request, user_id):
+    from apps.social.models import Follow
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    is_following = False
+    if request.user.is_authenticated:
+        is_following = Follow.objects.filter(follower=request.user, following=user).exists()
+
+    return Response(format_user(user, is_following=is_following))
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def get_user_profile(request, username):
     from apps.social.models import Follow
     try:

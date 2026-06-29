@@ -25,6 +25,7 @@ urlpatterns = [
     # Users
     path('users', views.list_users),
     path('users/search', views.search_users),
+    path('users/<int:user_id>', views.get_user_by_id),
     path('users/<str:username>', views.get_user_profile),
     path('users/<int:user_id>/videos', acc_ex.user_videos),
     path('users/<int:user_id>/stats', acc_ex.user_stats),
