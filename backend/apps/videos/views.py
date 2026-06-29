@@ -779,6 +779,13 @@ def create_video(request):
     # Kendi Oynatıcı kapalıysa video_url / hls_url'i temizle (crosspost'tan sonra)
     save_to_own_player = data.get('saveToOwnPlayer', data.get('save_to_own_player', True))
 
+    # Thumbnail yoksa otomatik üret (arka planda) — video_url temizlenmeden ÖNCE çağır
+    try:
+        from apps.videos.thumbnail_utils import auto_generate_thumbnail_async
+        auto_generate_thumbnail_async(video)
+    except Exception:
+        pass
+
     # Cross-posting: video eklenince otomatik olarak auto_post=True sitelere gönder
     try:
         site_ids = data.get('crossPostSiteIds')
@@ -801,13 +808,6 @@ def create_video(request):
         Video.objects.filter(id=video.id).update(video_url=None, hls_url=None)
         video.video_url = None
         video.hls_url = None
-
-    # Thumbnail yoksa otomatik üret (arka planda)
-    try:
-        from apps.videos.thumbnail_utils import auto_generate_thumbnail_async
-        auto_generate_thumbnail_async(video)
-    except Exception:
-        pass
 
     # Harici URL varsa arka planda sunucuya indir (embed asla kullanılmayacak)
     try:
@@ -2160,29 +2160,30 @@ def bulk_fetch_all_videos(request):
 def bulk_generate_thumbnails(request):
     """
     Thumbnail'i olmayan tüm videolar için ffmpeg ile otomatik thumbnail üretir.
+    video_url/hls_url boş olan videolar için crosspost stream URL'leri de denenir.
     Sadece admin/moderator kullanabilir.
     """
     if request.user.role not in ('admin', 'moderator'):
         return Response({'error': 'Admin yetkisi gerekli'}, status=403)
 
-    from apps.videos.thumbnail_utils import auto_generate_thumbnail_async
+    from apps.videos.thumbnail_utils import auto_generate_thumbnail_async, _find_source_url
 
-    videos = Video.objects.filter(thumbnail_url__isnull=True).exclude(
-        thumbnail_url=''
-    ) | Video.objects.filter(thumbnail_url='')
+    videos = (
+        Video.objects.filter(thumbnail_url__isnull=True) |
+        Video.objects.filter(thumbnail_url='')
+    ).distinct()
 
     queued = 0
     skipped = 0
     for video in videos:
-        url = video.video_url or video.hls_url or ''
-        if not url:
+        if _find_source_url(video) is None:
             skipped += 1
             continue
         auto_generate_thumbnail_async(video)
         queued += 1
 
     return Response({
-        'message': f'{queued} video için thumbnail üretimi başlatıldı',
+        'message': f'{queued} video için thumbnail üretimi başlatıldı, {skipped} video atlandı (kaynak URL yok)',
         'queued': queued,
         'skipped': skipped,
     })

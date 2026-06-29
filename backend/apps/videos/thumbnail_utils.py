@@ -1,31 +1,29 @@
 """
 Otomatik thumbnail (küçük resim) üretimi — ffmpeg tabanlı.
 
-Kullanım:
-    from apps.videos.thumbnail_utils import auto_generate_thumbnail
-    auto_generate_thumbnail(video)   # Video nesnesi gerekli
-
 Çalışma şekli:
   1. Video yerel dosyaysa (/media/uploads/…) → ffmpeg doğrudan dosyadan frame alır.
   2. Video URL'si bir HTTP/HTTPS adresi ise → ffmpeg stream üzerinden okur.
-  3. Thumbnail, media/thumbnails/auto_<uuid>.jpg olarak kaydedilir.
-  4. Video kaydının thumbnail_url alanı güncellenir.
-  5. Zaten thumbnail_url varsa hiçbir şey yapmaz.
+  3. Her iki yöntem de başarısız olursa crosspost job URL'leri denenir.
+  4. Thumbnail, media/thumbnails/auto_<uuid>.jpg olarak kaydedilir.
+  5. Video kaydının thumbnail_url alanı güncellenir.
+  6. Zaten thumbnail_url varsa hiçbir şey yapmaz.
 """
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import subprocess
-import tempfile
 import uuid
 
 from django.conf import settings
 
+logger = logging.getLogger(__name__)
+
 
 def _ffmpeg_bin() -> str:
-    """ffmpeg yolunu döner."""
     path = shutil.which("ffmpeg")
     return path or "ffmpeg"
 
@@ -47,7 +45,7 @@ def _local_path(video_url: str) -> str | None:
 def _public_url(video_url: str) -> str | None:
     """
     Göreceli URL'yi SITE_URL ile tam adrese çevirir.
-    Boş veya yerel dosya yolu ise None döner.
+    http/https URL'lerini olduğu gibi döner.
     """
     if not video_url:
         return None
@@ -60,15 +58,46 @@ def _public_url(video_url: str) -> str | None:
     return None
 
 
+def _find_source_url(video) -> str | None:
+    """
+    Video için kullanılabilir bir kaynak URL bulur.
+    Önce video_url/hls_url, yoksa crosspost job URL'lerini dener.
+    """
+    # 1. Doğrudan video_url veya hls_url
+    direct = video.video_url or video.hls_url or ""
+    if direct:
+        local = _local_path(direct)
+        if local:
+            return local
+        pub = _public_url(direct)
+        if pub:
+            return pub
+
+    # 2. Crosspost job'larından stream URL bul
+    try:
+        from apps.crosspost.models import CrosspostJob
+        jobs = CrosspostJob.objects.filter(
+            video_id=video.id,
+            status="done",
+        ).exclude(stream_url="").exclude(stream_url__isnull=True)
+        for job in jobs[:5]:
+            url = job.stream_url
+            if url and (url.startswith("http://") or url.startswith("https://")):
+                return url
+    except Exception:
+        pass
+
+    return None
+
+
 def _extract_frame(source: str, out_path: str, seek_seconds: float = 5.0) -> bool:
     """
     ffmpeg ile 'source' konumundan 'seek_seconds' saniyesindeki kareyi
-    'out_path' PNG/JPEG olarak kaydeder.
+    'out_path' JPEG olarak kaydeder.
     Kaynak yetersiz süredeyse 1. kareyi kullanır.
     Başarılıysa True, başarısızsa False döner.
     """
     ffmpeg = _ffmpeg_bin()
-    # Önce tam seek pozisyonunda deneyelim
     for seek in [seek_seconds, 1.0, 0.0]:
         cmd = [
             ffmpeg,
@@ -88,8 +117,15 @@ def _extract_frame(source: str, out_path: str, seek_seconds: float = 5.0) -> boo
             )
             if result.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 0:
                 return True
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        except subprocess.TimeoutExpired:
+            logger.warning("ffmpeg thumbnail timeout: seek=%.1f src=%s", seek, source[:80])
             return False
+        except (FileNotFoundError, OSError) as e:
+            logger.error("ffmpeg bulunamadı veya OS hatası: %s", e)
+            return False
+        except Exception as e:
+            logger.warning("ffmpeg beklenmedik hata: %s", e)
+            continue
     return False
 
 
@@ -100,23 +136,13 @@ def auto_generate_thumbnail(video) -> bool:
     Başarılıysa True döner.
     """
     if video.thumbnail_url:
-        return False  # Zaten var, dokunma
-
-    video_url = video.video_url or video.hls_url or ""
-    if not video_url:
         return False
 
-    # HLS (.m3u8) için ffmpeg stream okuma dene
-    is_hls = video_url.lower().endswith(".m3u8") or video_url.lower().endswith(".m3u")
-
-    # Kaynak belirle: önce yerel dosya, sonra HTTP URL
-    source = _local_path(video_url) if not is_hls else None
+    source = _find_source_url(video)
     if not source:
-        source = _public_url(video_url)
-    if not source:
+        logger.debug("Thumbnail üretilemedi: video_id=%s için kaynak URL bulunamadı", video.id)
         return False
 
-    # Çıktı yolu
     thumb_dir = os.path.join(settings.MEDIA_ROOT, "thumbnails")
     os.makedirs(thumb_dir, exist_ok=True)
     out_name = f"auto_{uuid.uuid4().hex}.jpg"
@@ -124,11 +150,11 @@ def auto_generate_thumbnail(video) -> bool:
 
     success = _extract_frame(source, out_path, seek_seconds=5.0)
     if not success:
-        # Geçici dosyayı temizle
         try:
             os.remove(out_path)
         except OSError:
             pass
+        logger.debug("Thumbnail üretilemedi: video_id=%s src=%s", video.id, source[:80])
         return False
 
     thumb_url = f"/media/thumbnails/{out_name}"
@@ -136,9 +162,11 @@ def auto_generate_thumbnail(video) -> bool:
         from apps.videos.models import Video as _Video
         _Video.objects.filter(id=video.id).update(thumbnail_url=thumb_url)
         video.thumbnail_url = thumb_url
-    except Exception:
+    except Exception as e:
+        logger.error("Thumbnail DB kaydı başarısız: video_id=%s hata=%s", video.id, e)
         return False
 
+    logger.info("Thumbnail üretildi: video_id=%s -> %s", video.id, thumb_url)
     return True
 
 
