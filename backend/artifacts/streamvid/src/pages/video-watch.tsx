@@ -319,21 +319,17 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
         </div>
       )}
 
-      {/* Harici URL indirme ilerlemesi (herhangi bir video için) */}
-      {isExternalUrl && !localVideoUrl && dlStatus && dlStatus !== 'done' && (
+      {/* Harici URL indirme ilerlemesi — yalnızca aktif indirme varken göster */}
+      {isExternalUrl && !localVideoUrl && (dlStatus === 'downloading' || dlStatus === 'pending') && (
         <div className="bg-[#0a1628] border border-blue-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
           <Loader2 className="h-4 w-4 text-blue-400 animate-spin shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-blue-300 text-xs font-semibold">
-              {dlStatus?.startsWith('error') ? '⚠ İndirme başarısız — proxy üzerinden oynatılıyor' : 'Video sunucuya indiriliyor... (şimdilik proxy üzerinden oynatılıyor)'}
-            </p>
-            {(dlStatus === 'downloading' || dlStatus === 'pending') && (
-              <div className="mt-1.5 h-1 bg-blue-900/40 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{ width: `${dlStatus === 'pending' ? 2 : dlPct}%` }} />
-              </div>
-            )}
+            <p className="text-blue-300 text-xs font-semibold">Video sunucuya indiriliyor...</p>
+            <div className="mt-1.5 h-1 bg-blue-900/40 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{ width: `${dlStatus === 'pending' ? 2 : dlPct}%` }} />
+            </div>
           </div>
-          {dlStatus === 'downloading' && dlPct > 0 && (
+          {dlPct > 0 && (
             <span className="text-blue-400 text-xs font-bold tabular-nums shrink-0">{dlPct}%</span>
           )}
         </div>
