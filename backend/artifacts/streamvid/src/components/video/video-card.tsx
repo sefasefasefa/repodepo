@@ -1,19 +1,36 @@
 import { Link } from "wouter";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Video } from "@workspace/api-client-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Play, Volume2, VolumeX } from "lucide-react";
+import Hls from "hls.js";
 
 interface VideoCardProps {
   video: Video;
+}
+
+function isPlayableUrl(url: string): boolean {
+  if (!url) return false;
+  // Sadece lokal dosyalar veya doğrudan video stream URL'leri
+  if (url.startsWith("/media/")) return true;
+  // Harici ama doğrudan MP4/webm olan URL'ler
+  const lower = url.toLowerCase().split("?")[0];
+  if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".ogg")) return true;
+  if (lower.endsWith(".m3u8")) return true;
+  return false;
+}
+
+function isHlsUrl(url: string): boolean {
+  return url.toLowerCase().split("?")[0].endsWith(".m3u8");
 }
 
 export function VideoCard({ video }: VideoCardProps) {
   const [previewing, setPreviewing] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressActive = useRef(false);
 
@@ -32,26 +49,51 @@ export function VideoCard({ video }: VideoCardProps) {
     return views.toString();
   };
 
-  const previewUrl = (video as any).videoUrl || (video as any).hlsUrl || "";
+  const rawUrl = (video as any).videoUrl || (video as any).hlsUrl || "";
+  const previewUrl = isPlayableUrl(rawUrl) ? rawUrl : "";
   const canPreview = !!previewUrl;
+
+  // HLS kurulumu / temizliği
+  useEffect(() => {
+    if (!previewing || !videoRef.current || !previewUrl) return;
+
+    const el = videoRef.current;
+
+    if (isHlsUrl(previewUrl) && Hls.isSupported()) {
+      const hls = new Hls({ maxBufferLength: 10, startLevel: 0 });
+      hlsRef.current = hls;
+      hls.loadSource(previewUrl);
+      hls.attachMedia(el);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        el.muted = true;
+        el.play().catch(() => {});
+      });
+    } else {
+      // Native HLS (Safari) veya MP4
+      el.src = previewUrl;
+      el.muted = true;
+      el.currentTime = 0;
+      el.play().catch(() => {});
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      el.pause();
+      el.removeAttribute("src");
+      el.load();
+    };
+  }, [previewing, previewUrl]);
 
   const startPreview = useCallback(() => {
     if (!canPreview) return;
     setPreviewing(true);
-    setTimeout(() => {
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-        videoRef.current.play().catch(() => {});
-      }
-    }, 50);
   }, [canPreview]);
 
   const stopPreview = useCallback(() => {
     setPreviewing(false);
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-    }
   }, []);
 
   // Desktop: hover
@@ -119,7 +161,6 @@ export function VideoCard({ video }: VideoCardProps) {
           {canPreview && (
             <video
               ref={videoRef}
-              src={previewUrl}
               muted={muted}
               loop
               playsInline

@@ -158,11 +158,15 @@ def geo_check(request):
         return resp
 
     ip = _get_client_ip(request)
-    country = 'LOCAL' if _is_local_ip(ip) else 'XX'
+    is_local = _is_local_ip(ip)
+    country = 'LOCAL' if is_local else 'XX'
     countries = cached_settings['countries']
     mode = cached_settings['mode']
-    if mode == 'allowlist':
-        blocked = country != 'LOCAL' and bool(countries) and country not in countries
+    # Ülke tespit edilemiyorsa (XX) engelleme — şüpheli trafiği bloke etme
+    if country == 'XX':
+        blocked = False
+    elif mode == 'allowlist':
+        blocked = not is_local and bool(countries) and country not in countries
     else:
         blocked = country in countries
     resp = Response({
