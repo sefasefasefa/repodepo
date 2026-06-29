@@ -1845,6 +1845,65 @@ def _download_any_url_to_server(video_id):
         cache.set(ck_status, 'downloading', 7200)
         cache.set(ck_pct, 0, 7200)
 
+        UA = (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/124.0.0.0 Safari/537.36'
+        )
+
+        def _try_fetch(url, extra_headers=None):
+            """URL'i çeşitli header kombinasyonlarıyla dener. (resp, hata_str) döner."""
+            parsed = urlparse(url)
+            origin  = f'{parsed.scheme}://{parsed.netloc}'
+            referer = origin + '/'
+
+            header_variants = [
+                # 1) Tam tarayıcı taklidi — Referer + Origin kendi CDN'i
+                {
+                    'User-Agent': UA,
+                    'Accept': 'video/webm,video/ogg,video/*;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+                    'Referer': referer,
+                    'Origin': origin,
+                    'Sec-Fetch-Dest': 'video',
+                    'Sec-Fetch-Mode': 'no-cors',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'Range': 'bytes=0-',
+                },
+                # 2) Referer olmadan sade istek
+                {
+                    'User-Agent': UA,
+                    'Accept': 'video/*,*/*',
+                    'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
+                },
+                # 3) Curl taklidi
+                {
+                    'User-Agent': 'curl/7.88.1',
+                    'Accept': '*/*',
+                },
+            ]
+            if extra_headers:
+                header_variants.insert(0, {**header_variants[0], **extra_headers})
+
+            last_err = ''
+            for hdrs in header_variants:
+                try:
+                    r = _rq.get(
+                        url, headers=hdrs, stream=True,
+                        timeout=180, allow_redirects=True,
+                        verify=True,
+                    )
+                    # 206 Partial Content da başarı sayılır
+                    if r.status_code in (200, 206):
+                        return r, ''
+                    # 410 Gone — dosya silinmiş, denemeye gerek yok
+                    if r.status_code == 410:
+                        return None, f'Dosya artık mevcut değil (410 Gone) — kaynak sunucudan silinmiş olabilir'
+                    last_err = f'HTTP {r.status_code}'
+                except Exception as e:
+                    last_err = f'{type(e).__name__}: {e}'
+            return None, last_err
+
         try:
             video = Video.objects.get(id=video_id)
             raw_url = video.video_url or video.hls_url or ''
@@ -1859,18 +1918,10 @@ def _download_any_url_to_server(video_id):
                 if resolved and resolved != raw_url:
                     raw_url = resolved
 
-            headers = {
-                'User-Agent': (
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                    'AppleWebKit/537.36 (KHTML, like Gecko) '
-                    'Chrome/120.0.0.0 Safari/537.36'
-                ),
-                'Accept': 'video/*,*/*',
-                'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
-            }
-
-            resp = _rq.get(raw_url, headers=headers, stream=True, timeout=120, allow_redirects=True)
-            resp.raise_for_status()
+            resp, err = _try_fetch(raw_url)
+            if resp is None:
+                cache.set(ck_status, f'error:{err}', 7200)
+                return
 
             total = int(resp.headers.get('Content-Length', 0)) or 0
             ct    = resp.headers.get('Content-Type', 'video/mp4').split(';')[0].strip().lower()
@@ -1904,6 +1955,15 @@ def _download_any_url_to_server(video_id):
                         if total:
                             pct = int(downloaded * 100 / total)
                             cache.set(ck_pct, pct, 7200)
+
+            # Boş dosya indiyse hata ver
+            if downloaded == 0:
+                try:
+                    os.remove(local_path)
+                except Exception:
+                    pass
+                cache.set(ck_status, 'error:Sunucu boş yanıt döndürdü — URL geçersiz olabilir', 7200)
+                return
 
             # Video kaydını güncelle (hem video_url hem hls_url temizle)
             Video.objects.filter(id=video_id).update(video_url=local_url, hls_url=None)
