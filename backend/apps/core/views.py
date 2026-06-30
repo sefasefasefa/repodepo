@@ -44,15 +44,29 @@ DEFAULT_FLAGS = [
 DEFAULT_FLAG_MAP = {f['key']: f for f in DEFAULT_FLAGS}
 _initialized = False
 
+_ENSURE_CACHE_KEY = 'core:defaults_done:v1'
+
 
 def ensure_defaults():
+    """Eksik feature flag'leri DB'ye ekler.
+    27 ayrı get_or_create yerine tek bulk_create kullanır → ~1ms."""
     global _initialized
     if _initialized:
         return
-    for flag in DEFAULT_FLAGS:
-        FeatureFlag.objects.get_or_create(key=flag['key'], defaults={
-            'label': flag['label'], 'description': flag['description'], 'state': 'enabled'
-        })
+    # Cache ile process'ler arası koordinasyon
+    if cache.get(_ENSURE_CACHE_KEY):
+        _initialized = True
+        return
+
+    existing_keys = set(FeatureFlag.objects.values_list('key', flat=True))
+    to_create = [
+        FeatureFlag(key=f['key'], label=f['label'], description=f['description'], state='enabled')
+        for f in DEFAULT_FLAGS if f['key'] not in existing_keys
+    ]
+    if to_create:
+        FeatureFlag.objects.bulk_create(to_create, ignore_conflicts=True)
+
+    cache.set(_ENSURE_CACHE_KEY, True, 3600)
     _initialized = True
 
 
