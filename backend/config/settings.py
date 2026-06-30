@@ -220,6 +220,10 @@ if not DEBUG:
 
 SECURE_SSL_REDIRECT = False  # Her ortamda False — redirect Cloudflare/nginx sorumluluğu
 
+# COOP başlığını devre dışı bırak — HTTP'de browser uyarısı çıkarıyor,
+# HTTPS'e geçildiğinde 'same-origin' olarak açılabilir.
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024 * 1024  # 10 GB
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB form data

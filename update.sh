@@ -114,11 +114,39 @@ NGINXCONF
 fi
 # ══════════════════════════════════════════════════════════════════════
 
+# ── Windows: nginx yolu bul (bir kez bul, sonra kullan) ─────────────────
+NGINX_WIN=""
+if [ "$OS" = "windows" ]; then
+    for p in \
+        "C:/nginx/nginx.exe" \
+        "C:/Program Files/nginx/nginx.exe" \
+        "C:/tools/nginx/nginx.exe" \
+        "$USERPROFILE/nginx/nginx.exe"
+    do
+        if [ -f "$p" ]; then
+            NGINX_WIN="$p"
+            NGINX_DIR=$(dirname "$p")
+            break
+        fi
+    done
+    if [ -z "$NGINX_WIN" ]; then
+        # PATH'de var mı?
+        NGINX_WIN=$(command -v nginx.exe 2>/dev/null || true)
+        [ -n "$NGINX_WIN" ] && NGINX_DIR=$(dirname "$NGINX_WIN")
+    fi
+fi
+
 # ── 1. Sunucuyu durdur ──────────────────────────────────────────────
 echo "[1/6] Sunucu durduruluyor..."
 if [ "$OS" = "windows" ]; then
     taskkill //F //IM python.exe 2>/dev/null || true
     taskkill //F //IM waitress-serve.exe 2>/dev/null || true
+    # Nginx'i de durdur (graceful)
+    if [ -n "$NGINX_WIN" ]; then
+        echo "   Nginx durduruluyor..."
+        "$NGINX_WIN" -p "$NGINX_DIR" -s quit 2>/dev/null || \
+        taskkill //F //IM nginx.exe 2>/dev/null || true
+    fi
 else
     # Systemd servisi varsa onu durdur, yoksa direkt pkill
     if systemctl is-active --quiet hotpulse 2>/dev/null; then
@@ -258,10 +286,27 @@ if [ "$OS" = "linux" ]; then
     # Systemd servisi varsa onu kullan (daha guvenilir)
     if systemctl list-unit-files hotpulse.service &>/dev/null 2>&1; then
         systemctl start hotpulse
+        systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
         echo "Sunucu baslatildi (systemd). HTTPS aktif: https://${DOMAIN:-hotpulse.me}"
     else
         exec ./start.sh
     fi
 else
+    # Windows: önce Waitress'i arka planda başlat, sonra nginx'i yeniden başlat
+    if [ -n "$NGINX_WIN" ]; then
+        echo "Nginx baslatiliyor: $NGINX_WIN"
+        # Nginx'i kendi dizininden başlat (nginx.conf'u oradan okur)
+        (cd "$NGINX_DIR" && "$NGINX_WIN" -p "$NGINX_DIR") &
+        sleep 1
+        # Başarılı mı?
+        if tasklist 2>/dev/null | grep -qi "nginx.exe"; then
+            echo "   Nginx calisiyor."
+        else
+            echo "   [UYARI] Nginx baslatılamadı — manuel olarak baslatın."
+        fi
+    else
+        echo "   [BILGI] Nginx bulunamadı (C:\\nginx\\nginx.exe yok)."
+        echo "          Nginx'i kurmak için: https://nginx.org/en/download.html"
+    fi
     exec ./start.sh
 fi
