@@ -344,22 +344,18 @@ def get_trending(request):
     return Response({'videos': enrich_videos_bulk(list(qs), request.user)})
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def home_page(request):
-    """Anasayfa için tüm verileri tek API isteğinde döndürür. 5 dk önbellek."""
-    is_anon = not request.user.is_authenticated
-    cache_key = 'home_page:v2'
-    if is_anon:
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return Response(cached)
+HOME_CACHE_KEY = 'home_page:v2'
 
-    user = None if is_anon else request.user
+
+def _build_home_data_anon():
+    """Anonim kullanıcı için anasayfa verisini oluşturur (veya cache'den döner)."""
+    cached = cache.get(HOME_CACHE_KEY)
+    if cached is not None:
+        return cached
+
     base_qs = Video.objects.filter(is_published=True).select_related('creator', 'category').prefetch_related('categories')
-
-    trending   = list(base_qs.order_by('-view_count', '-like_count')[:8])
-    newest     = list(base_qs.order_by('-created_at')[:8])
+    trending    = list(base_qs.order_by('-view_count', '-like_count')[:8])
+    newest      = list(base_qs.order_by('-created_at')[:8])
     most_viewed = list(base_qs.order_by('-view_count')[:8])
     most_liked  = list(base_qs.order_by('-like_count')[:8])
     shorts      = list(base_qs.filter(type='short').order_by('-view_count')[:8])
@@ -392,19 +388,72 @@ def home_page(request):
         home_filters = []
 
     result = {
-        'trending':    enrich_videos_bulk(trending, user),
-        'newest':      enrich_videos_bulk(newest, user),
-        'most_viewed': enrich_videos_bulk(most_viewed, user),
-        'most_liked':  enrich_videos_bulk(most_liked, user),
-        'shorts':      enrich_videos_bulk(shorts, user),
-        'premium':     enrich_videos_bulk(premium, user),
-        'categories':  categories,
-        'creators':    creators,
+        'trending':     enrich_videos_bulk(trending, None),
+        'newest':       enrich_videos_bulk(newest, None),
+        'most_viewed':  enrich_videos_bulk(most_viewed, None),
+        'most_liked':   enrich_videos_bulk(most_liked, None),
+        'shorts':       enrich_videos_bulk(shorts, None),
+        'premium':      enrich_videos_bulk(premium, None),
+        'categories':   categories,
+        'creators':     creators,
         'home_filters': home_filters,
     }
+    cache.set(HOME_CACHE_KEY, result, 300)
+    return result
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def home_page(request):
+    """Anasayfa için tüm verileri tek API isteğinde döndürür. 5 dk önbellek."""
+    is_anon = not request.user.is_authenticated
     if is_anon:
-        cache.set(cache_key, result, 300)
-    return Response(result)
+        return Response(_build_home_data_anon())
+
+    user = request.user
+    base_qs = Video.objects.filter(is_published=True).select_related('creator', 'category').prefetch_related('categories')
+    trending    = list(base_qs.order_by('-view_count', '-like_count')[:8])
+    newest      = list(base_qs.order_by('-created_at')[:8])
+    most_viewed = list(base_qs.order_by('-view_count')[:8])
+    most_liked  = list(base_qs.order_by('-like_count')[:8])
+    shorts      = list(base_qs.filter(type='short').order_by('-view_count')[:8])
+    premium     = list(base_qs.filter(is_premium=True).order_by('-view_count')[:6])
+
+    cats = list(Category.objects.all().order_by('-video_count', 'name'))
+    categories = [
+        {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
+        for c in cats
+    ]
+    from apps.accounts.models import User as _User
+    creator_qs = _User.objects.filter(role='creator').order_by('-follower_count')[:8]
+    creators = [
+        {'id': u.id, 'username': u.username, 'displayName': u.display_name,
+         'avatarUrl': u.avatar_url, 'followerCount': u.follower_count}
+        for u in creator_qs
+    ]
+    try:
+        from apps.admin_panel.models import HomeFilter as _HF
+        hf_qs = _HF.objects.filter(is_active=True).order_by('order')
+        home_filters = [
+            {'id': f.id, 'label': f.label, 'icon': f.icon, 'type': f.type,
+             'categoryId': f.category_id, 'sortBy': f.sort_by,
+             'rules': f.rules, 'order': f.order, 'isActive': f.is_active}
+            for f in hf_qs
+        ]
+    except Exception:
+        home_filters = []
+
+    return Response({
+        'trending':     enrich_videos_bulk(trending, user),
+        'newest':       enrich_videos_bulk(newest, user),
+        'most_viewed':  enrich_videos_bulk(most_viewed, user),
+        'most_liked':   enrich_videos_bulk(most_liked, user),
+        'shorts':       enrich_videos_bulk(shorts, user),
+        'premium':      enrich_videos_bulk(premium, user),
+        'categories':   categories,
+        'creators':     creators,
+        'home_filters': home_filters,
+    })
 
 
 @api_view(['GET'])

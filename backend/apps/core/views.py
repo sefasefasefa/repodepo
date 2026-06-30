@@ -181,7 +181,15 @@ def app_init(request):
             'redirectUrl': geo_cached['redirect_url'],
         }
 
-    result = {**cached_static, 'geo': geo}
+    home_data = None
+    if not request.user.is_authenticated:
+        try:
+            from apps.videos.views import _build_home_data_anon
+            home_data = _build_home_data_anon()
+        except Exception:
+            home_data = None
+
+    result = {**cached_static, 'geo': geo, 'homeData': home_data}
     resp = Response(result)
     resp['Cache-Control'] = 'private, max-age=120, stale-while-revalidate=60'
     return resp

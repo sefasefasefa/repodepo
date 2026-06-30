@@ -1,7 +1,20 @@
 /**
  * React mount olmadan önce /api/init'i tek seferde çeker.
  * Provider'lar bu promise'i bekleyerek ayrı ayrı fetch yapmaktan kurtulur.
+ * homeData anonim kullanıcılar için /api/home verisini de içerir.
  */
+
+export interface HomeData {
+  trending: unknown[];
+  newest: unknown[];
+  most_viewed: unknown[];
+  most_liked: unknown[];
+  shorts: unknown[];
+  premium: unknown[];
+  categories: unknown[];
+  creators: unknown[];
+  home_filters: unknown[];
+}
 
 export interface InitData {
   siteConfig: {
@@ -25,9 +38,10 @@ export interface InitData {
     message?: string;
     redirectUrl?: string;
   };
+  homeData: HomeData | null;
 }
 
-const INIT_CACHE_KEY = "app_init_v1";
+const INIT_CACHE_KEY = "app_init_v2";
 const INIT_CACHE_TTL = 2 * 60 * 1000;
 
 function loadInitCache(): InitData | null {
@@ -76,4 +90,8 @@ export function getInitData(): Promise<InitData | null> {
 export function invalidateInitCache() {
   try { localStorage.removeItem(INIT_CACHE_KEY); } catch {}
   _promise = startPrefetch();
+}
+
+export function getHomeDataFromInit(): Promise<HomeData | null> {
+  return getInitData().then(d => d?.homeData ?? null);
 }

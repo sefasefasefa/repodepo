@@ -20,6 +20,7 @@ import { useFeatureState } from "@/lib/feature-flags";
 import type { Video, Category } from "@workspace/api-client-react";
 import { JsonLd } from "@/components/json-ld";
 import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
+import { getHomeDataFromInit } from "@/lib/init-prefetch";
 
 function SectionSkeleton({ count = 4 }: { count?: number }) {
   return (
@@ -401,14 +402,22 @@ export default function Home() {
 
   useEffect(() => {
     setHomeLoading(true);
-    fetch("/api/home")
-      .then(r => r.json())
-      .then(d => {
-        setHomeData(d);
-        if (d.home_filters) setHomeFilters(d.home_filters);
+    getHomeDataFromInit().then(cached => {
+      if (cached) {
+        setHomeData(cached);
+        if ((cached as any).home_filters) setHomeFilters((cached as any).home_filters);
         setHomeLoading(false);
-      })
-      .catch(() => setHomeLoading(false));
+        return;
+      }
+      fetch("/api/home")
+        .then(r => r.json())
+        .then(d => {
+          setHomeData(d);
+          if (d.home_filters) setHomeFilters(d.home_filters);
+          setHomeLoading(false);
+        })
+        .catch(() => setHomeLoading(false));
+    });
   }, []);
 
   const trendingData   = homeData ? { videos: homeData.trending }    : undefined;
