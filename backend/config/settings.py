@@ -80,7 +80,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 import dj_database_url as _dj_db_url
 
 _DATABASE_URL = os.environ.get('DATABASE_URL')
-if _DATABASE_URL:
+_FORCE_SQLITE = os.environ.get('FORCE_SQLITE', '').lower() in ('true', '1', 'yes')
+if _DATABASE_URL and not _FORCE_SQLITE:
     _db_config = _dj_db_url.parse(_DATABASE_URL)
     _db_config['CONN_MAX_AGE'] = 60
     _db_config['OPTIONS'] = {
@@ -164,7 +165,8 @@ REST_FRAMEWORK = {
 }
 
 # Veritabanı bağlantı optimizasyonu (SQLite için de)
-if not os.environ.get('DATABASE_URL'):
+_using_sqlite = not os.environ.get('DATABASE_URL') or _FORCE_SQLITE
+if _using_sqlite:
     DATABASES['default']['OPTIONS'] = {
         'timeout': 20,
         'check_same_thread': False,
@@ -248,7 +250,7 @@ if SITE_URL and not SITE_URL.startswith('http'):
     SITE_URL = 'https://' + SITE_URL
 
 # SQLite WAL modu — eş zamanlı okuma/yazma çakışmasını önler, hızı artırır
-if not os.environ.get('DATABASE_URL'):
+if _using_sqlite:
     from django.db.backends.signals import connection_created
 
     def _sqlite_wal(sender, connection, **kwargs):

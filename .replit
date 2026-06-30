@@ -48,3 +48,4 @@ build = ["bash", "-c", "cd backend && pip install -r requirements.txt && pnpm in
 
 [userenv.shared]
 DEBUG = "True"
+FORCE_SQLITE = "true"
