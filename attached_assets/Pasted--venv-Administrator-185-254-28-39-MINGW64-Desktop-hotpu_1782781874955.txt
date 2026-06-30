@@ -1,0 +1,109 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ ./update.sh
+=== Hotpulse Guncelleme ===
+[1/6] Sunucu durduruluyor...
+[2/6] Kod guncelleniyor...
+   Indiriliyor: https://github.com/sefasefasefa/repodepo/archive/refs/heads/main.tar.gz
+   Kod guncellendi.
+[3/6] Python paketleri guncelleniyor...
+[4/6] Frontend derleniyor...
+Scope: all 4 workspace projects
+Already up to date
+Done in 1.9s using pnpm v11.9.0
+$ vite build --config vite.config.ts
+vite v7.3.3 building client environment for production...
+✓ 3689 modules transformed.
+dist/public/index.html                                      5.01 kB
+dist/public/assets/index-DGHXPeuJ.css                     256.86 kB
+dist/public/assets/skeleton-DFS-kV5Q.js                     0.22 kB
+dist/public/assets/label-CU_7HK-X.js                        0.44 kB
+dist/public/assets/textarea-BdREx4Fj.js                     0.53 kB
+dist/public/assets/badge-CcCvApqN.js                        0.80 kB
+dist/public/assets/link-filter-CCJRzgw1.js                  0.91 kB
+dist/public/assets/tabs-DDQ6Iy1A.js                         1.17 kB
+dist/public/assets/button-DWj5aHa8.js                       1.39 kB
+dist/public/assets/watch-progress-lRiSNh98.js               1.64 kB
+dist/public/assets/screen-protection-overlay-DPSzJdo0.js    2.06 kB
+dist/public/assets/creators-DocXksOV.js                     2.42 kB
+dist/public/assets/use-screen-protection-CfJfeS0U.js        2.49 kB
+dist/public/assets/developer-DtwFHq9A.js                    2.73 kB
+dist/public/assets/index-D2n8ztvH.js                        3.58 kB
+dist/public/assets/notifications-BitRK7qs.js                3.72 kB
+dist/public/assets/not-found-BUKdfXSI.js                    3.77 kB
+dist/public/assets/categories-CPD0aWzj.js                   4.33 kB
+dist/public/assets/playlist-detail-Bloqw9qL.js              4.38 kB
+dist/public/assets/pricing-B0acrVoM.js                      4.81 kB
+dist/public/assets/video-card-CWsC5KPl.js                   5.22 kB
+dist/public/assets/bookmarks-CCznDVyJ.js                    5.23 kB
+dist/public/assets/register-Bx0gY9Y1.js                     5.34 kB
+dist/public/assets/category-detail-Ca1eEObS.js              5.35 kB
+dist/public/assets/live-streams-DsPxg-0g.js                 5.56 kB
+dist/public/assets/history-D3PoTWbh.js                      5.78 kB
+dist/public/assets/custom-request-modal-DeJElhcM.js         5.85 kB
+dist/public/assets/leaderboard-Dohm48nS.js                  6.52 kB
+dist/public/assets/my-requests-BJYDsFQJ.js                  6.62 kB
+dist/public/assets/custom-page-7NTy1axx.js                  6.74 kB
+dist/public/assets/search-BRhJvF0Y.js                       7.20 kB
+dist/public/assets/playlists-C8BFx1Jc.js                    7.35 kB
+dist/public/assets/live-watch-BeEDxWf-.js                   7.42 kB
+dist/public/assets/login-BIB1P8ZI.js                        8.36 kB
+dist/public/assets/shorts-BGqxVNlQ.js                       8.38 kB
+dist/public/assets/subscriptions-CERIcyJW.js                9.02 kB
+dist/public/assets/videos-7vWISnUi.js                       9.16 kB
+dist/public/assets/creator-profile-ngSgoI3J.js              9.50 kB
+dist/public/assets/crosspost-jobs-DPlO8SUN.js               9.98 kB
+dist/public/assets/become-creator-B4hIYAMD.js              10.67 kB
+dist/public/assets/public-profile-C_hhfRDQ.js              10.80 kB
+dist/public/assets/affiliate-Be2jm-9p.js                   11.27 kB
+dist/public/assets/routing-Bzd4TU89.js                     13.20 kB
+dist/public/assets/payment-DGeBGtXI.js                     13.29 kB
+dist/public/assets/stories-ndmbrZA-.js                     14.98 kB
+dist/public/assets/downloads-CPigMnEa.js                   16.03 kB
+dist/public/assets/profile-DrVEvu8g.js                     19.80 kB
+dist/public/assets/home-CrezM8LR.js                        20.85 kB
+dist/public/assets/match-rooms-D05mwXfB.js                 20.88 kB
+dist/public/assets/messages-DlF3THfZ.js                    23.93 kB
+dist/public/assets/react-query-BS7tmDKE.js                 39.93 kB
+dist/public/assets/icons-CQJ3mR1e.js                       45.53 kB
+dist/public/assets/utils-BdEa6iqF.js                       49.55 kB
+dist/public/assets/app-layout-0zNPZjx3.js                  57.25 kB
+dist/public/assets/creator-dashboard-iFcLTjla.js           60.12 kB
+dist/public/assets/upload-BdHaG1qm.js                      82.54 kB
+dist/public/assets/form--yjHokYp.js                        85.94 kB
+dist/public/assets/video-watch-DOQ4Ipgt.js                 97.53 kB
+dist/public/assets/ui-radix-B7D3ahvu.js                   117.87 kB
+dist/public/assets/index-C9DW0joJ.js                      247.93 kB
+dist/public/assets/charts-Bo3zW_R_.js                     443.32 kB
+dist/public/assets/hls-DkI61o3c.js                        522.13 kB
+dist/public/assets/admin-C8i5tcbi.js                      602.38 kB
+✓ built in 1m 3s
+   Statik dosyalar kopyalaniyor...
+   Frontend build tamamlandi.
+[5/6] Veritabani migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, tokens, videos
+Running migrations:
+  No migrations to apply.
+[6/6] Statik dosyalar toplaniyor...
+
+Guncelleme tamamlandi! Sunucu baslatiliyor...
+
+Windows: Donanim analiz ediliyor...
+
+  Donanim  : 3 CPU cekirdek, 4095MB GB RAM
+  Threads  : 24  (cpu_core x8, min=16, max=64)
+  Conn Lmt : 579  (RAM'e gore otomatik)
+  Timeout  : 120 s
+
+Waitress sunucusu baslatiliyor (port 8000)...
+INFO 2026-06-30 03:48:06,686 wasyncore Serving on http://0.0.0.0:8000
+WARNING 2026-06-30 03:48:12,451 log Not Found: /favicon.ico
+INFO 2026-06-30 03:52:32,230 channel Client disconnected while serving /api/videos/29/stream
+INFO 2026-06-30 03:53:42,928 channel Client disconnected while serving /api/videos/20/stream
+INFO 2026-06-30 03:54:47,041 channel Client disconnected while serving /api/videos/27/stream
+INFO 2026-06-30 04:07:14,604 channel Client disconnected while serving /api/videos/32/stream
+INFO 2026-06-30 04:07:21,244 channel Client disconnected while serving /api/videos/32/stream
+INFO 2026-06-30 04:09:09,744 channel Client disconnected while serving /api/videos/33/stream
+INFO 2026-06-30 04:09:14,275 channel Client disconnected while serving /api/videos/35/stream
+WARNING 2026-06-30 04:10:49,191 log Forbidden (CSRF cookie not set.): /device.rsp
