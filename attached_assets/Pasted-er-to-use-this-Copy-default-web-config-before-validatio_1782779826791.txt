@@ -1,0 +1,70 @@
+er> to use this)
+
+ Copy default web.config before validation? (y/n*) - yes
+
+ After ownership of the domain(s) has been proven, we will create a
+ Certificate Signing Request (CSR) to obtain the actual certificate. The CSR
+ determines properties of the certificate like which (type of) key to use. If
+ you are not sure what to pick here, RSA is the safe default.
+
+ 1: Elliptic Curve key
+ 2: RSA key
+ C: Abort
+
+ What kind of private key should be used for the certificate?: <Enter>
+
+ When we have the certificate, you can store in one or more ways to make it
+ accessible to your applications. The Windows Certificate Store is the default
+ location for IIS (unless you are managing a cluster of them).
+
+ 1: IIS Central Certificate Store (.pfx per host)
+ 2: PEM encoded files (Apache, nginx, etc.)
+ 3: PFX archive
+ 4: Windows Certificate Store (Local Computer)
+ 5: No (additional) store steps
+
+ How would you like to store the certificate?: 2
+
+Description:         .pem files are exported to this folder.
+
+ File path: C:\ProgramData\win-acme
+
+Description:         Password to set for the private key .pem file.
+
+ 1: None
+ 2: Type/paste in console
+ 3: Search in vault
+
+ Choose from the menu: 1
+
+ 1: IIS Central Certificate Store (.pfx per host)
+ 2: PEM encoded files (Apache, nginx, etc.)
+ 3: PFX archive
+ 4: Windows Certificate Store (Local Computer)
+ 5: No (additional) store steps
+
+ Would you like to store it in another way too?: 5
+
+ Installation plugin IIS not available: No supported version of IIS detected.
+
+ With the certificate saved to the store(s) of your choice, you may choose one
+ or more steps to update your applications, e.g. to configure the new
+ thumbprint, or to update bindings.
+
+ 1: Create or update bindings in IIS
+ 2: Start external script or program
+ 3: No (additional) installation steps
+
+ Which installation step should run first?: 3
+
+ Plugin Manual generated source hotpulse.me with 1 identifiers
+ Plugin Single created 1 order
+ [hotpulse.me] Authorizing...
+ [hotpulse.me] Authorizing using http-01 validation (FileSystem)
+ Answer should now be browsable at http://hotpulse.me/.well-known/acme-challenge/APrbwovbpIkwXI55TJOqOcXSK4ftCFGRzuHvQNZ6jPQ
+ Preliminary validation failed, the server answered '(null)' instead of 'APrbwovbpIkwXI55TJOqOcXSK4ftCFGRzuHvQNZ6jPQ.X3jxy2jn0u28qjmfN_n_9gJMjWsCSrpo3i_ULlXWkPA'. The ACME server might have a different perspective
+ [hotpulse.me] Authorization result: invalid
+ [hotpulse.me] {"type":"urn:ietf:params:acme:error:unauthorized","detail":"2606:4700:3035::6815:3ba8: Invalid response from http://hotpulse.me/.well-known/acme-challenge/APrbwovbpIkwXI55TJOqOcXSK4ftCFGRzuHvQNZ6jPQ: \u0022\u003C!DOCTYPE html\u003E\\n\u003Chtml lang=\\\u0022tr\\\u0022\u003E\\n  \u003Chead\u003E\\n    \u003Cmeta charset=\\\u0022UTF-8\\\u0022 /\u003E\\n    \u003Cmeta name=\\\u0022viewport\\\u0022 content=\\\u0022width=device-width, in\u0022","status":403,"instance":null}
+ [hotpulse.me] Deactivating pending authorization
+
+ Create certificate failed, retry? (y/n*)
