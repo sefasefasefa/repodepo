@@ -58,6 +58,12 @@ export function VideoCard({ video }: VideoCardProps) {
     if (!previewing || !videoRef.current || !previewUrl) return;
 
     const el = videoRef.current;
+    let destroyed = false;
+
+    const tryPlay = () => {
+      if (destroyed) return;
+      el.play().catch(() => {});
+    };
 
     if (isHlsUrl(previewUrl) && Hls.isSupported()) {
       const hls = new Hls({ maxBufferLength: 10, startLevel: 0 });
@@ -66,17 +72,21 @@ export function VideoCard({ video }: VideoCardProps) {
       hls.attachMedia(el);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         el.muted = true;
-        el.play().catch(() => {});
+        tryPlay();
       });
     } else {
-      // Native HLS (Safari) veya MP4
-      el.src = previewUrl;
+      // Native (Safari HLS veya MP4/WebM)
       el.muted = true;
-      el.currentTime = 0;
-      el.play().catch(() => {});
+      el.src = previewUrl;
+      el.load();
+      // canplay: ilk kare hazır → oynat
+      el.addEventListener("canplay", tryPlay, { once: true });
+      // Yedek: loadedmetadata sonra da dene
+      el.addEventListener("loadedmetadata", tryPlay, { once: true });
     }
 
     return () => {
+      destroyed = true;
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
