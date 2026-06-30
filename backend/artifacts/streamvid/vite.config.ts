@@ -44,6 +44,7 @@ export default defineConfig({
     reportCompressedSize: false,
     rollupOptions: {
       output: {
+        sanitizeFileName: (name) => name.replace(/[-_]+(?=\.[^.]+$)/, "x").replace(/[<>:"/\\|?*]/g, "_"),
         manualChunks: {
           "react-query":  ["@tanstack/react-query"],
           "charts":       ["recharts"],

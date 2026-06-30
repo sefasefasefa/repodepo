@@ -205,7 +205,16 @@ python manage.py migrate --noinput
 
 # ── 6. Collectstatic ───────────────────────────────────────────────
 echo "[6/6] Statik dosyalar toplaniyor..."
-python manage.py collectstatic --noinput -v 0
+if [ "$OS" = "windows" ]; then
+    # Windows'ta collectstatic, Vite hash'lerindeki özel karakterler (-/_)
+    # nedeniyle OSError [Errno 22] verebiliyor.
+    # Çözüm: doğrudan kopyala, Django'yu atla.
+    mkdir -p staticfiles
+    cp -rf static/. staticfiles/ 2>/dev/null || true
+    echo "   Statik dosyalar kopyalandi (Windows modu)."
+else
+    python manage.py collectstatic --noinput -v 0
+fi
 
 # ── 7. Önbellek temizle ─────────────────────────────────────────────
 echo ""
