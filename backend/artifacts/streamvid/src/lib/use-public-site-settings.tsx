@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { JsonLd } from "@/components/json-ld";
+import { getInitData, invalidateInitCache } from "./init-prefetch";
 
 export interface PublicSiteSettings {
   siteName: string;
@@ -18,9 +19,6 @@ const DEFAULT: PublicSiteSettings = {
   primaryColor: "#7c3aed",
   registrationEnabled: true,
 };
-
-const CACHE_KEY = "pub_site_settings_v2";
-const CACHE_TTL = 5 * 60 * 1000;
 
 interface Ctx {
   settings: PublicSiteSettings;
@@ -66,38 +64,28 @@ function applyPrimaryColor(hex: string) {
   } catch {}
 }
 
-function loadCache(): PublicSiteSettings | null {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const { data, ts } = JSON.parse(raw);
-    if (Date.now() - ts < CACHE_TTL) return data as PublicSiteSettings;
-  } catch {}
-  return null;
-}
-
 export function PublicSiteSettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<PublicSiteSettings>(() => loadCache() ?? DEFAULT);
+  const [settings, setSettings] = useState<PublicSiteSettings>(DEFAULT);
+
+  const apply = useCallback((data: PublicSiteSettings) => {
+    setSettings(data);
+    if (data.primaryColor) applyPrimaryColor(data.primaryColor);
+    if (data.siteName) document.title = data.siteName;
+  }, []);
 
   const reload = useCallback(async () => {
     try {
-      const r = await fetch("/api/site-config");
-      if (!r.ok) return;
-      const data: PublicSiteSettings = await r.json();
-      setSettings(data);
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
-      if (data.primaryColor) applyPrimaryColor(data.primaryColor);
+      invalidateInitCache();
+      const init = await getInitData();
+      if (init?.siteConfig) apply(init.siteConfig as PublicSiteSettings);
     } catch {}
-  }, []);
+  }, [apply]);
 
   useEffect(() => {
-    reload();
-  }, [reload]);
-
-  useEffect(() => {
-    if (settings.primaryColor) applyPrimaryColor(settings.primaryColor);
-    if (settings.siteName) document.title = settings.siteName;
-  }, [settings.primaryColor, settings.siteName]);
+    getInitData().then((init) => {
+      if (init?.siteConfig) apply(init.siteConfig as PublicSiteSettings);
+    });
+  }, [apply]);
 
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
 

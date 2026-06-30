@@ -4,6 +4,7 @@ from . import visitor_views
 from . import seo_ping_views
 
 urlpatterns = [
+    path('init', views.app_init),
     path('features', views.list_features),
     path('features/<str:key>', views.update_feature),
     path('recommendations', views.recommendations),

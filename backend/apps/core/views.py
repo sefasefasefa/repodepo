@@ -112,6 +112,83 @@ def update_feature(request, key):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def app_init(request):
+    """Tek round-trip ile site-config + features + geo/check döner."""
+    from apps.admin_panel.models import SiteSettings
+    from .visitor_views import _get_geo_settings, _get_client_ip, _is_local_ip
+
+    CACHE_KEY = 'init:combined:v1'
+    cached_static = cache.get(CACHE_KEY)
+
+    if cached_static is None:
+        s, _ = SiteSettings.objects.get_or_create(id=1)
+        site_config = {
+            'siteName': s.site_name,
+            'siteDescription': s.site_description,
+            'logoUrl': s.logo_url,
+            'faviconUrl': s.favicon_url,
+            'primaryColor': s.primary_color,
+            'registrationEnabled': s.registration_enabled,
+            'maintenanceMode': s.maintenance_mode,
+        }
+
+        ensure_defaults()
+        flags_qs = FeatureFlag.objects.all()
+        flag_map = {f.key: f.state for f in flags_qs}
+        details = []
+        for f in flags_qs:
+            defaults = DEFAULT_FLAG_MAP.get(f.key, {})
+            details.append({
+                'key': f.key, 'state': f.state,
+                'label': f.label or defaults.get('label', f.key),
+                'description': f.description or defaults.get('description', ''),
+                'group': defaults.get('group', 'Diğer'),
+            })
+        features = {'flags': flag_map, 'details': details}
+
+        cached_static = {'siteConfig': site_config, 'features': features}
+        cache.set(CACHE_KEY, cached_static, 120)
+
+    geo_cached = cache.get('geo_settings:v1')
+    if geo_cached is None:
+        from .visitor_views import _get_geo_settings
+        s = _get_geo_settings()
+        geo_cached = {
+            'is_enabled': s.is_enabled, 'mode': s.mode,
+            'countries': s.countries or [], 'message': s.message,
+            'redirect_url': s.redirect_url,
+        }
+        cache.set('geo_settings:v1', geo_cached, 300)
+
+    if not geo_cached['is_enabled']:
+        geo = {'blocked': False, 'country': None, 'enabled': False}
+    else:
+        from .visitor_views import _get_client_ip, _is_local_ip
+        ip = _get_client_ip(request)
+        is_local = _is_local_ip(ip)
+        country = 'LOCAL' if is_local else 'XX'
+        countries = geo_cached['countries']
+        mode = geo_cached['mode']
+        if country == 'XX':
+            blocked = False
+        elif mode == 'allowlist':
+            blocked = not is_local and bool(countries) and country not in countries
+        else:
+            blocked = country in countries
+        geo = {
+            'blocked': blocked, 'country': country, 'enabled': True,
+            'mode': mode, 'message': geo_cached['message'],
+            'redirectUrl': geo_cached['redirect_url'],
+        }
+
+    result = {**cached_static, 'geo': geo}
+    resp = Response(result)
+    resp['Cache-Control'] = 'private, max-age=120, stale-while-revalidate=60'
+    return resp
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def health_check(request):
     return Response({'status': 'ok'})
 
