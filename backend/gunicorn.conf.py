@@ -2,7 +2,7 @@ import multiprocessing
 import os
 import tempfile
 
-bind = "0.0.0.0:5000"
+bind = os.environ.get("GUNICORN_BIND", "0.0.0.0:5000")
 
 _cpu = multiprocessing.cpu_count()
 
