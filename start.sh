@@ -10,6 +10,10 @@ esac
 
 cd backend
 
+# ── Statik dosyaları her zaman güncelle (staticfiles/ git'te değil) ──────────
+echo "Statik dosyalar hazirlaniyor..."
+python manage.py collectstatic --noinput -v 0 2>/dev/null || true
+
 if [ "$OS" = "windows" ]; then
 
     # ── Donanım bilgisini Python ile oku ─────────────────────────────────────
