@@ -45,10 +45,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'django.middleware.gzip.GZipMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',   # static dosyalar hızlı buradan çıkar
+    'corsheaders.middleware.CorsMiddleware',        # CORS: preflight'lar erken yanıtlanır
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -114,15 +113,16 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'hotpulse-cache',
-        'TIMEOUT': 120,
+        'TIMEOUT': 300,          # 5 dk — daha uzun cache hit oranını artırır
         'OPTIONS': {
-            'MAX_ENTRIES': 10000,
-            'CULL_FREQUENCY': 4,
+            'MAX_ENTRIES': 20000,
+            'CULL_FREQUENCY': 3,
         },
     }
 }
 
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+# JWT ile çalışıldığında session DB'ye çarpmaz; cache-only yeterli
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',
@@ -169,7 +169,7 @@ if not os.environ.get('DATABASE_URL'):
         'timeout': 20,
         'check_same_thread': False,
     }
-    DATABASES['default']['CONN_MAX_AGE'] = 300
+    DATABASES['default']['CONN_MAX_AGE'] = 600
 
 from datetime import timedelta
 
@@ -246,3 +246,18 @@ SITE_URL = (
 )
 if SITE_URL and not SITE_URL.startswith('http'):
     SITE_URL = 'https://' + SITE_URL
+
+# SQLite WAL modu — eş zamanlı okuma/yazma çakışmasını önler, hızı artırır
+if not os.environ.get('DATABASE_URL'):
+    from django.db.backends.signals import connection_created
+
+    def _sqlite_wal(sender, connection, **kwargs):
+        if connection.vendor == 'sqlite':
+            cursor = connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL;")
+            cursor.execute("PRAGMA synchronous=NORMAL;")
+            cursor.execute("PRAGMA cache_size=-32000;")  # 32 MB page cache
+            cursor.execute("PRAGMA temp_store=MEMORY;")
+            cursor.execute("PRAGMA mmap_size=134217728;")  # 128 MB mmap
+
+    connection_created.connect(_sqlite_wal)
