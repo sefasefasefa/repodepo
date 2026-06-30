@@ -16,6 +16,16 @@ else
   echo "Migrations up to date, skipping."
 fi
 
+# Veritabanı boşsa (ilk kurulum) temel seed datayı yükle
+CATEGORY_COUNT=$(python manage.py shell -c "from apps.videos.models import Category; print(Category.objects.count())" 2>/dev/null | tail -1)
+if [ "$CATEGORY_COUNT" = "0" ] || [ -z "$CATEGORY_COUNT" ]; then
+  echo "Veritabanı boş — temel seed data yükleniyor..."
+  python manage.py seed_data --env=prod 2>&1 | grep -v "^80 objects"
+fi
+
+# Cache temizle (eski boş cache sorununu önle)
+python manage.py shell -c "from django.core.cache import cache; cache.clear()" 2>/dev/null | grep -v "^80 objects" || true
+
 # Static dosyalar değiştiyse (yeni build geldi) collectstatic çalıştır
 STATIC_MARKER=".static_done"
 STATIC_HASH=$(find static -name "*.js" -o -name "*.css" 2>/dev/null | sort | xargs md5sum 2>/dev/null | md5sum | cut -d' ' -f1)
