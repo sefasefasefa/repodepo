@@ -7,6 +7,7 @@ from . import downloads_views as dl
 from . import chunk_upload_views as cu
 
 urlpatterns = [
+    path('home', views.home_page),
     path('videos', views.list_videos),
     path('videos/feed', views.get_feed),
     path('videos/trending', views.get_trending),

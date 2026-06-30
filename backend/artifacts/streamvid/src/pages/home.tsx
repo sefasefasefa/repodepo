@@ -1,10 +1,7 @@
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/app-layout";
 import {
-  useGetTrendingVideos,
   useListVideos,
-  useListCategories,
-  useListUsers,
 } from "@workspace/api-client-react";
 import { VideoCard } from "@/components/video/video-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -369,12 +366,6 @@ export default function Home() {
   const [homeFilters, setHomeFilters] = useState<HomeFilter[]>([]);
   const { settings } = usePublicSiteSettings();
 
-  useEffect(() => {
-    fetch("/api/home-filters").then(r => r.json()).then(d => {
-      if (d.filters) setHomeFilters(d.filters);
-    }).catch(() => {});
-  }, []);
-
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   const breadcrumbSchema = {
@@ -404,9 +395,38 @@ export default function Home() {
   const ffLive = useFeatureState("live_streams");
   const ffSubscriptions = useFeatureState("subscriptions");
 
-  const { data: trendingData, isLoading: trendingLoading } = useGetTrendingVideos({ limit: 8 } as any);
+  // ── Tek API isteğiyle tüm anasayfa verisi ───────────────────────────────
+  const [homeData, setHomeData] = useState<any>(null);
+  const [homeLoading, setHomeLoading] = useState(true);
 
-  // Aktif filtreye göre API parametrelerini hesapla
+  useEffect(() => {
+    setHomeLoading(true);
+    fetch("/api/home")
+      .then(r => r.json())
+      .then(d => {
+        setHomeData(d);
+        if (d.home_filters) setHomeFilters(d.home_filters);
+        setHomeLoading(false);
+      })
+      .catch(() => setHomeLoading(false));
+  }, []);
+
+  const trendingData   = homeData ? { videos: homeData.trending }    : undefined;
+  const newestData     = homeData ? { videos: homeData.newest }      : undefined;
+  const mostViewedData = homeData ? { videos: homeData.most_viewed } : undefined;
+  const mostLikedData  = homeData ? { videos: homeData.most_liked }  : undefined;
+  const shortData      = homeData ? { videos: homeData.shorts }      : undefined;
+  const premiumData    = homeData ? { videos: homeData.premium }     : undefined;
+  const categories: Category[] = homeData?.categories ?? [];
+  const visibleCategories = categories.filter((c: Category) => (c.videoCount ?? 0) > 0);
+  const creators: any[] = homeData?.creators ?? [];
+
+  const trendingLoading   = homeLoading;
+  const newestLoading     = homeLoading;
+  const mostViewedLoading = homeLoading;
+  const mostLikedLoading  = homeLoading;
+
+  // Kategoriye tıklandığında veya özel filtre seçildiğinde dinamik sorgu
   const filterParams = (() => {
     if (!activeFilter) return { categoryId: activeCategory ?? undefined };
     const p: Record<string, any> = {};
@@ -419,47 +439,9 @@ export default function Home() {
   })();
   const filteredSort = activeFilter?.sortBy ?? "most_viewed";
 
-  const { data: mostViewedData, isLoading: mostViewedLoading } = useListVideos({
-    sort: "most_viewed",
-    limit: 8,
-    ...(activeCategory && !activeFilter ? { categoryId: activeCategory } : {}),
-  });
-
-  const { data: newestData, isLoading: newestLoading } = useListVideos({
-    sort: "newest",
-    limit: 8,
-    ...(activeCategory && !activeFilter ? { categoryId: activeCategory } : {}),
-  });
-
-  const { data: mostLikedData, isLoading: mostLikedLoading } = useListVideos({
-    sort: "most_liked",
-    limit: 8,
-    ...(activeCategory && !activeFilter ? { categoryId: activeCategory } : {}),
-  });
-
-  // Aktif özel filtre için ayrı sorgu
   const { data: filteredData, isLoading: filteredLoading } = useListVideos(
     activeFilter ? { sort: filteredSort, limit: 24, ...filterParams } : { sort: "newest", limit: 1 }
   );
-
-  const { data: shortData, isLoading: shortsLoading } = useListVideos({
-    type: "short",
-    sort: "most_viewed",
-    limit: 8,
-  });
-
-  const { data: premiumData } = useListVideos({
-    isPremium: true,
-    sort: "most_viewed",
-    limit: 6,
-  });
-
-  const { data: categoriesData } = useListCategories();
-  const categories = (categoriesData as any)?.categories ?? [];
-  const visibleCategories = categories.filter((c: Category) => (c.videoCount ?? 0) > 0);
-
-  const { data: creatorsData } = useListUsers({ limit: 8, role: "creator" });
-  const creators = (creatorsData as any)?.users ?? [];
 
   return (
     <AppLayout>
