@@ -24,6 +24,22 @@ interface Props {
 function extractFrame(file: File, timeSec: number): Promise<Blob | null> {
   return new Promise((resolve) => {
     let settled = false;
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "auto";
+    video.muted = true;
+    video.playsInline = true;
+    // NOT setting crossOrigin — blob URLs are same-origin, crossOrigin causes unnecessary CORS headers
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      video.removeAttribute("src");
+      video.load();
+      try { URL.revokeObjectURL(url); } catch {}
+    };
+
     const done = (blob: Blob | null) => {
       if (settled) return;
       settled = true;
@@ -31,60 +47,47 @@ function extractFrame(file: File, timeSec: number): Promise<Blob | null> {
       resolve(blob);
     };
 
-    const url = URL.createObjectURL(file);
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.muted = true;
-    video.playsInline = true;
-    video.crossOrigin = "anonymous";
-    video.src = url;
-
-    const cleanup = () => { try { URL.revokeObjectURL(url); } catch {} };
-
-    // Timeout: bazı tarayıcı/format kombinasyonlarında seeked hiç tetiklenmez
-    const timeout = setTimeout(() => done(null), 8000);
-
     const capture = () => {
-      clearTimeout(timeout);
+      // Sadece video gerçekten yüklendiyse ve boyutu varsa yakala
+      if (video.readyState < 2 || video.videoWidth === 0) {
+        done(null);
+        return;
+      }
       try {
         const canvas = document.createElement("canvas");
         canvas.width = 1280;
         canvas.height = 720;
         const ctx = canvas.getContext("2d");
         if (!ctx) { done(null); return; }
-        const vw = video.videoWidth || 1280;
-        const vh = video.videoHeight || 720;
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
         const scale = Math.min(1280 / vw, 720 / vh);
-        const dw = vw * scale;
-        const dh = vh * scale;
+        const dw = Math.round(vw * scale);
+        const dh = Math.round(vh * scale);
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, 1280, 720);
-        ctx.drawImage(video, (1280 - dw) / 2, (720 - dh) / 2, dw, dh);
+        ctx.drawImage(video, Math.round((1280 - dw) / 2), Math.round((720 - dh) / 2), dw, dh);
         canvas.toBlob((blob) => done(blob), "image/jpeg", 0.88);
       } catch { done(null); }
     };
 
     video.addEventListener("loadedmetadata", () => {
-      const t = Math.min(timeSec, video.duration * 0.9 || 0);
-      if (t === 0) {
-        // Süre bilinmiyorsa mevcut kareyi al
-        capture();
-      } else {
-        video.currentTime = t;
-      }
+      // Durasyonu al; geçersizse direkt timeSec'e seek et
+      const dur = isFinite(video.duration) && video.duration > 0 ? video.duration : null;
+      const seekTo = dur ? Math.min(timeSec, dur * 0.9) : timeSec;
+      video.currentTime = seekTo;
     });
 
+    // seeked = seek tamamlandı, kare hazır
     video.addEventListener("seeked", capture);
 
-    // Seek olmadan veri gelirse de yakala
-    video.addEventListener("loadeddata", () => {
-      if (!settled && video.readyState >= 2) {
-        capture();
-      }
-    });
+    // Hata durumunda hemen bitir
+    video.addEventListener("error", () => done(null));
 
-    video.addEventListener("error", () => { clearTimeout(timeout); done(null); });
+    // 10 saniyede hiçbir şey olmazsa timeout
+    timeout = setTimeout(() => done(null), 10000);
 
+    video.src = url;
     video.load();
   });
 }
@@ -425,18 +428,32 @@ export function ChunkedUploadZone({ onDone }: Props) {
 
             <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-[#0d0d0d] border border-[#2a2a2a]">
               {thumbLoading && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                   <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                  <span className="text-xs text-[#666]">Thumbnail çıkarılıyor...</span>
                 </div>
               )}
               {thumbPreview && !thumbLoading && (
                 <img src={thumbPreview} alt="Thumbnail" className="w-full h-full object-contain" />
               )}
               {!thumbPreview && !thumbLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#444]">
+                <label className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#555] cursor-pointer hover:text-[#888] transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const blob = f.slice(0, f.size, f.type);
+                      setThumbBlob(blob);
+                      if (thumbPreview) URL.revokeObjectURL(thumbPreview);
+                      setThumbPreview(URL.createObjectURL(f));
+                    }}
+                  />
                   <Camera className="h-8 w-8" />
-                  <span className="text-xs">Thumbnail oluşturuluyor...</span>
-                </div>
+                  <span className="text-xs text-center px-4">Otomatik thumbnail alınamadı<br />Görsel seçmek için tıkla</span>
+                </label>
               )}
             </div>
 
@@ -605,6 +622,7 @@ export function ChunkedUploadZone({ onDone }: Props) {
             ) : null}
 
             <Button
+              type="button"
               onClick={handleStart}
               disabled={!meta.title.trim() || (scheduleEnabled && !scheduleValue)}
               className="w-full bg-primary hover:bg-primary/90 text-white gap-2 h-11 rounded-xl font-bold shadow-[0_0_20px_rgba(168,85,247,0.25)]"
