@@ -32,7 +32,7 @@ STATIC_HASH=$(find static -name "*.js" -o -name "*.css" 2>/dev/null | sort | xar
 
 if [ ! -f "$STATIC_MARKER" ] || [ "$(cat $STATIC_MARKER 2>/dev/null)" != "$STATIC_HASH" ]; then
   echo "Collecting and compressing static files..."
-  python manage.py collectstatic --noinput -v 0
+  python manage.py collectstatic --clear --noinput -v 0
   echo "$STATIC_HASH" > "$STATIC_MARKER"
 else
   echo "Static files up to date, skipping."

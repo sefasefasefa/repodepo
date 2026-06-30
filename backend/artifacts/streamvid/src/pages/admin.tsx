@@ -1,34 +1,34 @@
 import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/lib/auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useGetAdminDashboard } from "@workspace/api-client-react";
-import { AdminVideos } from "@/components/admin/admin-videos";
-import { AdminUsers } from "@/components/admin/admin-users";
-import { AdminAds } from "@/components/admin/admin-ads";
-import { AdminReports } from "@/components/admin/admin-reports";
-import { AdminSubscriptions } from "@/components/admin/admin-subscriptions";
-import { AdminCDN } from "@/components/admin/admin-cdn";
-import { AdminIntegrations } from "@/components/admin/admin-integrations";
-import { AdminPayments } from "@/components/admin/admin-payments";
-import { AdminSecurity } from "@/components/admin/admin-security";
-import AdminMining from "@/components/admin/admin-mining";
-import AdminSiteSettings from "@/components/admin/admin-site-settings";
-import { AdminCreators } from "@/components/admin/admin-creators";
-import { AdminCreatorApplications } from "@/components/admin/admin-creator-applications";
-import { AdminApiEndpoints } from "@/components/admin/admin-api-endpoints";
-import { AdminAffiliate } from "@/components/admin/admin-affiliate";
-import { AdminBadges } from "@/components/admin/admin-badges";
-import AdminCustomPages from "@/components/admin/admin-custom-pages";
-import AdminVisitorMap from "@/components/admin/admin-visitor-map";
-import AdminABTests from "@/components/admin/admin-ab-tests";
-import AdminRevenueProjection from "@/components/admin/admin-revenue-projection";
-import AdminEmailCampaigns from "@/components/admin/admin-email-campaigns";
-import AdminGiftSubscriptions from "@/components/admin/admin-gift-subscriptions";
-import AdminLinkModeration from "@/components/admin/admin-link-moderation";
-import AdminHomeFilters from "@/components/admin/admin-home-filters";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AdminFeatureFlags } from "@/components/admin/admin-feature-flags";
-import AdminCrosspostMonitor from "@/components/admin/admin-crosspost-monitor";
+
+const AdminVideos              = lazy(() => import("@/components/admin/admin-videos").then(m => ({ default: m.AdminVideos })));
+const AdminUsers               = lazy(() => import("@/components/admin/admin-users").then(m => ({ default: m.AdminUsers })));
+const AdminAds                 = lazy(() => import("@/components/admin/admin-ads").then(m => ({ default: m.AdminAds })));
+const AdminReports             = lazy(() => import("@/components/admin/admin-reports").then(m => ({ default: m.AdminReports })));
+const AdminSubscriptions       = lazy(() => import("@/components/admin/admin-subscriptions").then(m => ({ default: m.AdminSubscriptions })));
+const AdminCDN                 = lazy(() => import("@/components/admin/admin-cdn").then(m => ({ default: m.AdminCDN })));
+const AdminIntegrations        = lazy(() => import("@/components/admin/admin-integrations").then(m => ({ default: m.AdminIntegrations })));
+const AdminPayments            = lazy(() => import("@/components/admin/admin-payments").then(m => ({ default: m.AdminPayments })));
+const AdminSecurity            = lazy(() => import("@/components/admin/admin-security").then(m => ({ default: m.AdminSecurity })));
+const AdminMining              = lazy(() => import("@/components/admin/admin-mining"));
+const AdminSiteSettings        = lazy(() => import("@/components/admin/admin-site-settings"));
+const AdminCreators            = lazy(() => import("@/components/admin/admin-creators").then(m => ({ default: m.AdminCreators })));
+const AdminCreatorApplications = lazy(() => import("@/components/admin/admin-creator-applications").then(m => ({ default: m.AdminCreatorApplications })));
+const AdminApiEndpoints        = lazy(() => import("@/components/admin/admin-api-endpoints").then(m => ({ default: m.AdminApiEndpoints })));
+const AdminAffiliate           = lazy(() => import("@/components/admin/admin-affiliate").then(m => ({ default: m.AdminAffiliate })));
+const AdminBadges              = lazy(() => import("@/components/admin/admin-badges").then(m => ({ default: m.AdminBadges })));
+const AdminCustomPages         = lazy(() => import("@/components/admin/admin-custom-pages"));
+const AdminVisitorMap          = lazy(() => import("@/components/admin/admin-visitor-map"));
+const AdminABTests             = lazy(() => import("@/components/admin/admin-ab-tests"));
+const AdminRevenueProjection   = lazy(() => import("@/components/admin/admin-revenue-projection"));
+const AdminEmailCampaigns      = lazy(() => import("@/components/admin/admin-email-campaigns"));
+const AdminGiftSubscriptions   = lazy(() => import("@/components/admin/admin-gift-subscriptions"));
+const AdminLinkModeration      = lazy(() => import("@/components/admin/admin-link-moderation"));
+const AdminHomeFilters         = lazy(() => import("@/components/admin/admin-home-filters"));
+const AdminFeatureFlags        = lazy(() => import("@/components/admin/admin-feature-flags").then(m => ({ default: m.AdminFeatureFlags })));
+const AdminCrosspostMonitor    = lazy(() => import("@/components/admin/admin-crosspost-monitor"));
 import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Bitcoin, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -132,6 +132,7 @@ export default function Admin() {
             </nav>
           </aside>
           <main className="flex-1 p-4 md:p-6">
+            <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" /></div>}>
             {tab === "dashboard" && (
               <div className="space-y-6 max-w-5xl">
                 <h1 className="text-2xl font-bold">Genel Bakış</h1>
@@ -218,6 +219,7 @@ export default function Admin() {
                 </div>
               </div>
             )}
+            </Suspense>
           </main>
         </div>
       </div>
