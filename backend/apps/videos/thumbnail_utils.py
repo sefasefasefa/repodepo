@@ -120,8 +120,8 @@ def _extract_frame(source: str, out_path: str, seek_seconds: float = 5.0) -> boo
         except subprocess.TimeoutExpired:
             logger.warning("ffmpeg thumbnail timeout: seek=%.1f src=%s", seek, source[:80])
             return False
-        except (FileNotFoundError, OSError) as e:
-            logger.error("ffmpeg bulunamadı veya OS hatası: %s", e)
+        except (FileNotFoundError, OSError):
+            logger.debug("ffmpeg bulunamadı, thumbnail atlandı.")
             return False
         except Exception as e:
             logger.warning("ffmpeg beklenmedik hata: %s", e)
