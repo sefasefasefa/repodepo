@@ -174,12 +174,20 @@ if command -v pnpm &>/dev/null; then
     cd backend
     pnpm install --no-frozen-lockfile
     pnpm rebuild esbuild 2>/dev/null || true
-    pnpm --filter @workspace/streamvid run build
-    cd ..
-    echo "   Statik dosyalar kopyalaniyor..."
-    rm -rf backend/static/assets 2>/dev/null || true
-    cp -r backend/artifacts/streamvid/dist/public/. backend/static/ 2>/dev/null || true
-    echo "   Frontend build tamamlandi."
+    # Build başarılıysa statik dosyaları güncelle; başarısızsa eski dosyaları koru
+    if pnpm --filter @workspace/streamvid run build; then
+        cd ..
+        echo "   Statik dosyalar kopyalaniyor..."
+        rm -rf backend/static/assets 2>/dev/null || true
+        cp -r backend/artifacts/streamvid/dist/public/. backend/static/ 2>/dev/null || true
+        echo "   Frontend build tamamlandi."
+    else
+        cd ..
+        echo ""
+        echo "   [UYARI] Frontend build basarisiz — eski statik dosyalar korunuyor."
+        echo "   Site calismaya devam edecek, yeni frontend degisiklikleri uygulanmadi."
+        echo ""
+    fi
 else
     echo "   [UYARI] pnpm bulunamadi — frontend build atlandi."
     echo "   Kurmak icin: npm install -g pnpm"
