@@ -175,6 +175,7 @@ export function VideoCard({ video }: VideoCardProps) {
               loop
               playsInline
               preload="none"
+              poster={video.thumbnailUrl || undefined}
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${previewing ? "opacity-100" : "opacity-0 pointer-events-none"}`}
             />
           )}

@@ -38,6 +38,9 @@ function AddVideoModal({ categories, onClose, onSuccess }: {
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"url" | "file">("url");
   const [uploading, setUploading] = useState(false);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [thumbnailStatus, setThumbnailStatus] = useState<null | "success" | "error">(null);
+  const [thumbnailError, setThumbnailError] = useState("");
   const set = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
   const toggleCat = (id: number) => setSelectedCategoryIds(prev =>
     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
@@ -62,7 +65,9 @@ function AddVideoModal({ categories, onClose, onSuccess }: {
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true); setError("");
+    setThumbnailUploading(true);
+    setThumbnailStatus(null);
+    setThumbnailError("");
     try {
       const token = localStorage.getItem("token");
       const fd = new FormData();
@@ -70,8 +75,16 @@ function AddVideoModal({ categories, onClose, onSuccess }: {
       const res = await fetch("/api/upload/thumbnail-image", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      set("thumbnailUrl", data.url || data.thumbnailUrl || "");
-    } catch (e: any) { setError(e.message); } finally { setUploading(false); }
+      const url = data.url || data.thumbnailUrl || "";
+      if (!url) throw new Error("Sunucu URL döndürmedi");
+      set("thumbnailUrl", url);
+      setThumbnailStatus("success");
+    } catch (err: any) {
+      setThumbnailStatus("error");
+      setThumbnailError(err.message || "Yükleme başarısız");
+    } finally {
+      setThumbnailUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,12 +143,28 @@ function AddVideoModal({ categories, onClose, onSuccess }: {
           <div>
             <label className="text-xs text-[#888] mb-1.5 block font-medium">Thumbnail</label>
             <div className="flex gap-2">
-              <input value={form.thumbnailUrl} onChange={e => set("thumbnailUrl", e.target.value)} placeholder="https://example.com/thumb.jpg" className="flex-1 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555] focus:outline-none focus:border-primary" />
-              <label className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-colors shrink-0", uploading ? "border-primary/40 text-primary" : "border-[#2a2a2a] text-[#666] hover:text-white hover:border-[#444]")}>
-                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Image className="h-3.5 w-3.5" />} Yükle
-                <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} disabled={uploading} />
+              <input value={form.thumbnailUrl} onChange={e => { set("thumbnailUrl", e.target.value); setThumbnailStatus(null); }} placeholder="https://example.com/thumb.jpg" className="flex-1 bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#555] focus:outline-none focus:border-primary" />
+              <label className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-colors shrink-0",
+                thumbnailUploading ? "border-primary/40 text-primary" :
+                thumbnailStatus === "success" ? "border-green-600/50 text-green-400 bg-green-900/10" :
+                thumbnailStatus === "error" ? "border-red-600/50 text-red-400 bg-red-900/10" :
+                "border-[#2a2a2a] text-[#666] hover:text-white hover:border-[#444]"
+              )}>
+                {thumbnailUploading
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Yükleniyor…</>
+                  : thumbnailStatus === "success"
+                  ? <><Check className="h-3.5 w-3.5" /> Yüklendi</>
+                  : thumbnailStatus === "error"
+                  ? <><AlertCircle className="h-3.5 w-3.5" /> Hata</>
+                  : <><Image className="h-3.5 w-3.5" /> Yükle</>
+                }
+                <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} disabled={thumbnailUploading} />
               </label>
             </div>
+            {thumbnailStatus === "error" && thumbnailError && (
+              <p className="mt-1 text-[11px] text-red-400 flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />{thumbnailError}</p>
+            )}
             {form.thumbnailUrl && <img src={form.thumbnailUrl} className="mt-2 h-16 w-28 object-cover rounded-lg border border-[#2a2a2a]" onError={e => (e.currentTarget.style.display = "none")} />}
           </div>
 
@@ -549,6 +578,9 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
   );
   const [uploading, setUploading] = useState(false);
+  const [thumbUploading, setThumbUploading] = useState(false);
+  const [thumbStatus, setThumbStatus] = useState<null | "success" | "error">(null);
+  const [thumbError, setThumbError] = useState("");
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
 
   // ── cloud.mail.ru indirme durumu ─────────────────────────────────────────
@@ -602,15 +634,25 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
 
   const handleThumbUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
-    setUploading(true);
+    setThumbUploading(true);
+    setThumbStatus(null);
+    setThumbError("");
     try {
       const token = localStorage.getItem("token");
       const fd = new FormData(); fd.append("thumbnail", file);
       const res = await fetch("/api/upload/thumbnail-image", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Upload failed");
-      set("thumbnailUrl", data.url || data.thumbnailUrl || "");
-    } catch {} finally { setUploading(false); }
+      const url = data.url || data.thumbnailUrl || "";
+      if (!url) throw new Error("Sunucu URL döndürmedi");
+      set("thumbnailUrl", url);
+      setThumbStatus("success");
+    } catch (err: any) {
+      setThumbStatus("error");
+      setThumbError(err.message || "Yükleme başarısız");
+    } finally {
+      setThumbUploading(false);
+    }
   };
 
   return (
@@ -704,12 +746,28 @@ function EditVideoPanel({ video, categories, onClose, onSave }: {
               <div className="sm:col-span-2">
                 <label className="text-[11px] text-[#666] mb-1 block">Thumbnail URL</label>
                 <div className="flex gap-2">
-                  <input value={form.thumbnailUrl} onChange={e => set("thumbnailUrl", e.target.value)} placeholder="https://...jpg" className="flex-1 bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
-                  <label className="flex items-center gap-1 px-2.5 py-2 rounded-lg border border-[#333] text-[#666] hover:text-white text-xs cursor-pointer shrink-0">
-                    {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Image className="h-3.5 w-3.5" />}
-                    <input type="file" accept="image/*" className="hidden" onChange={handleThumbUpload} disabled={uploading} />
+                  <input value={form.thumbnailUrl} onChange={e => { set("thumbnailUrl", e.target.value); setThumbStatus(null); }} placeholder="https://...jpg" className="flex-1 bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary" />
+                  <label className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-colors shrink-0",
+                    thumbUploading ? "border-primary/40 text-primary" :
+                    thumbStatus === "success" ? "border-green-600/50 text-green-400 bg-green-900/10" :
+                    thumbStatus === "error" ? "border-red-600/50 text-red-400 bg-red-900/10" :
+                    "border-[#333] text-[#666] hover:text-white hover:border-[#444]"
+                  )}>
+                    {thumbUploading
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Yükleniyor…</>
+                      : thumbStatus === "success"
+                      ? <><Check className="h-3.5 w-3.5" /> Yüklendi</>
+                      : thumbStatus === "error"
+                      ? <><AlertCircle className="h-3.5 w-3.5" /> Hata</>
+                      : <><Image className="h-3.5 w-3.5" /> Yükle</>
+                    }
+                    <input type="file" accept="image/*" className="hidden" onChange={handleThumbUpload} disabled={thumbUploading} />
                   </label>
                 </div>
+                {thumbStatus === "error" && thumbError && (
+                  <p className="mt-1 text-[11px] text-red-400 flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />{thumbError}</p>
+                )}
                 {form.thumbnailUrl && <img src={form.thumbnailUrl} className="mt-1.5 h-12 w-20 object-cover rounded border border-[#333]" onError={e => (e.currentTarget.style.display = "none")} />}
               </div>
 
