@@ -26,15 +26,20 @@
       @keyframes pulse{0%,100%{opacity:.4}50%{opacity:.8}}
       @media(max-width:768px){#app-shell .sidebar{display:none}}
     </style>
+    <!-- Kritik kaynaklar için bağlantı ipuçları -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TX5SE92CJE"></script>
-    <script>
+    <!-- data-cfasync="false": Cloudflare Rocket Loader bu script'e dokunmasın -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TX5SE92CJE" data-cfasync="false"></script>
+    <script data-cfasync="false">
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'G-TX5SE92CJE');
     </script>
-    <script type="module" crossorigin src="/assets/index-Dk98EVsy.js"></script>
+    <!-- data-cfasync="false": Rocket Loader type="module" script'leri bozar, devre dışı bırak -->
+    <script type="module" crossorigin src="/assets/index-Dk98EVsy.js" data-cfasync="false"></script>
     <link rel="modulepreload" crossorigin href="/assets/routing-Bzd4TU89.js">
     <link rel="modulepreload" crossorigin href="/assets/react-query-BS7tmDKE.js">
     <link rel="modulepreload" crossorigin href="/assets/ui-radix-B7D3ahvu.js">
@@ -67,7 +72,7 @@
       </div>
     </div>
     <div id="root"></div>
-    <script>
+    <script data-cfasync="false">
       // React mount olunca iskelet ekranını kaldır
       (function(){
         var mo = new MutationObserver(function(){

@@ -200,8 +200,14 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CORS_ALLOW_CREDENTIALS = True
 
 # ── HTTPS Güvenlik (DEBUG=False + HTTPS kullanıldığında otomatik aktif) ───────
+# Cloudflare arkasında çalışıyoruz: CF→nginx HTTP (port 80), nginx X-Forwarded-Proto:https set eder.
+# SECURE_PROXY_SSL_HEADER ile Django bunu okur → request.is_secure() = True.
+# SECURE_SSL_REDIRECT=False: CF zaten HTTP→HTTPS redirect yapıyor, Django yapmasın
+# (yapsa CF→nginx arası HTTP olduğu için sonsuz redirect döngüsü oluşur).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False          # Cloudflare hallediyor
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
@@ -211,8 +217,7 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
 
-# localhost'ta HTTPS yok; SSL redirect'i localhost icin devre disi birak
-SECURE_SSL_REDIRECT = not DEBUG and 'localhost' not in os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+SECURE_SSL_REDIRECT = False  # Her ortamda False — redirect Cloudflare/nginx sorumluluğu
 
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024 * 1024  # 10 GB
 
