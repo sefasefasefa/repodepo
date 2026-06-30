@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django.middleware.gzip.GZipMiddleware',        # API yanıtlarını sıkıştır (JS/JSON ~70% küçülür)
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',   # static dosyalar hızlı buradan çıkar
     'corsheaders.middleware.CorsMiddleware',        # CORS: preflight'lar erken yanıtlanır

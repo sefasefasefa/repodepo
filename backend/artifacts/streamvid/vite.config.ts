@@ -62,6 +62,8 @@ export default defineConfig({
           ],
           "routing":      ["wouter"],
           "utils":        ["date-fns", "clsx", "tailwind-merge", "class-variance-authority"],
+          "motion":       ["framer-motion"],
+          "zod":          ["zod", "@hookform/resolvers", "react-hook-form"],
         },
       },
     },

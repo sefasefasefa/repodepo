@@ -8,7 +8,7 @@ _cpu = multiprocessing.cpu_count()
 # VDS'te standart formül kullan; Replit gibi kısıtlı ortamlar için
 # GUNICORN_WORKERS=2 şeklinde override et.
 # Örnek VDS (4 CPU): 9 worker × 4 thread = 36 eş zamanlı istek
-_default = _cpu * 2 + 1
+_default = min(_cpu * 2 + 1, 4)  # Replit gibi kısıtlı ortamlarda max 4 worker
 workers = int(os.environ.get("GUNICORN_WORKERS", _default))
 
 worker_class = "gthread"

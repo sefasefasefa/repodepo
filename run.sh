@@ -16,10 +16,16 @@ else
   echo "Migrations up to date, skipping."
 fi
 
-# staticfiles dizini yoksa oluştur (WhiteNoise uyarısını önler)
-if [ ! -d "staticfiles" ]; then
-  echo "Collecting static files..."
+# Static dosyalar değiştiyse (yeni build geldi) collectstatic çalıştır
+STATIC_MARKER=".static_done"
+STATIC_HASH=$(find static -name "*.js" -o -name "*.css" 2>/dev/null | sort | xargs md5sum 2>/dev/null | md5sum | cut -d' ' -f1)
+
+if [ ! -f "$STATIC_MARKER" ] || [ "$(cat $STATIC_MARKER 2>/dev/null)" != "$STATIC_HASH" ]; then
+  echo "Collecting and compressing static files..."
   python manage.py collectstatic --noinput -v 0
+  echo "$STATIC_HASH" > "$STATIC_MARKER"
+else
+  echo "Static files up to date, skipping."
 fi
 
 echo "Starting Django + Gunicorn on port 5000..."
