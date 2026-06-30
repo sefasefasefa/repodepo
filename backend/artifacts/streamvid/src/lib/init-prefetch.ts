@@ -63,8 +63,12 @@ function saveInitCache(data: InitData) {
 let _promise: Promise<InitData | null> | null = null;
 
 function startPrefetch(): Promise<InitData | null> {
-  return fetch("/api/init", { credentials: "same-origin" })
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4000);
+
+  return fetch("/api/init", { credentials: "same-origin", signal: controller.signal })
     .then((r) => {
+      clearTimeout(timeout);
       if (!r.ok) return null;
       return r.json() as Promise<InitData>;
     })
@@ -72,7 +76,10 @@ function startPrefetch(): Promise<InitData | null> {
       if (data) saveInitCache(data);
       return data;
     })
-    .catch(() => null);
+    .catch(() => {
+      clearTimeout(timeout);
+      return null;
+    });
 }
 
 const cached = loadInitCache();

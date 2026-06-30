@@ -554,9 +554,19 @@ def stream_video(request, video_id):
     for candidate in [v.hls_url, v.video_url]:
         if not candidate:
             continue
-        # /media/ ile başlayan göreli yol veya MEDIA_ROOT altında mı?
+        # /media/ ile başlayan göreli yol
         if candidate.startswith('/media/') or candidate.startswith('media/'):
-            rel = candidate.lstrip('/')  # media/videos/...
+            rel = candidate.lstrip('/')
+            # MEDIA_ROOT üzerinden dene (daha güvenilir)
+            try:
+                media_rel = rel[len('media/'):] if rel.startswith('media/') else rel
+                full_path = os.path.join(settings.MEDIA_ROOT, media_rel)
+                if os.path.isfile(full_path):
+                    local_file = full_path
+                    break
+            except Exception:
+                pass
+            # BASE_DIR üzerinden dene
             full_path = os.path.join(settings.BASE_DIR, rel)
             if os.path.isfile(full_path):
                 local_file = full_path
@@ -564,16 +574,6 @@ def stream_video(request, video_id):
         # Mutlak yol mu?
         elif os.path.isabs(candidate) and os.path.isfile(candidate):
             local_file = candidate
-            break
-        # MEDIA_ROOT altında mı kontrol et
-        candidate_basename = candidate.split('/')[-1]
-        for root, _, files in os.walk(settings.MEDIA_ROOT):
-            if candidate_basename in files:
-                full = os.path.join(root, candidate_basename)
-                if os.path.isfile(full):
-                    local_file = full
-                    break
-        if local_file:
             break
 
     if local_file:

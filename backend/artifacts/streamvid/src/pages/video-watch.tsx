@@ -204,9 +204,10 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
 
     const isExternal = effectiveUrl.startsWith("http://") || effectiveUrl.startsWith("https://");
 
-    // Yerel dosya → doğrudan sun; embed ASLA kullanılmaz
+    // Yerel dosya → stream endpoint üzerinden sun (range request + doğru MIME)
     if (!isExternal) {
-      const ownSrc: PlayerSource = { id: 0, playerName: "Kendi Oynatıcı", directUrl: effectiveUrl, isDefault: true, quality: "HD", language: "TR" };
+      const streamUrl = `/api/videos/${video.id}/stream`;
+      const ownSrc: PlayerSource = { id: 0, playerName: "Kendi Oynatıcı", directUrl: streamUrl, isDefault: true, quality: "HD", language: "TR" };
       return [ownSrc, ...players];
     }
 
