@@ -169,28 +169,33 @@ echo "[3/6] Python paketleri guncelleniyor..."
 python -m pip install -r backend/requirements.txt -q || pip install -r backend/requirements.txt -q
 
 # ── 4. Frontend build (React → statik dosyalar) ─────────────────────────
-echo "[4/6] Frontend derleniyor..."
-if command -v pnpm &>/dev/null; then
-    cd backend
-    pnpm install --no-frozen-lockfile
-    pnpm rebuild esbuild 2>/dev/null || true
-    # Build başarılıysa statik dosyaları güncelle; başarısızsa eski dosyaları koru
-    if pnpm --filter @workspace/streamvid run build; then
-        cd ..
-        echo "   Statik dosyalar kopyalaniyor..."
-        rm -rf backend/static/assets 2>/dev/null || true
-        cp -r backend/artifacts/streamvid/dist/public/. backend/static/ 2>/dev/null || true
-        echo "   Frontend build tamamlandi."
-    else
-        cd ..
-        echo ""
-        echo "   [UYARI] Frontend build basarisiz — eski statik dosyalar korunuyor."
-        echo "   Site calismaya devam edecek, yeni frontend degisiklikleri uygulanmadi."
-        echo ""
-    fi
+# NOT: Built dosyalar git'te takip edilir (backend/static/).
+# Windows'ta pnpm build calistirmak gereksiz ve sorun cikariyor.
+# Sadece Linux'ta (Replit/CI ortami gibi) build yapilir.
+echo "[4/6] Frontend kontrol ediliyor..."
+if [ "$OS" = "windows" ]; then
+    echo "   Windows: git'ten gelen onceden derlenmiş dosyalar kullaniliyor."
+    echo "   (pnpm build atlandı — backend/static/ git'ten geldi)"
 else
-    echo "   [UYARI] pnpm bulunamadi — frontend build atlandi."
-    echo "   Kurmak icin: npm install -g pnpm"
+    # Linux: pnpm varsa build yap, yoksa git'teki dosyaları kullan
+    if command -v pnpm &>/dev/null; then
+        cd backend
+        pnpm install --no-frozen-lockfile
+        pnpm rebuild esbuild 2>/dev/null || true
+        # Build başarılıysa statik dosyaları güncelle; başarısızsa git'tekini koru
+        if pnpm --filter @workspace/streamvid run build; then
+            cd ..
+            echo "   Statik dosyalar guncelleniyor..."
+            rm -rf backend/static/assets 2>/dev/null || true
+            cp -r backend/artifacts/streamvid/dist/public/. backend/static/ 2>/dev/null || true
+            echo "   Frontend build tamamlandi."
+        else
+            cd ..
+            echo "   [UYARI] Build basarisiz — git'teki statik dosyalar korunuyor."
+        fi
+    else
+        echo "   pnpm bulunamadi — git'teki statik dosyalar kullaniliyor."
+    fi
 fi
 
 # ── 5. Migrate ─────────────────────────────────────────────────────────
