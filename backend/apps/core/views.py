@@ -184,8 +184,8 @@ def app_init(request):
     home_data = None
     if not request.user.is_authenticated:
         try:
-            from apps.videos.views import _build_home_data_anon
-            home_data = _build_home_data_anon()
+            from apps.videos.views import HOME_CACHE_KEY
+            home_data = cache.get(HOME_CACHE_KEY)
         except Exception:
             home_data = None
 

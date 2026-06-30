@@ -12,7 +12,7 @@ _default = min(_cpu * 2 + 1, 4)  # Replit gibi kısıtlı ortamlarda max 4 worke
 workers = int(os.environ.get("GUNICORN_WORKERS", _default))
 
 worker_class = "gthread"
-threads = int(os.environ.get("GUNICORN_THREADS", 4))
+threads = int(os.environ.get("GUNICORN_THREADS", 8))
 
 # Worker heartbeat RAM disk üzerinden → disk I/O yok
 worker_tmp_dir = "/dev/shm"

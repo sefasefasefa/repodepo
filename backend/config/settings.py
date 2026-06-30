@@ -112,12 +112,11 @@ USE_TZ = True
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'hotpulse-cache',
-        'TIMEOUT': 300,          # 5 dk — daha uzun cache hit oranını artırır
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': BASE_DIR / '.cache',
+        'TIMEOUT': 300,
         'OPTIONS': {
-            'MAX_ENTRIES': 20000,
-            'CULL_FREQUENCY': 3,
+            'MAX_ENTRIES': 5000,
         },
     }
 }
