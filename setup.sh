@@ -105,7 +105,44 @@ echo "[6/6] Veritabani tablolari + statik dosyalar..."
 cd backend
 python manage.py migrate --run-syncdb
 python manage.py collectstatic --noinput
+
+# ── 7. Django önbelleği temizle ─────────────────────────────────────────────
+echo ""
+echo "[7/7] Onbellek temizleniyor..."
+python manage.py shell -c "
+from django.core.cache import cache
+cache.clear()
+print('  Onbellek temizlendi.')
+"
+
+# ── 8. Yayınlanmamış video kontrolü ────────────────────────────────────────
+echo ""
+echo "[8/7] Video durumu kontrol ediliyor..."
+python manage.py shell -c "
+from apps.videos.models import Video
+total     = Video.objects.count()
+published = Video.objects.filter(is_published=True).count()
+unpub     = total - published
+
+print(f'  Toplam video : {total}')
+print(f'  Yayinda      : {published}')
+print(f'  Taslak       : {unpub}')
+
+if total > 0 and published == 0:
+    n = Video.objects.filter(is_published=False).update(is_published=True)
+    print(f'  Uyari: Hic yayinda video yoktu — {n} video otomatik yayina alindi.')
+elif unpub > 0:
+    print(f'  Bilgi: {unpub} video hala taslak durumunda (admin panelinden yayinlayabilirsin).')
+"
+
 cd ..
+
+# ── 9. Servis yeniden başlatma (sadece systemd varsa) ─────────────────────
+if systemctl is-active --quiet hotpulse 2>/dev/null; then
+    echo ""
+    echo "[9/7] Hotpulse servisi yeniden baslatiliyor..."
+    sudo systemctl restart hotpulse && echo "  Servis yeniden baslatildi." || echo "  Servis baslatma basarisiz (manuel: sudo systemctl restart hotpulse)"
+fi
 
 echo ""
 echo "Kurulum tamamlandi!"
