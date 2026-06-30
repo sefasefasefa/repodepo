@@ -131,14 +131,15 @@ PASSWORD_HASHERS = [
 ]
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+# STATIC_ROOT = doğrudan static/ klasörü.
+# collectstatic buraya yazar; React dosyaları zaten burada;
+# staticfiles/ diye ayrı bir kopyaya gerek yok → Windows OSError yok.
+STATIC_ROOT = BASE_DIR / 'static'
+STATICFILES_DIRS = []   # static/ zaten STATIC_ROOT, çift kayıt olmaz
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# WhiteNoise: /assets/*, /favicon.*, /mining-worker.js gibi kök URL'leri
-# doğrudan middleware'den sun (Django URL routing'e düşmeden).
-# staticfiles/ altındaki gzip varyantları otomatik kullanılır.
-WHITENOISE_ROOT = str(BASE_DIR / 'staticfiles')
+# WhiteNoise doğrudan static/ klasörünü serve eder.
+WHITENOISE_ROOT = str(BASE_DIR / 'static')
 WHITENOISE_AUTOREFRESH = False
 WHITENOISE_MAX_AGE = 31536000  # 1 yıl (hash'li dosyalar için)
 
