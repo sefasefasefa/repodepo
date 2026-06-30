@@ -12,7 +12,17 @@ cd backend
 
 # ── Statik dosyaları her zaman güncelle (staticfiles/ git'te değil) ──────────
 echo "Statik dosyalar hazirlaniyor..."
-python manage.py collectstatic --noinput -v 0 2>/dev/null || true
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+        # Windows: collectstatic hash'li dosya adlarında OSError verebiliyor.
+        # Doğrudan kopyala — Django'yu atla.
+        mkdir -p staticfiles
+        cp -rf static/. staticfiles/ 2>/dev/null || true
+        ;;
+    *)
+        python manage.py collectstatic --noinput -v 0 2>/dev/null || true
+        ;;
+esac
 
 if [ "$OS" = "windows" ]; then
 
