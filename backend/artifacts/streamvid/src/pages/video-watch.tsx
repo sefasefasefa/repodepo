@@ -210,16 +210,8 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
       return [ownSrc, ...players];
     }
 
-    // Harici URL → CDN platform mı yoksa doğrudan video mu?
-    const embedResult = resolveEmbedFromUrl(effectiveUrl);
-    if (embedResult) {
-      // DoodStream / Mixdrop / Voe.sx vb. — iframe ile oynat
-      const ownSrc: PlayerSource = { id: 0, playerName: "Kendi Oynatıcı", embedCode: embedResult, isDefault: true, quality: "HD", language: "TR" };
-      return [ownSrc, ...players];
-    }
-    // Doğrudan video linki (cloud.mail.ru, doğrudan mp4 vb.) → stream proxy
-    const ownSrc: PlayerSource = { id: 0, playerName: "Kendi Oynatıcı", directUrl: `/api/videos/${video.id}/stream`, isDefault: true, quality: "HD", language: "TR" };
-    return [ownSrc, ...players];
+    // Harici URL → Kendi Oynatıcı yok, sadece CDN sekmeler göster
+    return [...players];
   })();
 
   const defaultSource = allSources.find(p => p.isDefault) || allSources[0];
