@@ -366,6 +366,7 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState<HomeFilter | null>(null);
   const [homeFilters, setHomeFilters] = useState<HomeFilter[]>([]);
   const { settings } = usePublicSiteSettings();
+  const { user, token } = useAuth() as any;
 
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
 
