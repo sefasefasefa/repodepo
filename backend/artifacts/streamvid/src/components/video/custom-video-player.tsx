@@ -325,9 +325,11 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       } else if (vid.canPlayType("application/vnd.apple.mpegurl") && isHlsStream) {
         // iOS Safari — native HLS
         vid.src = src;
+        vid.load();
       } else {
         // Native oynatıcı (MP4, WebM vb.)
         vid.src = src;
+        vid.load();
       }
 
       // 25 saniye içinde oynatılmazsa takılı sayılır

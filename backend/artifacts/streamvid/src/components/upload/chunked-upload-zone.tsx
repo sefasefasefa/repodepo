@@ -23,27 +23,35 @@ interface Props {
 // ── Thumbnail extractor ──────────────────────────────────────────────────────
 function extractFrame(file: File, timeSec: number): Promise<Blob | null> {
   return new Promise((resolve) => {
+    let settled = false;
+    const done = (blob: Blob | null) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(blob);
+    };
+
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
     video.preload = "metadata";
     video.muted = true;
     video.playsInline = true;
+    video.crossOrigin = "anonymous";
     video.src = url;
 
-    const cleanup = () => URL.revokeObjectURL(url);
+    const cleanup = () => { try { URL.revokeObjectURL(url); } catch {} };
 
-    video.addEventListener("loadedmetadata", () => {
-      const t = Math.min(timeSec, video.duration * 0.9);
-      video.currentTime = t;
-    });
+    // Timeout: bazı tarayıcı/format kombinasyonlarında seeked hiç tetiklenmez
+    const timeout = setTimeout(() => done(null), 8000);
 
-    video.addEventListener("seeked", () => {
+    const capture = () => {
+      clearTimeout(timeout);
       try {
         const canvas = document.createElement("canvas");
         canvas.width = 1280;
         canvas.height = 720;
         const ctx = canvas.getContext("2d");
-        if (!ctx) { cleanup(); resolve(null); return; }
+        if (!ctx) { done(null); return; }
         const vw = video.videoWidth || 1280;
         const vh = video.videoHeight || 720;
         const scale = Math.min(1280 / vw, 720 / vh);
@@ -52,13 +60,31 @@ function extractFrame(file: File, timeSec: number): Promise<Blob | null> {
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, 1280, 720);
         ctx.drawImage(video, (1280 - dw) / 2, (720 - dh) / 2, dw, dh);
-        canvas.toBlob((blob) => { cleanup(); resolve(blob); }, "image/jpeg", 0.88);
-      } catch { cleanup(); resolve(null); }
+        canvas.toBlob((blob) => done(blob), "image/jpeg", 0.88);
+      } catch { done(null); }
+    };
+
+    video.addEventListener("loadedmetadata", () => {
+      const t = Math.min(timeSec, video.duration * 0.9 || 0);
+      if (t === 0) {
+        // Süre bilinmiyorsa mevcut kareyi al
+        capture();
+      } else {
+        video.currentTime = t;
+      }
     });
 
-    video.addEventListener("error", () => { cleanup(); resolve(null); });
+    video.addEventListener("seeked", capture);
 
-    // Trigger load
+    // Seek olmadan veri gelirse de yakala
+    video.addEventListener("loadeddata", () => {
+      if (!settled && video.readyState >= 2) {
+        capture();
+      }
+    });
+
+    video.addEventListener("error", () => { clearTimeout(timeout); done(null); });
+
     video.load();
   });
 }
@@ -340,11 +366,10 @@ export function ChunkedUploadZone({ onDone }: Props) {
   return (
     <div className="space-y-5">
       {/* Drop zone */}
-      <div
+      <label
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        onClick={() => fileRef.current?.click()}
         className={cn(
           "relative flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all py-12 px-6 text-center group",
           dragging ? "border-primary bg-primary/5 scale-[1.01]" : selectedFile ? "border-primary/50 bg-primary/5" : "border-[#2a2a2a] bg-[#111] hover:border-[#444] hover:bg-[#161616]"
@@ -374,7 +399,7 @@ export function ChunkedUploadZone({ onDone }: Props) {
             </div>
           </>
         )}
-      </div>
+      </label>
 
       {/* Meta form — only when file selected */}
       {selectedFile && (
