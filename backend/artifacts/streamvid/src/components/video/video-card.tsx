@@ -160,12 +160,20 @@ export function VideoCard({ video }: VideoCardProps) {
               alt={video.title}
               className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-105 ${previewing ? "opacity-0" : "opacity-100"}`}
               loading="lazy"
+              onError={(e) => {
+                const target = e.currentTarget;
+                target.style.display = "none";
+                const fallback = target.nextElementSibling as HTMLElement | null;
+                if (fallback) fallback.style.display = "flex";
+              }}
             />
-          ) : (
-            <div className={`w-full h-full flex items-center justify-center bg-secondary/50 transition-colors ${previewing ? "opacity-0" : "opacity-100 group-hover:bg-secondary"}`}>
-              <Play className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground opacity-50" />
-            </div>
-          )}
+          ) : null}
+          <div
+            style={{ display: video.thumbnailUrl ? "none" : "flex" }}
+            className={`w-full h-full items-center justify-center bg-secondary/50 transition-colors ${previewing ? "opacity-0" : "opacity-100 group-hover:bg-secondary"}`}
+          >
+            <Play className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground opacity-50" />
+          </div>
 
           {/* Video önizleme */}
           {canPreview && (
