@@ -408,51 +408,71 @@ def home_page(request):
     """Anasayfa için tüm verileri tek API isteğinde döndürür. 5 dk önbellek."""
     is_anon = not request.user.is_authenticated
     if is_anon:
-        return Response(_build_home_data_anon())
+        data = _build_home_data_anon()
+        resp = Response(data)
+        resp['Cache-Control'] = 'public, max-age=90, stale-while-revalidate=60'
+        return resp
 
+    # Giriş yapmış kullanıcılar için yapısal veri (video listesi) cache'lenir,
+    # isLiked/isBookmarked durumları üzerine eklenir.
     user = request.user
-    base_qs = Video.objects.filter(is_published=True).select_related('creator', 'category').prefetch_related('categories')
-    trending    = list(base_qs.order_by('-view_count', '-like_count')[:8])
-    newest      = list(base_qs.order_by('-created_at')[:8])
-    most_viewed = list(base_qs.order_by('-view_count')[:8])
-    most_liked  = list(base_qs.order_by('-like_count')[:8])
-    shorts      = list(base_qs.filter(type='short').order_by('-view_count')[:8])
-    premium     = list(base_qs.filter(is_premium=True).order_by('-view_count')[:6])
+    STRUCT_KEY = 'home_struct:v1'
+    struct = cache.get(STRUCT_KEY)
+    if struct is None:
+        base_qs = Video.objects.filter(is_published=True).select_related('creator', 'category').prefetch_related('categories')
+        trending    = list(base_qs.order_by('-view_count', '-like_count')[:8])
+        newest      = list(base_qs.order_by('-created_at')[:8])
+        most_viewed = list(base_qs.order_by('-view_count')[:8])
+        most_liked  = list(base_qs.order_by('-like_count')[:8])
+        shorts      = list(base_qs.filter(type='short').order_by('-view_count')[:8])
+        premium     = list(base_qs.filter(is_premium=True).order_by('-view_count')[:6])
 
-    cats = list(Category.objects.all().order_by('-video_count', 'name'))
-    categories = [
-        {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
-        for c in cats
-    ]
-    from apps.accounts.models import User as _User
-    creator_qs = _User.objects.filter(role='creator').order_by('-follower_count')[:8]
-    creators = [
-        {'id': u.id, 'username': u.username, 'displayName': u.display_name,
-         'avatarUrl': u.avatar_url, 'followerCount': u.follower_count}
-        for u in creator_qs
-    ]
-    try:
-        from apps.admin_panel.models import HomeFilter as _HF
-        hf_qs = _HF.objects.filter(is_active=True).order_by('order')
-        home_filters = [
-            {'id': f.id, 'label': f.label, 'icon': f.icon, 'type': f.type,
-             'categoryId': f.category_id, 'sortBy': f.sort_by,
-             'rules': f.rules, 'order': f.order, 'isActive': f.is_active}
-            for f in hf_qs
+        cats = list(Category.objects.all().order_by('-video_count', 'name'))
+        categories = [
+            {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
+            for c in cats
         ]
-    except Exception:
-        home_filters = []
+        from apps.accounts.models import User as _User
+        creator_qs = _User.objects.filter(role='creator').order_by('-follower_count')[:8]
+        creators = [
+            {'id': u.id, 'username': u.username, 'displayName': u.display_name,
+             'avatarUrl': u.avatar_url, 'followerCount': u.follower_count}
+            for u in creator_qs
+        ]
+        try:
+            from apps.admin_panel.models import HomeFilter as _HF
+            hf_qs = _HF.objects.filter(is_active=True).order_by('order')
+            home_filters = [
+                {'id': f.id, 'label': f.label, 'icon': f.icon, 'type': f.type,
+                 'categoryId': f.category_id, 'sortBy': f.sort_by,
+                 'rules': f.rules, 'order': f.order, 'isActive': f.is_active}
+                for f in hf_qs
+            ]
+        except Exception:
+            home_filters = []
 
+        struct = {
+            '_raw': {
+                'trending': trending, 'newest': newest, 'most_viewed': most_viewed,
+                'most_liked': most_liked, 'shorts': shorts, 'premium': premium,
+            },
+            'categories': categories,
+            'creators': creators,
+            'home_filters': home_filters,
+        }
+        cache.set(STRUCT_KEY, struct, 120)
+
+    raw = struct['_raw']
     return Response({
-        'trending':     enrich_videos_bulk(trending, user),
-        'newest':       enrich_videos_bulk(newest, user),
-        'most_viewed':  enrich_videos_bulk(most_viewed, user),
-        'most_liked':   enrich_videos_bulk(most_liked, user),
-        'shorts':       enrich_videos_bulk(shorts, user),
-        'premium':      enrich_videos_bulk(premium, user),
-        'categories':   categories,
-        'creators':     creators,
-        'home_filters': home_filters,
+        'trending':     enrich_videos_bulk(raw['trending'], user),
+        'newest':       enrich_videos_bulk(raw['newest'], user),
+        'most_viewed':  enrich_videos_bulk(raw['most_viewed'], user),
+        'most_liked':   enrich_videos_bulk(raw['most_liked'], user),
+        'shorts':       enrich_videos_bulk(raw['shorts'], user),
+        'premium':      enrich_videos_bulk(raw['premium'], user),
+        'categories':   struct['categories'],
+        'creators':     struct['creators'],
+        'home_filters': struct['home_filters'],
     })
 
 

@@ -113,11 +113,11 @@ USE_TZ = True
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': BASE_DIR / '.cache',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'hotpulse-main',
         'TIMEOUT': 300,
         'OPTIONS': {
-            'MAX_ENTRIES': 5000,
+            'MAX_ENTRIES': 10000,
         },
     }
 }

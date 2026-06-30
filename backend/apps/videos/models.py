@@ -90,7 +90,9 @@ class Video(models.Model):
         indexes = [
             models.Index(fields=['is_published', '-created_at'], name='video_pub_date_idx'),
             models.Index(fields=['is_published', '-view_count'], name='video_pub_views_idx'),
+            models.Index(fields=['is_published', '-like_count'], name='video_pub_likes_idx'),
             models.Index(fields=['is_published', 'type', '-created_at'], name='video_pub_type_idx'),
+            models.Index(fields=['is_published', 'is_premium', '-view_count'], name='video_pub_prem_idx'),
             models.Index(fields=['creator', 'is_published'], name='video_creator_pub_idx'),
         ]
 
