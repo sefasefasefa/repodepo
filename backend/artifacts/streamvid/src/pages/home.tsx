@@ -402,23 +402,36 @@ export default function Home() {
 
   useEffect(() => {
     setHomeLoading(true);
+
+    const applyData = (d: any) => {
+      setHomeData(d);
+      if (d.home_filters) setHomeFilters(d.home_filters);
+      setHomeLoading(false);
+    };
+
+    // Giriş yapmış kullanıcılar her zaman taze veri çeker (localStorage cache atlanır)
+    if (user) {
+      const headers: any = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      fetch("/api/home", { headers })
+        .then(r => r.json())
+        .then(applyData)
+        .catch(() => setHomeLoading(false));
+      return;
+    }
+
+    // Anonim kullanıcılar için init cache kullan, yoksa /api/home çek
     getHomeDataFromInit().then(cached => {
-      if (cached) {
-        setHomeData(cached);
-        if ((cached as any).home_filters) setHomeFilters((cached as any).home_filters);
-        setHomeLoading(false);
+      if (cached && (cached as any).trending?.length > 0) {
+        applyData(cached);
         return;
       }
       fetch("/api/home")
         .then(r => r.json())
-        .then(d => {
-          setHomeData(d);
-          if (d.home_filters) setHomeFilters(d.home_filters);
-          setHomeLoading(false);
-        })
+        .then(applyData)
         .catch(() => setHomeLoading(false));
     });
-  }, []);
+  }, [user]);
 
   const trendingData   = homeData ? { videos: homeData.trending }    : undefined;
   const newestData     = homeData ? { videos: homeData.newest }      : undefined;

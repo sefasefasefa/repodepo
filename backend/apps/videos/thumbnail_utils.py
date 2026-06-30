@@ -8,6 +8,10 @@ Otomatik thumbnail (küçük resim) üretimi — ffmpeg tabanlı.
   4. Thumbnail, media/thumbnails/auto_<uuid>.jpg olarak kaydedilir.
   5. Video kaydının thumbnail_url alanı güncellenir.
   6. Zaten thumbnail_url varsa hiçbir şey yapmaz.
+
+ffmpeg öncelik sırası:
+  1. imageio-ffmpeg (Python paketine gömülü, kurulum gerektirmez)
+  2. Sistem PATH'indeki ffmpeg
 """
 
 from __future__ import annotations
@@ -24,8 +28,36 @@ logger = logging.getLogger(__name__)
 
 
 def _ffmpeg_bin() -> str:
+    """
+    ffmpeg binary'sini bulur.
+    Önce imageio-ffmpeg (portable/bundled) dener, yoksa sistem PATH'ini kullanır.
+    Windows'ta kurulum gerektirmeden çalışır.
+    """
+    # 1. imageio-ffmpeg ile gömülü binary (Windows dahil tüm platformlarda çalışır)
+    try:
+        import imageio_ffmpeg
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if exe and os.path.exists(exe):
+            return exe
+    except Exception:
+        pass
+
+    # 2. Sistem PATH'indeki ffmpeg
     path = shutil.which("ffmpeg")
-    return path or "ffmpeg"
+    if path:
+        return path
+
+    # 3. Yaygın Windows kurulum yolları
+    win_paths = [
+        r"C:\ffmpeg\bin\ffmpeg.exe",
+        r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
+        r"C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe",
+    ]
+    for p in win_paths:
+        if os.path.exists(p):
+            return p
+
+    return "ffmpeg"
 
 
 def _local_path(video_url: str) -> str | None:

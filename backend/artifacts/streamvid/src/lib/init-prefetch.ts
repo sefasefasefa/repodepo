@@ -41,7 +41,7 @@ export interface InitData {
   homeData: HomeData | null;
 }
 
-const INIT_CACHE_KEY = "app_init_v2";
+const INIT_CACHE_KEY = "app_init_v3";
 const INIT_CACHE_TTL = 2 * 60 * 1000;
 
 function loadInitCache(): InitData | null {
