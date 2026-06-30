@@ -210,8 +210,14 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
       return [ownSrc, ...players];
     }
 
-    // Harici URL → stream proxy üzerinden oynat (indirme arka planda devam eder)
-    // embed iframe ASLA kullanılmaz
+    // Harici URL → CDN platform mı yoksa doğrudan video mu?
+    const embedResult = resolveEmbedFromUrl(effectiveUrl);
+    if (embedResult) {
+      // DoodStream / Mixdrop / Voe.sx vb. — iframe ile oynat
+      const ownSrc: PlayerSource = { id: 0, playerName: "Kendi Oynatıcı", embedCode: embedResult, isDefault: true, quality: "HD", language: "TR" };
+      return [ownSrc, ...players];
+    }
+    // Doğrudan video linki (cloud.mail.ru, doğrudan mp4 vb.) → stream proxy
     const ownSrc: PlayerSource = { id: 0, playerName: "Kendi Oynatıcı", directUrl: `/api/videos/${video.id}/stream`, isDefault: true, quality: "HD", language: "TR" };
     return [ownSrc, ...players];
   })();
@@ -337,7 +343,7 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
         </div>
       )}
 
-      {/* Video alanı — SADECE kendi oynatıcı, embed ASLA kullanılmaz */}
+      {/* Video alanı */}
       <div className="w-full max-w-[960px] mx-auto">
         <div className="w-full rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
           <ScreenProtectionOverlay className="w-full h-full">
@@ -355,6 +361,12 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
                   className="w-full h-full"
                   videoId={video.id}
                   token={token}
+                />
+              ) : activeSource?.embedCode ? (
+                <div
+                  key={activeSource.embedCode}
+                  className="w-full h-full"
+                  dangerouslySetInnerHTML={{ __html: activeSource.embedCode }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
