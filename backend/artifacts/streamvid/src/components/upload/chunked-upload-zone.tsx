@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   Upload, FileVideo, X, Pause, Play, CheckCircle2,
-  AlertTriangle, Loader2, Zap, Clock, BarChart2, Layers,
-  Camera, RefreshCw, ImageIcon, CalendarClock, Share2
+  AlertTriangle, Loader2, Zap, Clock, Layers,
+  Camera, RefreshCw, ImageIcon, CalendarClock, Share2,
+  Gauge, TrendingUp, FolderOpen
 } from "lucide-react";
 import { Link } from "wouter";
 import { ProviderSelector } from "./provider-selector";
@@ -25,13 +26,11 @@ function extractFrame(file: File, timeSec: number): Promise<Blob | null> {
   return new Promise((resolve) => {
     let settled = false;
     let timeout: ReturnType<typeof setTimeout>;
-
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
     video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
-    // NOT setting crossOrigin — blob URLs are same-origin, crossOrigin causes unnecessary CORS headers
 
     const cleanup = () => {
       clearTimeout(timeout);
@@ -39,82 +38,73 @@ function extractFrame(file: File, timeSec: number): Promise<Blob | null> {
       video.load();
       try { URL.revokeObjectURL(url); } catch {}
     };
-
     const done = (blob: Blob | null) => {
       if (settled) return;
       settled = true;
       cleanup();
       resolve(blob);
     };
-
     const capture = () => {
-      // Sadece video gerçekten yüklendiyse ve boyutu varsa yakala
-      if (video.readyState < 2 || video.videoWidth === 0) {
-        done(null);
-        return;
-      }
+      if (video.readyState < 2 || video.videoWidth === 0) { done(null); return; }
       try {
         const canvas = document.createElement("canvas");
-        canvas.width = 1280;
-        canvas.height = 720;
+        canvas.width = 1280; canvas.height = 720;
         const ctx = canvas.getContext("2d");
         if (!ctx) { done(null); return; }
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
+        const vw = video.videoWidth, vh = video.videoHeight;
         const scale = Math.min(1280 / vw, 720 / vh);
-        const dw = Math.round(vw * scale);
-        const dh = Math.round(vh * scale);
+        const dw = Math.round(vw * scale), dh = Math.round(vh * scale);
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, 1280, 720);
         ctx.drawImage(video, Math.round((1280 - dw) / 2), Math.round((720 - dh) / 2), dw, dh);
         canvas.toBlob((blob) => done(blob), "image/jpeg", 0.88);
       } catch { done(null); }
     };
-
     video.addEventListener("loadedmetadata", () => {
-      // Durasyonu al; geçersizse direkt timeSec'e seek et
       const dur = isFinite(video.duration) && video.duration > 0 ? video.duration : null;
-      const seekTo = dur ? Math.min(timeSec, dur * 0.9) : timeSec;
-      video.currentTime = seekTo;
+      video.currentTime = dur ? Math.min(timeSec, dur * 0.9) : timeSec;
     });
-
-    // seeked = seek tamamlandı, kare hazır
     video.addEventListener("seeked", capture);
-
-    // Hata durumunda hemen bitir
     video.addEventListener("error", () => done(null));
-
-    // 10 saniyede hiçbir şey olmazsa timeout
     timeout = setTimeout(() => done(null), 10000);
-
     video.src = url;
     video.load();
   });
 }
 
+// ── Speed history sparkline ──────────────────────────────────────────────────
+function SpeedSparkline({ samples }: { samples: number[] }) {
+  if (samples.length < 2) return null;
+  const max = Math.max(...samples);
+  if (max === 0) return null;
+  const w = 64, h = 24;
+  const step = w / (samples.length - 1);
+  const pts = samples.map((v, i) => `${i * step},${h - (v / max) * h}`).join(" ");
+  return (
+    <svg width={w} height={h} className="opacity-50">
+      <polyline points={pts} fill="none" stroke="#a855f7" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export function ChunkedUploadZone({ onDone }: Props) {
   const { token, user } = useAuth() as any;
-  const isAdmin = user?.role === "admin";
   const { state, start, pause, resume, cancel, reset } = useChunkedUpload();
   const fileRef = useRef<HTMLInputElement>(null);
+  const thumbFileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [speedHistory, setSpeedHistory] = useState<number[]>([]);
 
-  const [meta, setMeta] = useState<UploadMeta & { title: string; description: string }>({
-    title: "",
-    description: "",
-    isPremium: false,
-    isAdult: false,
-    type: "video",
-    categoryId: undefined,
-    scheduledPublishAt: null,
-    crosspostSiteIds: [],
-    crosspostMode: "all" as "all" | "select" | "none",
+  const [meta, setMeta] = useState<UploadMeta & { title: string; description: string; crosspostMode: "all" | "select" | "none" }>({
+    title: "", description: "",
+    isPremium: false, isAdult: false, type: "video",
+    categoryId: undefined, scheduledPublishAt: null,
+    crosspostSiteIds: [], crosspostMode: "all",
   });
 
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleValue, setScheduleValue] = useState("");
-
 
   // ── Thumbnail state ──────────────────────────────────────────────────────
   const [thumbBlob, setThumbBlob] = useState<Blob | null>(null);
@@ -124,16 +114,22 @@ export function ChunkedUploadZone({ onDone }: Props) {
   const [videoDuration, setVideoDuration] = useState(0);
   const [thumbUploading, setThumbUploading] = useState(false);
   const [thumbDone, setThumbDone] = useState(false);
+  const [thumbSource, setThumbSource] = useState<"auto" | "manual">("auto");
 
   const { data: catData } = useListCategories();
   const categories: any[] = (catData as any)?.categories ?? [];
 
-  // Extract duration when file selected
+  // Track speed history for sparkline
+  useEffect(() => {
+    if (state.speed > 0) {
+      setSpeedHistory(prev => [...prev.slice(-15), state.speed]);
+    }
+  }, [state.speed]);
+
   const getVideoDuration = (file: File) => {
     const url = URL.createObjectURL(file);
     const v = document.createElement("video");
-    v.preload = "metadata";
-    v.src = url;
+    v.preload = "metadata"; v.src = url;
     v.addEventListener("loadedmetadata", () => {
       setVideoDuration(v.duration || 0);
       URL.revokeObjectURL(url);
@@ -143,18 +139,19 @@ export function ChunkedUploadZone({ onDone }: Props) {
 
   const generateThumbnail = useCallback(async (file: File, t: number) => {
     setThumbLoading(true);
-    if (thumbPreview) URL.revokeObjectURL(thumbPreview);
+    if (thumbPreview && thumbSource === "auto") URL.revokeObjectURL(thumbPreview);
     setThumbPreview(null);
     try {
       const blob = await extractFrame(file, t);
       if (blob) {
         setThumbBlob(blob);
         setThumbPreview(URL.createObjectURL(blob));
+        setThumbSource("auto");
       }
     } finally {
       setThumbLoading(false);
     }
-  }, []);
+  }, [thumbPreview, thumbSource]);
 
   const pickFile = useCallback((file: File) => {
     setMeta((m) => ({ ...m, title: file.name.replace(/\.[^.]+$/, "") }));
@@ -163,46 +160,50 @@ export function ChunkedUploadZone({ onDone }: Props) {
     setThumbTime(5);
     setVideoDuration(0);
     setThumbDone(false);
+    setSpeedHistory([]);
     getVideoDuration(file);
     generateThumbnail(file, 5);
   }, [generateThumbnail]);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) {
-        pickFile(file);
-        if (fileRef.current) {
-          const dt = new DataTransfer();
-          dt.items.add(file);
-          fileRef.current.files = dt.files;
-        }
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      pickFile(file);
+      if (fileRef.current) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileRef.current.files = dt.files;
       }
-    },
-    [pickFile]
-  );
+    }
+  }, [pickFile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) pickFile(file);
   };
 
-  const selectedFile = (() => {
-    if (fileRef.current?.files?.[0]) return fileRef.current.files[0];
-    if (state.file) return state.file;
-    return null;
-  })();
+  const handleManualThumb = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (thumbPreview && thumbSource === "auto") URL.revokeObjectURL(thumbPreview);
+    const blob = f.slice(0, f.size, f.type);
+    setThumbBlob(blob);
+    setThumbPreview(URL.createObjectURL(f));
+    setThumbSource("manual");
+  };
+
+  const selectedFile = fileRef.current?.files?.[0] ?? state.file ?? null;
 
   const handleStart = () => {
     const file = fileRef.current?.files?.[0] ?? state.file;
     if (!file) return;
-    const finalMeta = {
+    setSpeedHistory([]);
+    start(file, {
       ...meta,
       scheduledPublishAt: scheduleEnabled && scheduleValue ? new Date(scheduleValue).toISOString() : null,
-    };
-    start(file, finalMeta);
+    });
   };
 
   // Upload thumbnail after video done
@@ -223,28 +224,41 @@ export function ChunkedUploadZone({ onDone }: Props) {
     }
   }, [state.status, state.videoId, thumbBlob, thumbDone, thumbUploading, token]);
 
-  // Cleanup preview URL on unmount
   useEffect(() => {
-    return () => { if (thumbPreview) URL.revokeObjectURL(thumbPreview); };
-  }, [thumbPreview]);
+    return () => { if (thumbPreview && thumbSource === "auto") URL.revokeObjectURL(thumbPreview); };
+  }, []);
 
   const s = state;
 
   // ── Done ─────────────────────────────────────────────────────────────────
   if (s.status === "done" && s.videoId) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-10 text-center">
-        <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
-          <CheckCircle2 className="h-10 w-10 text-green-400" />
+      <div className="flex flex-col items-center justify-center gap-4 py-6 text-center">
+        <div className="relative w-full max-w-xs aspect-video rounded-xl overflow-hidden border border-green-500/30 shadow-[0_0_30px_rgba(34,197,94,0.15)]">
+          {thumbPreview
+            ? <img src={thumbPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+            : <div className="w-full h-full bg-[#111] flex items-center justify-center"><FileVideo className="h-10 w-10 text-[#333]" /></div>
+          }
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2">
+            <div className="p-2 rounded-full bg-green-500/20 border border-green-500/40 backdrop-blur-sm">
+              <CheckCircle2 className="h-6 w-6 text-green-400" />
+            </div>
+          </div>
         </div>
-        {thumbPreview && (
-          <img src={thumbPreview} alt="Thumbnail" className="w-48 h-28 object-cover rounded-xl border border-[#333] shadow-xl" />
-        )}
         <div>
           <p className="text-lg font-bold text-white">Yükleme Tamamlandı!</p>
-          <p className="text-sm text-[#888] mt-1">{s.file?.name} başarıyla yüklendi.</p>
-          {thumbUploading && <p className="text-xs text-primary mt-1 flex items-center justify-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Thumbnail kaydediliyor...</p>}
-          {thumbDone && <p className="text-xs text-green-400 mt-1 flex items-center justify-center gap-1"><CheckCircle2 className="h-3 w-3" /> Thumbnail eklendi</p>}
+          <p className="text-sm text-[#888] mt-1 max-w-xs truncate">{s.file?.name}</p>
+          {thumbUploading && (
+            <p className="text-xs text-primary mt-2 flex items-center justify-center gap-1.5">
+              <Loader2 className="h-3 w-3 animate-spin" /> Thumbnail kaydediliyor...
+            </p>
+          )}
+          {thumbDone && (
+            <p className="text-xs text-green-400 mt-2 flex items-center justify-center gap-1.5">
+              <CheckCircle2 className="h-3 w-3" /> Thumbnail eklendi
+            </p>
+          )}
         </div>
         <div className="flex gap-3">
           <Link href={`/videos/${s.videoId}`}>
@@ -281,84 +295,176 @@ export function ChunkedUploadZone({ onDone }: Props) {
   // ── Active Upload ─────────────────────────────────────────────────────────
   if (s.status !== "idle" && s.status !== "canceled") {
     const isAssembling = s.status === "assembling";
+    const isInitializing = s.status === "initializing";
     const isPaused = s.status === "paused";
+    const speedMbps = s.speed / (1024 * 1024);
 
     return (
-      <div className="space-y-5 py-2">
-        {/* Thumbnail preview while uploading */}
-        {thumbPreview && (
-          <div className="relative w-full aspect-video max-h-44 rounded-xl overflow-hidden border border-[#2a2a2a]">
-            <img src={thumbPreview} alt="Thumbnail" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-2 left-3 text-xs text-[#aaa] font-medium flex items-center gap-1">
-              <ImageIcon className="h-3 w-3" /> Thumbnail
+      <div className="space-y-4 py-2">
+        {/* ── Thumbnail + Progress Overlay ─────────────────────────────── */}
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#2a2a2a] bg-[#0d0d0d]">
+          {thumbPreview
+            ? <img src={thumbPreview} alt="Thumbnail" className={cn("w-full h-full object-cover transition-opacity duration-500", isPaused ? "opacity-50" : "opacity-100")} />
+            : <div className="w-full h-full flex items-center justify-center"><FileVideo className="h-12 w-12 text-[#2a2a2a]" /></div>
+          }
+
+          {/* Dark gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+          {/* Center status badge */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {isInitializing && (
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                <span className="text-xs text-[#aaa] font-medium">Başlatılıyor...</span>
+              </div>
+            )}
+            {isAssembling && (
+              <div className="flex flex-col items-center gap-2">
+                <div className="relative">
+                  <Loader2 className="h-10 w-10 text-yellow-400 animate-spin" />
+                  <div className="absolute inset-0 rounded-full border-2 border-yellow-400/20 animate-ping" />
+                </div>
+                <span className="text-xs text-yellow-400 font-semibold">Birleştiriliyor...</span>
+              </div>
+            )}
+            {isPaused && (
+              <div className="flex flex-col items-center gap-2">
+                <div className="p-3 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm">
+                  <Pause className="h-8 w-8 text-white" fill="currentColor" />
+                </div>
+                <span className="text-sm text-white font-semibold">Duraklatıldı</span>
+              </div>
+            )}
+            {s.status === "uploading" && (
+              <div className="text-center">
+                <p className="text-5xl font-black text-white tabular-nums drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                  {s.progress}%
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom bar — progress + speed */}
+          {!isInitializing && (
+            <div className="absolute bottom-0 left-0 right-0 p-3 space-y-2">
+              {/* Progress bar */}
+              <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-500",
+                    isAssembling ? "bg-gradient-to-r from-yellow-500 to-orange-400 animate-pulse" :
+                    isPaused    ? "bg-[#555]" :
+                                  "bg-gradient-to-r from-primary to-violet-400"
+                  )}
+                  style={{ width: `${s.progress}%` }}
+                />
+                {/* Shimmer effect while uploading */}
+                {s.status === "uploading" && (
+                  <div
+                    className="absolute top-0 h-full w-8 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse"
+                    style={{ left: `${Math.max(0, s.progress - 5)}%` }}
+                  />
+                )}
+              </div>
+
+              {/* Stats row */}
+              {!isAssembling && !isInitializing && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <Zap className="h-3 w-3 text-primary" />
+                    <span className={cn("text-xs font-bold tabular-nums", speedMbps > 10 ? "text-green-400" : speedMbps > 2 ? "text-yellow-400" : "text-[#aaa]")}>
+                      {s.speed > 0 ? `${speedMbps.toFixed(1)} MB/s` : "--"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] text-[#888] tabular-nums">
+                      {formatBytes(s.uploadedBytes)} / {formatBytes(s.totalBytes)}
+                    </span>
+                    <span className="text-[11px] text-[#888]">
+                      {isPaused ? "Duraklatıldı" : formatEta(s.eta)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Detay kartları ───────────────────────────────────────────────── */}
+        {!isAssembling && !isInitializing && (
+          <div className="grid grid-cols-3 gap-2">
+            {/* Hız */}
+            <div className="bg-[#161616] border border-[#222] rounded-xl p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Gauge className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[11px] text-[#666] font-medium uppercase tracking-wider">Hız</span>
+                </div>
+                <SpeedSparkline samples={speedHistory} />
+              </div>
+              <p className={cn("text-base font-bold tabular-nums", speedMbps > 10 ? "text-green-400" : speedMbps > 2 ? "text-yellow-400" : "text-[#aaa]")}>
+                {s.speed > 0 ? `${speedMbps.toFixed(1)} MB/s` : "--"}
+              </p>
+              <p className="text-[10px] text-[#555]">{s.speed > 0 ? `${formatBytes(s.speed)}/s` : "hesaplanıyor"}</p>
+            </div>
+
+            {/* Kalan Süre */}
+            <div className="bg-[#161616] border border-[#222] rounded-xl p-3 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-yellow-400" />
+                <span className="text-[11px] text-[#666] font-medium uppercase tracking-wider">Kalan</span>
+              </div>
+              <p className="text-base font-bold text-yellow-400 tabular-nums">
+                {isPaused ? "—" : formatEta(s.eta)}
+              </p>
+              <p className="text-[10px] text-[#555]">{formatBytes(s.totalBytes - s.uploadedBytes)} kaldı</p>
+            </div>
+
+            {/* Parça */}
+            <div className="bg-[#161616] border border-[#222] rounded-xl p-3 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5 text-violet-400" />
+                <span className="text-[11px] text-[#666] font-medium uppercase tracking-wider">Parça</span>
+              </div>
+              <p className="text-base font-bold text-violet-400 tabular-nums">
+                {s.currentChunk} / {s.totalChunks}
+              </p>
+              {/* Mini parça progress */}
+              <div className="flex gap-px flex-wrap">
+                {Array.from({ length: Math.min(s.totalChunks, 20) }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={cn("h-1 rounded-full flex-1 min-w-[2px]", i < Math.floor(s.currentChunk / s.totalChunks * Math.min(s.totalChunks, 20)) ? "bg-violet-500" : "bg-[#333]")}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* File info */}
-        <div className="flex items-center gap-3 bg-[#161616] border border-[#222] rounded-xl p-4">
-          <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 shrink-0">
-            <FileVideo className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{s.file?.name}</p>
-            <p className="text-xs text-[#666] mt-0.5">{formatBytes(s.totalBytes)}</p>
-          </div>
-          {!isAssembling && (
-            <button onClick={cancel} className="p-1.5 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-500/10 transition-all" title="İptal et">
-              <X className="h-4 w-4" />
-            </button>
-          )}
+        <div className="flex items-center gap-3 bg-[#0d0d0d] border border-[#1e1e1e] rounded-xl px-4 py-3">
+          <FileVideo className="h-4 w-4 text-[#555] shrink-0" />
+          <p className="text-sm text-[#888] truncate flex-1">{s.file?.name}</p>
+          <span className="text-xs text-[#555] shrink-0">{formatBytes(s.totalBytes)}</span>
         </div>
-
-        {/* Progress bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#666]">
-            <span className="font-semibold text-white text-sm">{s.progress}%</span>
-            <span>
-              {isAssembling ? "Birleştiriliyor..." : s.status === "initializing" ? "Başlatılıyor..." : `${formatBytes(s.uploadedBytes)} / ${formatBytes(s.totalBytes)}`}
-            </span>
-          </div>
-          <div className="relative h-2.5 bg-[#1e1e1e] rounded-full overflow-hidden">
-            <div
-              className={cn("h-full rounded-full transition-all duration-300", isAssembling ? "bg-gradient-to-r from-yellow-500 to-orange-500 animate-pulse" : isPaused ? "bg-[#444]" : "bg-gradient-to-r from-primary to-violet-500")}
-              style={{ width: `${s.progress}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Stats */}
-        {!isAssembling && s.status !== "initializing" && (
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard icon={Zap} label="Hız" value={s.speed > 0 ? `${formatBytes(s.speed)}/s` : "--"} color="text-primary" />
-            <StatCard icon={Clock} label="Kalan" value={isPaused ? "Duraklatıldı" : formatEta(s.eta)} color={isPaused ? "text-[#888]" : "text-yellow-400"} />
-            <StatCard icon={Layers} label="Parça" value={`${s.currentChunk} / ${s.totalChunks}`} color="text-violet-400" />
-          </div>
-        )}
 
         {/* Controls */}
-        {!isAssembling && s.status !== "initializing" && (
+        {!isAssembling && !isInitializing && (
           <div className="flex gap-3">
             {isPaused ? (
               <Button onClick={resume} className="flex-1 bg-primary hover:bg-primary/90 gap-2">
                 <Play className="h-4 w-4" fill="currentColor" /> Devam Et
               </Button>
             ) : (
-              <Button onClick={pause} variant="outline" className="flex-1 border-[#333] text-[#aaa] hover:text-white gap-2">
+              <Button onClick={pause} variant="outline" className="flex-1 border-[#2a2a2a] text-[#aaa] hover:text-white gap-2">
                 <Pause className="h-4 w-4" fill="currentColor" /> Duraklat
               </Button>
             )}
-            <Button onClick={cancel} variant="ghost" className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10 gap-2">
+            <Button onClick={cancel} variant="ghost" className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10 gap-2 px-4">
               <X className="h-4 w-4" /> İptal
             </Button>
-          </div>
-        )}
-
-        {isAssembling && (
-          <div className="flex items-center justify-center gap-2 text-[#888] text-sm py-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Parçalar birleştiriliyor, lütfen bekle...
           </div>
         )}
       </div>
@@ -374,12 +480,13 @@ export function ChunkedUploadZone({ onDone }: Props) {
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         className={cn(
-          "relative flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all py-12 px-6 text-center group",
-          dragging ? "border-primary bg-primary/5 scale-[1.01]" : selectedFile ? "border-primary/50 bg-primary/5" : "border-[#2a2a2a] bg-[#111] hover:border-[#444] hover:bg-[#161616]"
+          "relative flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all py-10 px-6 text-center group",
+          dragging    ? "border-primary bg-primary/5 scale-[1.01]" :
+          selectedFile? "border-primary/40 bg-primary/5" :
+                        "border-[#2a2a2a] bg-[#111] hover:border-[#444] hover:bg-[#161616]"
         )}
       >
         <input ref={fileRef} type="file" accept={ACCEPTED} className="hidden" onChange={handleFileChange} />
-
         {selectedFile ? (
           <>
             <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
@@ -409,67 +516,106 @@ export function ChunkedUploadZone({ onDone }: Props) {
         <div className="space-y-5 bg-[#111] border border-[#1e1e1e] rounded-xl p-5">
           <p className="text-xs text-[#555] font-bold uppercase tracking-widest">Video Bilgileri</p>
 
-          {/* Thumbnail preview + scrubber */}
-          <div className="space-y-2">
+          {/* ── Thumbnail ──────────────────────────────────────────────────── */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-[#888] flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> Thumbnail Önizleme</label>
-              {thumbPreview && (
+              <label className="text-xs font-medium text-[#888] flex items-center gap-1.5">
+                <ImageIcon className="h-3.5 w-3.5" /> Thumbnail
+                {thumbSource === "manual" && <span className="ml-1 text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">Manuel</span>}
+                {thumbSource === "auto" && thumbPreview && <span className="ml-1 text-[10px] bg-[#222] text-[#666] px-1.5 py-0.5 rounded-full">Otomatik</span>}
+              </label>
+              <div className="flex items-center gap-2">
+                {thumbPreview && thumbSource === "auto" && (
+                  <button
+                    type="button"
+                    onClick={() => generateThumbnail(selectedFile, thumbTime)}
+                    className="text-[11px] text-[#666] hover:text-primary flex items-center gap-1 transition-colors"
+                    disabled={thumbLoading}
+                  >
+                    <RefreshCw className={cn("h-3 w-3", thumbLoading && "animate-spin")} /> Yenile
+                  </button>
+                )}
+                {/* Manuel thumbnail yükle butonu */}
                 <button
                   type="button"
-                  onClick={() => generateThumbnail(selectedFile, thumbTime)}
+                  onClick={() => thumbFileRef.current?.click()}
                   className="text-[11px] text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
-                  disabled={thumbLoading}
                 >
-                  <RefreshCw className={cn("h-3 w-3", thumbLoading && "animate-spin")} />
-                  Yenile
+                  <FolderOpen className="h-3 w-3" /> Görsel Seç
                 </button>
-              )}
+                <input
+                  ref={thumbFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleManualThumb}
+                />
+              </div>
             </div>
 
+            {/* Preview area */}
             <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-[#0d0d0d] border border-[#2a2a2a]">
               {thumbLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <Loader2 className="h-6 w-6 text-primary animate-spin" />
-                  <span className="text-xs text-[#666]">Thumbnail çıkarılıyor...</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#0d0d0d]">
+                  <div className="relative">
+                    <Loader2 className="h-7 w-7 text-primary animate-spin" />
+                    <div className="absolute inset-0 rounded-full border border-primary/20 animate-ping" />
+                  </div>
+                  <span className="text-xs text-[#666]">Kare çıkarılıyor...</span>
                 </div>
               )}
               {thumbPreview && !thumbLoading && (
-                <img src={thumbPreview} alt="Thumbnail" className="w-full h-full object-contain" />
+                <>
+                  <img src={thumbPreview} alt="Thumbnail" className="w-full h-full object-contain" />
+                  {/* Overlay hint */}
+                  <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity bg-black/50 flex items-center justify-center gap-3">
+                    {thumbSource === "auto" && (
+                      <button
+                        type="button"
+                        onClick={() => generateThumbnail(selectedFile, thumbTime)}
+                        className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-2 rounded-lg backdrop-blur-sm transition-all"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" /> Yenile
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => thumbFileRef.current?.click()}
+                      className="flex items-center gap-1.5 bg-primary/80 hover:bg-primary text-white text-xs px-3 py-2 rounded-lg backdrop-blur-sm transition-all"
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" /> Görsel Değiştir
+                    </button>
+                  </div>
+                </>
               )}
               {!thumbPreview && !thumbLoading && (
-                <label className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#555] cursor-pointer hover:text-[#888] transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (!f) return;
-                      const blob = f.slice(0, f.size, f.type);
-                      setThumbBlob(blob);
-                      if (thumbPreview) URL.revokeObjectURL(thumbPreview);
-                      setThumbPreview(URL.createObjectURL(f));
-                    }}
-                  />
-                  <Camera className="h-8 w-8" />
-                  <span className="text-xs text-center px-4">Otomatik thumbnail alınamadı<br />Görsel seçmek için tıkla</span>
+                <label className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-[#555] cursor-pointer hover:text-[#888] transition-colors group/thumb">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleManualThumb} />
+                  <div className="p-3 rounded-xl border border-dashed border-[#333] group-hover/thumb:border-primary/40 group-hover/thumb:bg-primary/5 transition-all">
+                    <Camera className="h-8 w-8" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-medium">Thumbnail ekle</p>
+                    <p className="text-[11px] text-[#444] mt-0.5">Tıklayarak görsel seç</p>
+                  </div>
                 </label>
               )}
             </div>
 
-            {/* Time scrubber */}
-            {videoDuration > 0 && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] text-[#555]">
-                  <span>Kare zamanı</span>
-                  <span className="text-[#888] font-mono">{Math.floor(thumbTime / 60)}:{String(Math.round(thumbTime % 60)).padStart(2, "0")} / {Math.floor(videoDuration / 60)}:{String(Math.round(videoDuration % 60)).padStart(2, "0")}</span>
+            {/* Time scrubber — only for auto mode */}
+            {videoDuration > 0 && thumbSource === "auto" && (
+              <div className="space-y-1.5 bg-[#0d0d0d] rounded-lg p-3 border border-[#1e1e1e]">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[#555]">Kare zamanı</span>
+                  <span className="text-[#888] font-mono">
+                    {Math.floor(thumbTime / 60)}:{String(Math.round(thumbTime % 60)).padStart(2, "0")}
+                    {" / "}
+                    {Math.floor(videoDuration / 60)}:{String(Math.round(videoDuration % 60)).padStart(2, "0")}
+                  </span>
                 </div>
                 <input
                   type="range"
-                  min={0}
-                  max={Math.floor(videoDuration)}
-                  step={1}
-                  value={thumbTime}
+                  min={0} max={Math.floor(videoDuration)} step={1} value={thumbTime}
                   onChange={(e) => setThumbTime(Number(e.target.value))}
                   onMouseUp={() => generateThumbnail(selectedFile, thumbTime)}
                   onTouchEnd={() => generateThumbnail(selectedFile, thumbTime)}
@@ -479,6 +625,7 @@ export function ChunkedUploadZone({ onDone }: Props) {
             )}
           </div>
 
+          {/* Title + Description */}
           <div className="border-t border-[#1e1e1e] pt-4 space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-[#888]">Başlık <span className="text-red-400">*</span></label>
@@ -489,7 +636,6 @@ export function ChunkedUploadZone({ onDone }: Props) {
                 className="bg-[#161616] border-[#2a2a2a] focus:border-primary text-white"
               />
             </div>
-
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-[#888]">Açıklama</label>
               <Textarea
@@ -527,130 +673,75 @@ export function ChunkedUploadZone({ onDone }: Props) {
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <label className="flex items-center gap-2.5 cursor-pointer flex-1">
-                <button
-                  type="button"
-                  onClick={() => setMeta((m) => ({ ...m, isPremium: !m.isPremium }))}
-                  className={cn("relative w-10 h-5 rounded-full transition-all shrink-0", meta.isPremium ? "bg-primary" : "bg-[#333]")}
-                >
-                  <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", meta.isPremium ? "left-5" : "left-0.5")} />
-                </button>
-                <span className="text-sm text-[#aaa]">Premium içerik</span>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={meta.isPremium}
+                  onChange={(e) => setMeta((m) => ({ ...m, isPremium: e.target.checked }))}
+                  className="accent-primary h-4 w-4 rounded"
+                />
+                <span className="text-sm text-[#aaa]">Premium</span>
               </label>
-
-              <label className="flex items-center gap-2.5 cursor-pointer flex-1">
-                <button
-                  type="button"
-                  onClick={() => setMeta((m) => ({ ...m, isAdult: !m.isAdult }))}
-                  className={cn("relative w-10 h-5 rounded-full transition-all shrink-0", meta.isAdult ? "bg-red-500" : "bg-[#333]")}
-                >
-                  <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", meta.isAdult ? "left-5" : "left-0.5")} />
-                </button>
-                <span className="text-sm text-[#aaa]">+18 İçerik</span>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={meta.isAdult}
+                  onChange={(e) => setMeta((m) => ({ ...m, isAdult: e.target.checked }))}
+                  className="accent-primary h-4 w-4 rounded"
+                />
+                <span className="text-sm text-[#aaa]">18+</span>
               </label>
             </div>
 
-            {/* Zamanlanmış yayın */}
-            <div className="space-y-2.5">
-              <label className="flex items-center gap-2.5 cursor-pointer" onClick={() => setScheduleEnabled(v => !v)}>
-                <span className={cn("relative w-10 h-5 rounded-full transition-all shrink-0", scheduleEnabled ? "bg-primary" : "bg-[#333]")}>
-                  <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", scheduleEnabled ? "left-5" : "left-0.5")} />
+            {/* Schedule */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={scheduleEnabled}
+                  onChange={(e) => setScheduleEnabled(e.target.checked)}
+                  className="accent-primary h-4 w-4 rounded"
+                />
+                <span className="text-sm text-[#aaa] flex items-center gap-1.5">
+                  <CalendarClock className="h-3.5 w-3.5" /> Zamanlanmış Yayın
                 </span>
-                <CalendarClock className="h-3.5 w-3.5 text-[#888]" />
-                <span className="text-sm text-[#aaa]">Zamanlanmış yayın</span>
               </label>
               {scheduleEnabled && (
-                <div className="space-y-1">
-                  <input
-                    type="datetime-local"
-                    value={scheduleValue}
-                    min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
-                    onChange={(e) => setScheduleValue(e.target.value)}
-                    className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary [color-scheme:dark]"
-                  />
-                  {scheduleValue && (
-                    <p className="text-[11px] text-primary flex items-center gap-1">
-                      <CalendarClock className="h-3 w-3" />
-                      Video {new Date(scheduleValue).toLocaleString("tr-TR")} tarihinde yayınlanacak
-                    </p>
-                  )}
-                </div>
+                <input
+                  type="datetime-local"
+                  value={scheduleValue}
+                  onChange={(e) => setScheduleValue(e.target.value)}
+                  className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                />
               )}
             </div>
 
-            {/* Sağlayıcı seçimi — sadece admin */}
-            {isAdmin ? (
-              <div className="border border-[#1e1e1e] rounded-xl overflow-hidden">
-                <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-                  <Share2 className="h-4 w-4 text-[#666]" />
-                  <span className="text-sm text-[#aaa] font-medium">Çapraz Yayın (Cross-post)</span>
-                </div>
-                <div className="flex gap-2 px-4 pb-3">
-                  {(["all", "select", "none"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setMeta((m) => ({ ...m, crosspostMode: mode }))}
-                      className={cn(
-                        "flex-1 text-xs py-2 rounded-lg border transition-all font-medium",
-                        (meta.crosspostMode ?? "all") === mode
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-[#aaa]"
-                      )}
-                    >
-                      {mode === "all" ? "🔁 Tüme At" : mode === "select" ? "☑ Seç" : "✕ Gönderme"}
-                    </button>
-                  ))}
-                </div>
-                {(meta.crosspostMode ?? "all") === "all" && (
-                  <p className="text-xs text-[#555] px-4 pb-3">Tüm aktif sağlayıcılara otomatik gönderilir.</p>
-                )}
-                {(meta.crosspostMode ?? "all") === "select" && (
-                  <div className="p-4 border-t border-[#1e1e1e] bg-[#0d0d0d]">
-                    <ProviderSelector
-                      isAdult={meta.isAdult ?? false}
-                      selectedIds={meta.crosspostSiteIds ?? []}
-                      onChange={(ids) => setMeta((m) => ({ ...m, crosspostSiteIds: ids }))}
-                    />
-                  </div>
-                )}
-                {(meta.crosspostMode ?? "all") === "none" && (
-                  <p className="text-xs text-[#555] px-4 pb-3">Bu video hiçbir sağlayıcıya gönderilmez.</p>
-                )}
-              </div>
-            ) : null}
-
-            <Button
-              type="button"
-              onClick={handleStart}
-              disabled={!meta.title.trim() || (scheduleEnabled && !scheduleValue)}
-              className="w-full bg-primary hover:bg-primary/90 text-white gap-2 h-11 rounded-xl font-bold shadow-[0_0_20px_rgba(168,85,247,0.25)]"
-            >
-              {scheduleEnabled && scheduleValue ? (
-                <><CalendarClock className="h-4 w-4" /> Zamanla ve Yükle</>
-              ) : (
-                <><Upload className="h-4 w-4" /> Yüklemeyi Başlat</>
-              )}
-            </Button>
-
-            <div className="flex items-center gap-2 text-xs text-[#555]">
-              <BarChart2 className="h-3.5 w-3.5" />
-              5 MB parçalar · Duraklat/devam desteklenir · Otomatik thumbnail
+            {/* Crosspost */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[#888] flex items-center gap-1.5">
+                <Share2 className="h-3.5 w-3.5" /> Crosspost
+              </label>
+              <ProviderSelector
+                mode={meta.crosspostMode ?? "all"}
+                selectedIds={meta.crosspostSiteIds ?? []}
+                onModeChange={(m) => setMeta((s) => ({ ...s, crosspostMode: m }))}
+                onSelectedChange={(ids) => setMeta((s) => ({ ...s, crosspostSiteIds: ids }))}
+              />
             </div>
           </div>
+
+          {/* Start button */}
+          <Button
+            onClick={handleStart}
+            disabled={!meta.title.trim()}
+            className="w-full bg-primary hover:bg-primary/90 gap-2 h-12 text-base font-semibold shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+          >
+            <Upload className="h-5 w-5" />
+            Yüklemeyi Başlat
+          </Button>
         </div>
       )}
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, color }: { icon: typeof Zap; label: string; value: string; color?: string }) {
-  return (
-    <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3 text-center">
-      <Icon className={cn("h-4 w-4 mx-auto mb-1.5", color ?? "text-[#666]")} />
-      <p className="text-[10px] text-[#555] uppercase tracking-widest font-bold">{label}</p>
-      <p className="text-sm font-bold text-white mt-0.5 leading-none">{value}</p>
     </div>
   );
 }
