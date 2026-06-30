@@ -193,6 +193,38 @@ python manage.py migrate --noinput
 # ── 6. Collectstatic ───────────────────────────────────────────────
 echo "[6/6] Statik dosyalar toplaniyor..."
 python manage.py collectstatic --noinput -v 0
+
+# ── 7. Önbellek temizle ─────────────────────────────────────────────
+echo ""
+echo "[7/7] Onbellek temizleniyor..."
+python manage.py shell -c "
+from django.core.cache import cache
+cache.clear()
+print('  Onbellek temizlendi.')
+"
+
+# ── 8. Video durumu ─────────────────────────────────────────────────
+echo ""
+echo "[8/7] Video durumu kontrol ediliyor..."
+python manage.py shell -c "
+from apps.videos.models import Video
+total     = Video.objects.count()
+published = Video.objects.filter(is_published=True).count()
+unpub     = total - published
+
+print(f'  Toplam video : {total}')
+print(f'  Yayinda      : {published}')
+print(f'  Taslak       : {unpub}')
+
+if total > 0 and published == 0:
+    n = Video.objects.filter(is_published=False).update(is_published=True)
+    print(f'  Uyari: Hic yayinda video yoktu — {n} video otomatik yayina alindi.')
+elif unpub > 0:
+    print(f'  Bilgi: {unpub} video taslak durumunda (admin panelinden yayinlayabilirsin).')
+else:
+    print(f'  Tum videolar yayinda.')
+"
+
 cd ..
 
 echo ""
