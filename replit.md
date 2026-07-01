@@ -147,17 +147,45 @@ git pull && ./setup.sh && sudo systemctl restart hotpulse
 
 ## Replit (Geliştirme Ortamı)
 
-Replit'te proje iki workflow ile çalışır:
+Django, build edilmiş frontend'i port **5000**'den WhiteNoise ile serve eder.
 
 | Workflow | Port | Açıklama |
 |---|---|---|
-| Django Backend | 8000 | API sunucusu |
-| Start application | 5000 | Vite dev server (frontend) |
+| Start application | 5000 | Django (API + statik frontend) |
+
+### İlk kurulum (bir kez çalıştır)
 
 ```bash
-# Geliştirme ortamında admin oluştur
-cd backend && python manage.py createsuperuser
+# Python bağımlılıkları
+pip install -r backend/requirements.txt
+
+# Frontend bağımlılıkları ve build
+cd backend/artifacts/streamvid && pnpm install && pnpm run build && cd ../..
+
+# Veritabanı migrate + statik dosyalar
+cd backend && python manage.py migrate --run-syncdb && python manage.py collectstatic --noinput
 ```
+
+### Admin kullanıcısı oluşturma
+
+```bash
+cd backend
+python manage.py shell -c "
+from apps.accounts.models import User
+u = User.objects.create_user('admin', 'admin@example.com', 'sifre123')
+u.role = 'admin'
+u.save()
+print('Admin oluşturuldu')
+"
+```
+
+### Ortam değişkenleri (Replit'te ayarlanmış)
+
+| Değişken | Değer |
+|---|---|
+| `DEBUG` | `True` |
+| `FORCE_SQLITE` | `true` (SQLite kullanır) |
+| `SESSION_SECRET` | Replit Secret olarak saklanır |
 
 ---
 
