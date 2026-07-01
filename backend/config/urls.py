@@ -111,6 +111,114 @@ def api_catalog(request):
     return response
 
 
+def serve_auth_md(request):
+    """
+    auth.md — Agent Authentication Metadata (workos.com/auth-md spec).
+    Serves a human- and machine-readable Markdown file at /auth.md that
+    describes how AI agents can discover, register, and authenticate with
+    this platform.
+    """
+    base = request.build_absolute_uri('/').rstrip('/')
+    content = (
+        "# Authentication for AI Agents — Hotpulse\n\n"
+        "> This file follows the [auth.md](https://workos.com/auth-md) specification.\n"
+        "> It describes how AI agents can authenticate with the Hotpulse API.\n\n"
+        "## Overview\n\n"
+        "Hotpulse is an 18+ social video platform. Agents may read public video\n"
+        "metadata and, with a valid credential, act on behalf of registered users\n"
+        "(upload videos, manage subscriptions, send messages, etc.).\n\n"
+        "## Quick Start\n\n"
+        f"1. **Discover** — `GET {base}/.well-known/oauth-authorization-server`\n"
+        f"2. **Register** — `POST {base}/api/accounts/register/` (see [Registration](#registration))\n"
+        f"3. **Authenticate** — `POST {base}/api/token/` (see [Token Endpoint](#token-endpoint))\n"
+        "4. **Call APIs** — `Authorization: Bearer <access_token>` on every request\n\n"
+        "---\n\n"
+        "## Registration\n\n"
+        f"`POST {base}/api/accounts/register/`\n\n"
+        "```json\n"
+        "{\n"
+        '  "username": "agent_name",\n'
+        '  "email":    "agent@example.com",\n'
+        '  "password": "strong-password"\n'
+        "}\n"
+        "```\n\n"
+        "**Response** — `201 Created`\n\n"
+        "```json\n"
+        "{\n"
+        '  "id":       1,\n'
+        '  "username": "agent_name",\n'
+        '  "email":    "agent@example.com",\n'
+        '  "role":     "user"\n'
+        "}\n"
+        "```\n\n"
+        "---\n\n"
+        "## Token Endpoint\n\n"
+        f"`POST {base}/api/token/`  ·  `Content-Type: application/json`\n\n"
+        "```json\n"
+        "{\n"
+        '  "username": "agent_name",\n'
+        '  "password": "strong-password"\n'
+        "}\n"
+        "```\n\n"
+        "**Response** — `200 OK`\n\n"
+        "```json\n"
+        "{\n"
+        '  "access":  "<JWT — valid 7 days>",\n'
+        '  "refresh": "<JWT — valid 30 days>"\n'
+        "}\n"
+        "```\n\n"
+        f"Refresh: `POST {base}/api/token/refresh/` with `{{\"refresh\": \"<token>\"}}`\n\n"
+        "---\n\n"
+        "## Identity Types Supported\n\n"
+        "| Type       | Description                             |\n"
+        "|------------|-----------------------------------------|\n"
+        "| `username` | Platform-local identifier (primary)     |\n"
+        "| `email`    | Email address tied to the account       |\n"
+        f"| `url`      | Profile URL `{base}/u/<username>`       |\n\n"
+        "---\n\n"
+        "## Credential Types Supported\n\n"
+        "| Type            | Header                           | Lifetime |\n"
+        "|-----------------|----------------------------------|----------|\n"
+        "| `bearer_token`  | `Authorization: Bearer <token>`  | 7 days   |\n"
+        "| `refresh_token` | Used at `/api/token/refresh/`    | 30 days  |\n\n"
+        "---\n\n"
+        "## Claims\n\n"
+        "JWT access tokens carry the following claims:\n\n"
+        "| Claim      | Description                    |\n"
+        "|------------|--------------------------------|\n"
+        "| `sub`      | User ID (integer, as string)   |\n"
+        "| `username` | Platform username              |\n"
+        "| `email`    | User email address             |\n"
+        "| `role`     | `user`, `creator`, or `admin`  |\n"
+        "| `exp`      | Token expiry (Unix timestamp)  |\n\n"
+        "---\n\n"
+        "## Key Endpoints\n\n"
+        "| Purpose              | Method | Path                                      |\n"
+        "|----------------------|--------|-------------------------------------------|\n"
+        "| Registration         | POST   | `/api/accounts/register/`                 |\n"
+        "| Token (login)        | POST   | `/api/token/`                             |\n"
+        "| Token refresh        | POST   | `/api/token/refresh/`                     |\n"
+        "| Current user profile | GET    | `/api/accounts/me/`                       |\n"
+        "| Video list           | GET    | `/api/videos/`                            |\n"
+        "| Health check         | GET    | `/api/healthz`                            |\n"
+        "| API catalog          | GET    | `/.well-known/api-catalog`                |\n"
+        "| Auth server metadata | GET    | `/.well-known/oauth-authorization-server` |\n"
+        "| Protected resource   | GET    | `/.well-known/oauth-protected-resource`   |\n\n"
+        "---\n\n"
+        "## Contact\n\n"
+        f"- Platform: {base}\n"
+        f"- API catalog: {base}/.well-known/api-catalog\n"
+    )
+    response = HttpResponse(content, content_type="text/markdown; charset=utf-8")
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Cache-Control"] = "public, max-age=3600"
+    response["Link"] = (
+        f'<{base}/.well-known/oauth-authorization-server>; rel="oauth-authorization-server", '
+        f'<{base}/.well-known/oauth-protected-resource>; rel="oauth-protected-resource"'
+    )
+    return response
+
+
 def oauth_protected_resource(request):
     """RFC 9728 — OAuth 2.0 Protected Resource Metadata."""
     base = request.build_absolute_uri('/').rstrip('/')
@@ -122,6 +230,14 @@ def oauth_protected_resource(request):
         "bearer_methods_supported": ["header"],
         "resource_signing_alg_values_supported": ["HS256", "EdDSA"],
         "resource_documentation": f"{base}/.well-known/api-catalog",
+        # auth.md — agent registration pointer (workos.com/auth-md)
+        "agent_auth": {
+            "auth_md": f"{base}/auth.md",
+            "register_uri": f"{base}/api/accounts/register/",
+            "identity_types_supported": ["url", "username", "email"],
+            "credential_types_supported": ["bearer_token", "refresh_token"],
+            "claims_supported": ["sub", "username", "email", "role"],
+        },
     }
     response = JsonResponse(meta)
     response["Access-Control-Allow-Origin"] = "*"
@@ -134,6 +250,7 @@ def oauth_discovery(request):
     RFC 8414 — OAuth 2.0 Authorization Server Metadata.
     OpenID Connect Discovery 1.0 — /.well-known/openid-configuration.
     Agents use this to discover token endpoints and supported grant types.
+    Includes agent_auth block per auth.md spec (workos.com/auth-md).
     """
     base = request.build_absolute_uri('/').rstrip('/')
     meta = {
@@ -154,6 +271,15 @@ def oauth_discovery(request):
         "claims_supported": ["sub", "email", "username", "role"],
         "token_endpoint_auth_signing_alg_values_supported": ["HS256", "EdDSA"],
         "service_documentation": f"{base}/.well-known/api-catalog",
+        # auth.md — agent registration block (workos.com/auth-md)
+        "agent_auth": {
+            "auth_md": f"{base}/auth.md",
+            "register_uri": f"{base}/api/accounts/register/",
+            "identity_types_supported": ["url", "username", "email"],
+            "credential_types_supported": ["bearer_token", "refresh_token"],
+            "claims_supported": ["sub", "username", "email", "role"],
+            "revocation_endpoint": f"{base}/api/token/revoke/",
+        },
     }
     response = JsonResponse(meta)
     response["Access-Control-Allow-Origin"] = "*"
@@ -163,6 +289,9 @@ def oauth_discovery(request):
 
 urlpatterns = [
     path('django-admin/', admin.site.urls),
+
+    # auth.md — Agent Authentication Metadata (workos.com/auth-md)
+    re_path(r'^auth\.md$', serve_auth_md, name='auth_md'),
 
     # OAuth 2.0 / OIDC discovery (RFC 8414 + OpenID Connect Discovery 1.0)
     path('.well-known/openid-configuration', oauth_discovery, name='openid_configuration'),
@@ -386,6 +515,6 @@ urlpatterns += [
     re_path(r'^(?P<path>opengraph\.[a-zA-Z]+)$', _serve_from_static),
     # Video sayfaları — server-side OG meta + JSON-LD enjeksiyonu
     re_path(r'^videos/(?P<slug>[\w.-]+)$', video_seo_page),
-    # SPA catch-all — global SEO meta enjeksiyonlu
-    re_path(r'^(?!api/|django-admin/|static/|media/|assets/).*$', global_seo_page),
+    # SPA catch-all — auth.md ve well-known dışındaki her şey
+    re_path(r'^(?!api/|django-admin/|static/|media/|assets/|auth\.md$|\.well-known/).*$', global_seo_page),
 ]
