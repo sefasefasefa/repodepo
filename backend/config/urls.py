@@ -111,6 +111,24 @@ def api_catalog(request):
     return response
 
 
+def oauth_protected_resource(request):
+    """RFC 9728 — OAuth 2.0 Protected Resource Metadata."""
+    base = request.build_absolute_uri('/').rstrip('/')
+    meta = {
+        "resource": base,
+        "authorization_servers": [base],
+        "jwks_uri": f"{base}/.well-known/http-message-signatures-directory",
+        "scopes_supported": ["openid", "profile", "email"],
+        "bearer_methods_supported": ["header"],
+        "resource_signing_alg_values_supported": ["HS256", "EdDSA"],
+        "resource_documentation": f"{base}/.well-known/api-catalog",
+    }
+    response = JsonResponse(meta)
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
 def oauth_discovery(request):
     """
     RFC 8414 — OAuth 2.0 Authorization Server Metadata.
@@ -149,6 +167,9 @@ urlpatterns = [
     # OAuth 2.0 / OIDC discovery (RFC 8414 + OpenID Connect Discovery 1.0)
     path('.well-known/openid-configuration', oauth_discovery, name='openid_configuration'),
     path('.well-known/oauth-authorization-server', oauth_discovery, name='oauth_authorization_server'),
+
+    # OAuth Protected Resource Metadata (RFC 9728)
+    path('.well-known/oauth-protected-resource', oauth_protected_resource, name='oauth_protected_resource'),
 
     # Agent discovery (RFC 8288 / RFC 9727)
     path('.well-known/api-catalog', api_catalog, name='api_catalog'),
