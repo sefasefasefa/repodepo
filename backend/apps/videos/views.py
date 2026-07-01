@@ -443,7 +443,7 @@ def home_page(request):
     if is_anon:
         data = _build_home_data_anon()
         resp = Response(data)
-        resp['Cache-Control'] = 'public, max-age=90, stale-while-revalidate=60'
+        resp['Cache-Control'] = 'public, s-maxage=90, max-age=90, stale-while-revalidate=60'
         return resp
 
     # Giriş yapmış kullanıcılar için yapısal veri (video listesi) cache'lenir,
@@ -1283,14 +1283,18 @@ def get_bookmarks(request):
 def list_categories(request):
     cached = cache.get('categories:all_v2')
     if cached is not None:
-        return Response(cached)
+        resp = Response(cached)
+        resp['Cache-Control'] = 'public, s-maxage=300, max-age=300, stale-while-revalidate=120'
+        return resp
     cats = Category.objects.all().order_by('-video_count', 'name')
     result = [
         {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
         for c in cats
     ]
     cache.set('categories:all_v2', result, 300)
-    return Response(result)
+    resp = Response(result)
+    resp['Cache-Control'] = 'public, s-maxage=300, max-age=300, stale-while-revalidate=120'
+    return resp
 
 
 @api_view(['GET'])

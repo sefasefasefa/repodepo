@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',        # CORS: preflight'lar erken yanıtlanır
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.http.ConditionalGetMiddleware',  # ETag + 304 desteği
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

@@ -243,16 +243,19 @@ def app_init(request):
     """
     if not request.user.is_authenticated:
         # ── Tam anonim yanıt önbelleği ──────────────────────────────────
+        # public + s-maxage: Cloudflare edge + nginx proxy_cache bu yanıtı cache'ler.
+        # Kullanıcı Türkiye'den bağlanıyorsa CF'nin Frankfurt/Warsaw node'undan alır.
+        _CC = 'public, s-maxage=60, max-age=60, stale-while-revalidate=120'
         cached = cache.get(_ANON_INIT_CACHE_KEY)
         if cached is not None:
             resp = Response(cached)
-            resp['Cache-Control'] = 'private, no-store'
+            resp['Cache-Control'] = _CC
             resp['X-Cache'] = 'HIT'
             return resp
 
         result = _build_init_anon_with_lock()
         resp = Response(result)
-        resp['Cache-Control'] = 'private, no-store'
+        resp['Cache-Control'] = _CC
         resp['X-Cache'] = 'MISS'
         return resp
 
