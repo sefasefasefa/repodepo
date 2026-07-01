@@ -708,7 +708,7 @@ def oauth_discovery(request):
             "identity_types_supported": ["url", "username", "email"],
             "credential_types_supported": ["bearer_token", "refresh_token"],
             "claims_supported": ["sub", "username", "email", "role"],
-            "revocation_endpoint": f"{base}/api/token/revoke/",
+            "revocation_endpoint": f"{base}/api/auth/revoke",
         },
     }
     response = JsonResponse(meta)

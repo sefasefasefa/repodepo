@@ -9,6 +9,7 @@ urlpatterns = [
     path('auth/login', views.login_view),
     path('auth/logout', views.logout_view),
     path('auth/refresh', TokenRefreshView.as_view()),
+    path('auth/revoke', views.token_revoke),      # RFC 7009 token revocation
     path('auth/me', views.me),
     path('auth/update-profile', views.update_profile),
     path('auth/upload-avatar', views.upload_avatar),

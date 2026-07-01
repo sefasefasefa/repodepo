@@ -118,11 +118,44 @@ def login_view(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def logout_view(request):
+    refresh_token = request.data.get('refresh')
+    if refresh_token:
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except Exception:
+            pass
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if auth_header.startswith('Bearer '):
-        token = auth_header[7:]
-        User.objects.filter(session_token=token).update(session_token=None)
+        raw = auth_header[7:]
+        User.objects.filter(session_token=raw).update(session_token=None)
     return Response({'message': 'Logged out'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def token_revoke(request):
+    """
+    RFC 7009 — OAuth 2.0 Token Revocation.
+
+    Body (JSON):
+        { "token": "<refresh_token>", "token_type_hint": "refresh_token" }
+
+    Accepts a refresh token and adds it to the SimpleJWT blacklist so it
+    can no longer be used for rotation or as proof-of-possession.
+    Access tokens are stateless JWTs — they cannot be revoked server-side,
+    but their lifetime is capped at 7 days (ACCESS_TOKEN_LIFETIME setting).
+
+    Returns 200 regardless of whether the token was valid (per RFC 7009 §2.2).
+    """
+    raw = request.data.get('token') or request.data.get('refresh_token')
+    if raw:
+        try:
+            token = RefreshToken(raw)
+            token.blacklist()
+        except Exception:
+            pass
+    return Response({'revoked': True}, status=200)
 
 
 @api_view(['GET'])
