@@ -18,6 +18,52 @@ from apps.core.seo_views import video_seo_page, global_seo_page
 from django.http import JsonResponse
 
 
+def jwks_directory(request):
+    """
+    Web Bot Auth — JWKS directory endpoint.
+    Draft: https://datatracker.ietf.org/wg/webbotauth/about/
+    Cloudflare: https://developers.cloudflare.com/bots/reference/bot-verification/web-bot-auth/
+
+    Sitenin bot/agent isteklerini imzalarken kullandığı Ed25519 public key'i JWKS formatında yayınlar.
+    Alıcı siteler bu endpoint'i fetch ederek imzayı doğrulayabilir.
+    """
+    import base64, os, time
+
+    pub_b64 = os.environ.get("BOT_SIGNING_PUBLIC_KEY", "")
+    kid     = os.environ.get("BOT_SIGNING_KID", "hotpulse-bot-2026-01")
+
+    if not pub_b64:
+        return JsonResponse({"error": "signing key not configured"}, status=503)
+
+    # Ed25519 public key → JWK (RFC 8037)
+    jwk = {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "kid": kid,
+        "use": "sig",
+        "alg": "EdDSA",
+        "x": pub_b64,   # raw public key, base64url-encoded (no padding)
+    }
+
+    base = request.build_absolute_uri("/").rstrip("/")
+    payload = {
+        "keys": [jwk],
+        # Web Bot Auth metadata
+        "iss": base,
+        "iat": int(time.time()),
+        "context": {
+            "site": base,
+            "contact": f"{base}/about",
+            "purpose": "Hotpulse platform agent requests signed with this key for identity verification.",
+        },
+    }
+
+    response = JsonResponse(payload)
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
 def api_catalog(request):
     """RFC 8288 / RFC 9727 — Agent discovery API catalog."""
     base = request.build_absolute_uri('/').rstrip('/')
@@ -34,6 +80,7 @@ def api_catalog(request):
                     {"url": f"{base}/api/token/", "description": "JWT token alma"},
                     {"url": f"{base}/api/token/refresh/", "description": "JWT token yenileme"},
                     {"url": f"{base}/sitemap.xml", "description": "Sitemap"},
+                    {"url": f"{base}/.well-known/http-message-signatures-directory", "description": "Web Bot Auth — JWKS (Ed25519 public key, RFC 8037)"},
                 ],
                 "authentication": {
                     "type": "http",
@@ -50,6 +97,9 @@ urlpatterns = [
 
     # Agent discovery (RFC 8288 / RFC 9727)
     path('.well-known/api-catalog', api_catalog, name='api_catalog'),
+
+    # Web Bot Auth — JWKS directory (Ed25519 public key)
+    path('.well-known/http-message-signatures-directory', jwks_directory, name='jwks_directory'),
 
     # SEO
     path('sitemap.xml', sitemap_xml, name='sitemap'),

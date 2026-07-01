@@ -5,6 +5,7 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "argon2-cffi==25.1.0",
+    "cryptography>=49.0.0",
     "dj-database-url==3.1.2",
     "django==4.2.16",
     "django-cors-headers==4.4.0",
