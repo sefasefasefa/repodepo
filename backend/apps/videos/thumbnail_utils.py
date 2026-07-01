@@ -177,17 +177,32 @@ def auto_generate_thumbnail(video) -> bool:
 
     thumb_dir = os.path.join(settings.MEDIA_ROOT, "thumbnails")
     os.makedirs(thumb_dir, exist_ok=True)
-    out_name = f"auto_{uuid.uuid4().hex}.jpg"
-    out_path = os.path.join(thumb_dir, out_name)
+    tmp_name = f"auto_{uuid.uuid4().hex}_tmp.jpg"
+    tmp_path = os.path.join(thumb_dir, tmp_name)
 
-    success = _extract_frame(source, out_path, seek_seconds=5.0)
+    success = _extract_frame(source, tmp_path, seek_seconds=5.0)
     if not success:
         try:
-            os.remove(out_path)
+            os.remove(tmp_path)
         except OSError:
             pass
         logger.debug("Thumbnail üretilemedi: video_id=%s src=%s", video.id, source[:80])
         return False
+
+    # ffmpeg JPEG → WebP dönüşümü (~%50-60 küçülme, aynı kalite)
+    out_name = tmp_name.replace("_tmp.jpg", ".webp")
+    out_path = os.path.join(thumb_dir, out_name)
+    try:
+        from PIL import Image
+        img = Image.open(tmp_path).convert("RGB")
+        img.thumbnail((1280, 720), Image.LANCZOS)
+        img.save(out_path, format="WEBP", quality=82, method=4)
+        os.remove(tmp_path)
+    except Exception as e:
+        logger.warning("WebP dönüşümü başarısız, JPEG kullanılıyor: %s", e)
+        os.rename(tmp_path, out_path.replace(".webp", ".jpg"))
+        out_name = out_name.replace(".webp", ".jpg")
+        out_path = os.path.join(thumb_dir, out_name)
 
     thumb_url = f"/media/thumbnails/{out_name}"
     try:

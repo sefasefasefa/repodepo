@@ -162,6 +162,8 @@ def update_profile(request):
 def upload_avatar(request):
     import os, uuid
     from django.conf import settings
+    from PIL import Image
+    import io
 
     file = request.FILES.get('avatar')
     if not file:
@@ -174,14 +176,22 @@ def upload_avatar(request):
     if file.size > 5 * 1024 * 1024:
         return Response({'error': 'Dosya boyutu 5 MB\'ı geçemez'}, status=400)
 
-    ext = os.path.splitext(file.name)[1].lower() or '.jpg'
+    # GIF animasyonlu olabilir — olduğu gibi sakla
+    is_gif = file.content_type == 'image/gif'
+    ext = '.gif' if is_gif else '.webp'
     filename = f"avatars/{uuid.uuid4().hex}{ext}"
     save_path = os.path.join(settings.MEDIA_ROOT, filename)
-
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    with open(save_path, 'wb') as f:
-        for chunk in file.chunks():
-            f.write(chunk)
+
+    if is_gif:
+        with open(save_path, 'wb') as f:
+            for chunk in file.chunks():
+                f.write(chunk)
+    else:
+        # JPEG/PNG/WebP → max 400×400 WebP (kalite 85) → ~%60-70 küçülme
+        img = Image.open(file).convert('RGB')
+        img.thumbnail((400, 400), Image.LANCZOS)
+        img.save(save_path, format='WEBP', quality=85, method=4)
 
     avatar_url = f"{settings.MEDIA_URL}{filename}"
     request.user.avatar_url = avatar_url
