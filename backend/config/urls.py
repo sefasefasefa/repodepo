@@ -111,6 +111,157 @@ def api_catalog(request):
     return response
 
 
+def a2a_agent_card(request):
+    """
+    A2A Agent Card — Agent-to-Agent protocol discovery.
+    https://a2a-protocol.org/latest/specification/
+    https://a2a-protocol.org/latest/topics/agent-discovery/
+
+    Served at /.well-known/agent-card.json so other AI agents can discover
+    this platform's capabilities and interact via the A2A protocol.
+    """
+    import json
+    base = request.build_absolute_uri('/').rstrip('/')
+    card = {
+        "schemaVersion": "1.0",
+        "name": "Hotpulse",
+        "version": "1.0.0",
+        "description": (
+            "Hotpulse is an 18+ social video platform. "
+            "Agents can browse public video content, manage user accounts, "
+            "handle subscriptions, and interact with live streaming features."
+        ),
+        "url": base,
+        "provider": {
+            "name": "Hotpulse",
+            "url": base,
+        },
+        "supportedInterfaces": [
+            {
+                "type": "rest-api",
+                "url": f"{base}/api/",
+                "transport": "http",
+                "protocol": "https",
+                "authentication": {
+                    "type": "bearer",
+                    "tokenEndpoint": f"{base}/api/token/",
+                },
+            },
+            {
+                "type": "mcp",
+                "url": f"{base}/api/mcp",
+                "transport": "http",
+                "protocol": "mcp/1.0",
+            },
+        ],
+        "capabilities": {
+            "streaming": False,
+            "pushNotifications": False,
+            "stateTransitionHistory": False,
+            "authentication": True,
+            "multimodal": True,
+        },
+        "defaultInputModes": ["text/plain", "application/json"],
+        "defaultOutputModes": ["application/json"],
+        "skills": [
+            {
+                "id": "video-browse",
+                "name": "Browse Videos",
+                "description": "List, search, and filter public videos by category, keyword, or sort order.",
+                "tags": ["video", "content", "search"],
+                "examples": [
+                    "List the latest uploaded videos",
+                    "Find videos in the 'Music' category",
+                    "Search for videos matching 'dance'",
+                ],
+                "inputModes": ["text/plain", "application/json"],
+                "outputModes": ["application/json"],
+            },
+            {
+                "id": "video-detail",
+                "name": "Get Video Details",
+                "description": "Retrieve full metadata, thumbnail URLs, and stream information for a specific video.",
+                "tags": ["video", "metadata", "stream"],
+                "examples": [
+                    "Get details for video ID 42",
+                    "What is the duration of this video?",
+                ],
+                "inputModes": ["text/plain", "application/json"],
+                "outputModes": ["application/json"],
+            },
+            {
+                "id": "user-profile",
+                "name": "User Profiles",
+                "description": "Fetch public user profiles, creator pages, and follower statistics.",
+                "tags": ["user", "profile", "creator"],
+                "examples": [
+                    "Get the profile of user 'alice'",
+                    "How many followers does creator 'bob' have?",
+                ],
+                "inputModes": ["text/plain", "application/json"],
+                "outputModes": ["application/json"],
+            },
+            {
+                "id": "account-management",
+                "name": "Account Management",
+                "description": "Register new accounts, authenticate, and manage the authenticated user's profile. Requires a valid Bearer token for write operations.",
+                "tags": ["auth", "account", "registration"],
+                "examples": [
+                    "Register a new user account",
+                    "Get the currently logged-in user's details",
+                ],
+                "inputModes": ["application/json"],
+                "outputModes": ["application/json"],
+                "authRequired": True,
+            },
+            {
+                "id": "categories",
+                "name": "Content Categories",
+                "description": "List all available video categories on the platform.",
+                "tags": ["category", "taxonomy"],
+                "examples": [
+                    "What categories are available?",
+                    "List all content categories",
+                ],
+                "inputModes": ["text/plain"],
+                "outputModes": ["application/json"],
+            },
+            {
+                "id": "health",
+                "name": "Platform Health",
+                "description": "Check whether the Hotpulse API is operational.",
+                "tags": ["health", "status"],
+                "examples": ["Is the API online?"],
+                "inputModes": ["text/plain"],
+                "outputModes": ["application/json"],
+            },
+        ],
+        "authentication": {
+            "schemes": ["bearer"],
+            "tokenEndpoint": f"{base}/api/token/",
+            "registrationEndpoint": f"{base}/api/accounts/register/",
+            "authMd": f"{base}/auth.md",
+        },
+        "discovery": {
+            "apiCatalog": f"{base}/.well-known/api-catalog",
+            "oauthServer": f"{base}/.well-known/oauth-authorization-server",
+            "oauthResource": f"{base}/.well-known/oauth-protected-resource",
+            "mcpServerCard": f"{base}/.well-known/mcp/server-card.json",
+            "authMd": f"{base}/auth.md",
+        },
+    }
+    body = json.dumps(card, ensure_ascii=False, indent=2)
+    response = HttpResponse(body, content_type="application/json")
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Cache-Control"] = "public, max-age=3600"
+    response["Link"] = (
+        f'<{base}/.well-known/oauth-authorization-server>; rel="oauth-authorization-server", '
+        f'<{base}/auth.md>; rel="auth-md", '
+        f'<{base}/.well-known/mcp/server-card.json>; rel="mcp-server-card"'
+    )
+    return response
+
+
 def mcp_server_card(request):
     """
     MCP Server Card (SEP-1649) — Model Context Protocol agent discovery.
@@ -406,6 +557,9 @@ urlpatterns = [
 
     # auth.md — Agent Authentication Metadata (workos.com/auth-md)
     re_path(r'^auth\.md$', serve_auth_md, name='auth_md'),
+
+    # A2A Agent Card — Agent-to-Agent protocol discovery
+    path('.well-known/agent-card.json', a2a_agent_card, name='a2a_agent_card'),
 
     # MCP Server Card (SEP-1649) — Model Context Protocol agent discovery
     path('.well-known/mcp/server-card.json', mcp_server_card, name='mcp_server_card'),
