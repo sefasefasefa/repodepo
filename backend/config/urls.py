@@ -89,7 +89,10 @@ def api_catalog(request):
                 },
             }
         ]
-    }, headers={"Access-Control-Allow-Origin": "*"})
+    }, headers={
+        "Access-Control-Allow-Origin": "*",
+        "Link": '</.well-known/api-catalog>; rel="self"',
+    })
 
 
 urlpatterns = [
@@ -276,11 +279,19 @@ def _serve_from_static(request, path):
     raise Http404
 
 
+_LINK_HEADER = (
+    '</.well-known/api-catalog>; rel="api-catalog", '
+    '</api/healthz>; rel="service-desc", '
+    '</sitemap.xml>; rel="sitemap"'
+)
+
 def spa_index(request, *args, **kwargs):
     index_path = os.path.join(settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT, 'index.html')
     if os.path.exists(index_path):
-        return FileResponse(open(index_path, 'rb'), content_type='text/html')
-    return HttpResponse(
+        resp = FileResponse(open(index_path, 'rb'), content_type='text/html')
+        resp["Link"] = _LINK_HEADER
+        return resp
+    resp = HttpResponse(
         '<!DOCTYPE html><html><body>'
         '<h2>Soci API is running ✓</h2>'
         '<p>React frontend not built yet. Run <code>npm run build</code> in the '
@@ -291,6 +302,8 @@ def spa_index(request, *args, **kwargs):
         content_type='text/html',
         status=200,
     )
+    resp["Link"] = _LINK_HEADER
+    return resp
 
 
 urlpatterns += [
