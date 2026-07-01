@@ -299,41 +299,39 @@ fi
 
 # CSS async → blocking: app-shell skeleton zaten saklıyor, FOUC olmaz
 python - <<'PYEOF'
-import re, glob
+import re
 idx = "staticfiles/index.html"
 try:
     with open(idx, encoding="utf-8") as f:
         html = f.read()
-    # Async CSS yükleme (onload trick) → doğrudan blocking stylesheet
-    patched = re.sub(
-        r'<link[^>]+rel=["\']preload["\'][^>]+as=["\']style["\'][^>]+href=["\']([^"\']+\.css)["\'][^>]*>[\s\S]*?<noscript>[\s\S]*?</noscript>',
-        lambda m: f'<link rel="stylesheet" crossorigin href="{re.search(r"href=[\"\'](.*?\.css)[\"']", m.group(0)).group(1)}">',
-        html
-    )
-    if patched != html:
-        with open(idx, "w", encoding="utf-8") as f:
-            f.write(patched)
-        print("   CSS blocking yapildi (FOUC giderildi).")
-    else:
-        # Basit string replace dene
-        import re as _re
-        m = _re.search(r'href=["\']([^"\']+\.css)["\']', html)
-        if m:
-            css_href = m.group(1)
-            # Eski async satırı bul ve değiştir
-            html2 = _re.sub(
+
+    # Önce CSS href'i bul
+    css_match = re.search(r'href=["\']([^"\']+\.css)["\']', html)
+    if css_match:
+        css_href = css_match.group(1)
+        link_tag = '<link rel="stylesheet" crossorigin href="' + css_href + '">'
+        # Async preload + noscript bloğunu blocking link ile değiştir
+        patched = re.sub(
+            r'<link[^>]+rel=["\']preload["\'][^>]+as=["\']style["\'][^>]*>[\s\S]*?<noscript>[\s\S]*?</noscript>',
+            link_tag,
+            html
+        )
+        if patched == html:
+            # Alternatif: DOTALL ile dene
+            patched = re.sub(
                 r'<link[^>]+rel=["\']preload["\'][^>]+as=["\']style["\'][^>]*>.*?<noscript>.*?</noscript>',
-                f'<link rel="stylesheet" crossorigin href="{css_href}">',
-                html, flags=_re.DOTALL
+                link_tag,
+                html,
+                flags=re.DOTALL
             )
-            if html2 != html:
-                with open(idx, "w", encoding="utf-8") as f:
-                    f.write(html2)
-                print("   CSS blocking yapildi (v2).")
-            else:
-                print("   CSS zaten blocking veya patch uygulanamadi.")
+        if patched != html:
+            with open(idx, "w", encoding="utf-8") as f:
+                f.write(patched)
+            print("   CSS blocking yapildi (FOUC giderildi).")
         else:
-            print("   CSS link bulunamadi, atlanıyor.")
+            print("   CSS zaten blocking veya patch uygulanamadi.")
+    else:
+        print("   CSS link bulunamadi, atlanıyor.")
 except FileNotFoundError:
     print("   [UYARI] staticfiles/index.html bulunamadi.")
 PYEOF
