@@ -67,8 +67,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (timerRef.current) clearInterval(timerRef.current);
 
     if (user && token) {
-      fetchNotifications();
-      timerRef.current = setInterval(fetchNotifications, POLL_INTERVAL);
+      // İlk fetch'i 3 saniye geciktir — sayfa yükünün kritik isteklerine bant genişliği bırak
+      const startDelay = setTimeout(() => {
+        fetchNotifications();
+        timerRef.current = setInterval(fetchNotifications, POLL_INTERVAL);
+      }, 3000);
+      return () => {
+        clearTimeout(startDelay);
+        if (timerRef.current) clearInterval(timerRef.current);
+      };
     } else {
       setConnected(false);
       setUnreadCount(0);

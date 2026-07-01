@@ -10,6 +10,8 @@
     <!-- /api/init erken fetch — React başlamadan önce başlar -->
     <script>
     (function(){
+      // Django zaten inline data gömdüyse (anonim kullanıcı, global_seo_page) — fetch atma
+      if(document.getElementById('__HP_INIT__'))return;
       try{
         var KEY='app_init_v4',TTL=120000;
         var raw=localStorage.getItem(KEY);

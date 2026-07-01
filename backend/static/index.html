@@ -10,6 +10,8 @@
     <!-- /api/init erken fetch — React başlamadan önce başlar -->
     <script>
     (function(){
+      // Django zaten inline data gömdüyse (anonim kullanıcı, global_seo_page) — fetch atma
+      if(document.getElementById('__HP_INIT__'))return;
       try{
         var KEY='app_init_v4',TTL=120000;
         var raw=localStorage.getItem(KEY);
@@ -56,7 +58,7 @@
       gtag('config', 'G-TX5SE92CJE');
     </script>
     <!--VITE_CSS_NONBLOCKING-->
-    <script type="module" crossorigin src="/assets/index-DH6x8q2F.js"></script>
+    <script type="module" crossorigin src="/assets/index-BrJdHznb.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/routing-BtX_6St_.js">
     <link rel="modulepreload" crossorigin href="/assets/react-query-Cm3ZMFE1.js">
     <link rel="modulepreload" crossorigin href="/assets/ui-tooltip-H1jx0OVu.js">

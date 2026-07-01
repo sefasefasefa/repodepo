@@ -367,6 +367,12 @@ def video_seo_page(request, slug):
     except Exception:
         pass
 
+    # Anonim kullanıcılar için init verisini HTML'e göm — /api/init round-trip'ini ortadan kaldırır
+    if not request.user.is_authenticated:
+        inline = _build_inline_init()
+        if inline:
+            html = _inject_into_head(html, inline)
+
     resp = HttpResponse(html, content_type="text/html; charset=utf-8")
     resp["Cache-Control"] = "no-cache"
     return resp
