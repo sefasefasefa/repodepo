@@ -271,6 +271,11 @@ def global_seo_page(request):
 
     resp = HttpResponse(html, content_type="text/html; charset=utf-8")
     resp["Cache-Control"] = "no-cache"
+    resp["Link"] = (
+        '</.well-known/api-catalog>; rel="api-catalog", '
+        '</api/healthz>; rel="service-desc", '
+        '</sitemap.xml>; rel="sitemap"'
+    )
     return resp
 
 
@@ -375,4 +380,9 @@ def video_seo_page(request, slug):
 
     resp = HttpResponse(html, content_type="text/html; charset=utf-8")
     resp["Cache-Control"] = "no-cache"
+    resp["Link"] = (
+        '</.well-known/api-catalog>; rel="api-catalog", '
+        '</api/healthz>; rel="service-desc", '
+        '</sitemap.xml>; rel="sitemap"'
+    )
     return resp

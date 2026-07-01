@@ -15,9 +15,41 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 
 from apps.core.sitemap import sitemap_xml, robots_txt
 from apps.core.seo_views import video_seo_page, global_seo_page
+from django.http import JsonResponse
+
+
+def api_catalog(request):
+    """RFC 8288 / RFC 9727 — Agent discovery API catalog."""
+    base = request.build_absolute_uri('/').rstrip('/')
+    return JsonResponse({
+        "apis": [
+            {
+                "id": f"{base}/api/",
+                "title": "Hotpulse REST API",
+                "description": "Video platformu için kimlik doğrulama, video, sosyal ve abonelik API'leri.",
+                "urls": [
+                    {"url": f"{base}/api/init", "description": "Platform init verisi (site config, özellikler, geo)"},
+                    {"url": f"{base}/api/videos/", "description": "Video listeleme ve arama"},
+                    {"url": f"{base}/api/healthz", "description": "Sağlık kontrolü"},
+                    {"url": f"{base}/api/token/", "description": "JWT token alma"},
+                    {"url": f"{base}/api/token/refresh/", "description": "JWT token yenileme"},
+                    {"url": f"{base}/sitemap.xml", "description": "Sitemap"},
+                ],
+                "authentication": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "description": "JWT Bearer token. /api/token/ endpoint'inden alınır."
+                },
+            }
+        ]
+    }, headers={"Access-Control-Allow-Origin": "*"})
+
 
 urlpatterns = [
     path('django-admin/', admin.site.urls),
+
+    # Agent discovery (RFC 8288 / RFC 9727)
+    path('.well-known/api-catalog', api_catalog, name='api_catalog'),
 
     # SEO
     path('sitemap.xml', sitemap_xml, name='sitemap'),
