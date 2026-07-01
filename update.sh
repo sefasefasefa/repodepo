@@ -295,6 +295,52 @@ else
     python manage.py collectstatic --noinput -v 0
 fi
 
+# ── 6b. Service Worker — sw.js kopyala + index.html'e kayıt inja ───
+_SW_REPO="$(dirname "$0")/backend/artifacts/streamvid/public/sw.js"
+_SW_STATIC="staticfiles/sw.js"
+
+# sw.js'i kaynak repodan kopyala (güncel tutar)
+if [ -f "$_SW_REPO" ]; then
+    cp "$_SW_REPO" "$_SW_STATIC" 2>/dev/null \
+        && echo "   sw.js kopyalandi: $_SW_STATIC" \
+        || echo "   [UYARI] sw.js kopyalanamadi."
+fi
+
+# index.html'de kayıt kodu yoksa enjekte et
+_IDX="staticfiles/index.html"
+if [ -f "$_IDX" ] && ! grep -q "serviceWorker.register" "$_IDX"; then
+    python - <<'PYEOF'
+import re, sys
+idx = "staticfiles/index.html"
+with open(idx, encoding="utf-8") as f:
+    html = f.read()
+
+SW_SCRIPT = """
+    <!-- Service Worker — tekrar ziyarette JS/CSS diskten gelir (0ms) -->
+    <script>
+    if('serviceWorker' in navigator){
+      window.addEventListener('load',function(){
+        navigator.serviceWorker.register('/sw.js',{scope:'/'})
+          .then(function(reg){
+            reg.addEventListener('updatefound',function(){
+              var nw=reg.installing;
+              if(nw) nw.addEventListener('statechange',function(){
+                if(nw.state==='installed'&&navigator.serviceWorker.controller)
+                  console.log('[SW] Yeni surum hazir.');
+              });
+            });
+          }).catch(function(e){console.warn('[SW] Kayit basarisiz:',e);});
+      });
+    }
+    </script>"""
+
+html = html.replace("</body>", SW_SCRIPT + "\n  </body>", 1)
+with open(idx, "w", encoding="utf-8") as f:
+    f.write(html)
+print("   Service Worker kaydi index.html'e eklendi.")
+PYEOF
+fi
+
 # ── 7. Önbellek ısıt (temizle + hemen yeniden doldur) ───────────────
 echo ""
 echo "[7/7] Onbellek isitiliyor..."

@@ -121,6 +121,7 @@ def update_feature(request, key):
         flag.description = defaults.get('description', '')
     flag.save()
     cache.delete('features:all')
+    invalidate_init_cache()
     return Response({'key': flag.key, 'state': flag.state, 'label': flag.label})
 
 
@@ -186,9 +187,49 @@ def _build_init_anon():
     }
 
 
-# Tam anonim yanıt için cache anahtarı (versiyon değişince eski cache geçersiz olur)
+# Tam anonim yanıt için cache anahtarları
 _ANON_INIT_CACHE_KEY = 'init:anon:full:v3'
+_ANON_INIT_LOCK_KEY  = 'init:anon:building:v3'   # thundering-herd lock
 _ANON_INIT_TTL = 30  # saniye — düşük TTL ile admin değişiklikleri hızlı yansır
+
+# Admin yazma işlemlerinde temizlenecek tüm init cache anahtarları
+INIT_CACHE_KEYS = [
+    _ANON_INIT_CACHE_KEY,
+    'init:combined:v1',
+    'init:anon:full:v1',
+    'init:anon:full:v2',
+]
+
+
+def invalidate_init_cache():
+    """
+    Site config / feature flag / geo değiştiğinde çağrılır.
+    Tüm init önbelleklerini temizler → sonraki istek taze veri alır.
+    """
+    cache.delete_many(INIT_CACHE_KEYS)
+
+
+def _build_init_anon_with_lock():
+    """
+    Thundering-herd korumalı _build_init_anon çağrısı.
+    cache.add() sadece anahtar yoksa True döner → tek worker oluşturur,
+    diğerleri kısa bekler ve hazır sonucu alır.
+    """
+    # Zaten biri oluşturuyor mu?
+    if not cache.add(_ANON_INIT_LOCK_KEY, 1, 15):
+        # Başka bir worker yapıyor; ~150ms bekle, sonra önbellekten al
+        import time
+        time.sleep(0.15)
+        hit = cache.get(_ANON_INIT_CACHE_KEY)
+        if hit is not None:
+            return hit
+        # Hâlâ boşsa (çok nadiren) biz de oluşturalım — stale veri yok
+    try:
+        result = _build_init_anon()
+        cache.set(_ANON_INIT_CACHE_KEY, result, _ANON_INIT_TTL)
+        return result
+    finally:
+        cache.delete(_ANON_INIT_LOCK_KEY)
 
 
 @api_view(['GET'])
@@ -209,8 +250,7 @@ def app_init(request):
             resp['X-Cache'] = 'HIT'
             return resp
 
-        result = _build_init_anon()
-        cache.set(_ANON_INIT_CACHE_KEY, result, _ANON_INIT_TTL)
+        result = _build_init_anon_with_lock()
         resp = Response(result)
         resp['Cache-Control'] = 'private, no-store'
         resp['X-Cache'] = 'MISS'

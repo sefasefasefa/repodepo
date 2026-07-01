@@ -224,6 +224,22 @@
       var r=document.getElementById('root');
       if(r) mo.observe(r,{childList:true});
     })();
+
+    // Service Worker — tekrar ziyarette JS/CSS diskten gelir (0ms)
+    if('serviceWorker' in navigator){
+      window.addEventListener('load',function(){
+        navigator.serviceWorker.register('/sw.js',{scope:'/'})
+          .then(function(reg){
+            reg.addEventListener('updatefound',function(){
+              var nw=reg.installing;
+              if(nw) nw.addEventListener('statechange',function(){
+                if(nw.state==='installed'&&navigator.serviceWorker.controller)
+                  console.log('[SW] Yeni sürüm hazır.');
+              });
+            });
+          }).catch(function(e){console.warn('[SW] Kayıt başarısız:',e);});
+      });
+    }
     </script>
   </body>
 </html>

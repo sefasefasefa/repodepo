@@ -255,6 +255,12 @@ def update_geo_settings(request):
     settings_obj.redirect_url = data.get('redirectUrl', settings_obj.redirect_url)
     settings_obj.message = data.get('message', settings_obj.message)
     settings_obj.save()
+    cache.delete('geo_settings:v1')
+    try:
+        from apps.core.views import invalidate_init_cache
+        invalidate_init_cache()
+    except Exception:
+        pass
     return Response({'message': 'Geo settings updated'})
 
 
@@ -414,6 +420,11 @@ def update_site_settings(request):
     s.contact_email = data.get('contactEmail', s.contact_email)
     s.save()
     cache.delete('site_config:public')
+    try:
+        from apps.core.views import invalidate_init_cache
+        invalidate_init_cache()
+    except Exception:
+        pass
     return Response({'message': 'Settings updated'})
 
 
