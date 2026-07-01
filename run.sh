@@ -41,16 +41,19 @@ if not os.path.exists(html_path):
 with open(html_path, 'r', encoding='utf-8') as f:
     html = f.read()
 
-# ── 1. CSS linkini JS script'inden önceye al (FOUC önlemi) ──────────────────
-css_pattern = r'(\s*<link rel="stylesheet" crossorigin href="[^"]+">)'
-script_pattern = r'(\s*<script type="module" crossorigin src="[^"]+"></script>)'
-css_match = re.search(css_pattern, html)
-script_match = re.search(script_pattern, html)
-if css_match and script_match and html.index(css_match.group()) > html.index(script_match.group()):
-    # CSS, script'ten sonra geliyor — yer değiştir
-    css_tag = css_match.group().strip()
-    html = html.replace(css_match.group(), '', 1)
-    html = html.replace(script_match.group().strip(), css_tag + '\n    ' + script_match.group().strip(), 1)
+# ── 1. CSS'i non-render-blocking yap (en kritik mobil hız optimizasyonu) ────
+# <link rel="stylesheet"> render'ı bloklar → preload trick ile anında render
+css_block_pattern = r'<link rel="stylesheet" crossorigin href="([^"]+)">'
+css_match = re.search(css_block_pattern, html)
+if css_match:
+    href = css_match.group(1)
+    old_css = css_match.group(0)
+    new_css = (
+        f'<link rel="preload" as="style" crossorigin href="{href}" '
+        f'onload="this.rel=\'stylesheet\';this.onload=null">\n'
+        f'    <noscript><link rel="stylesheet" crossorigin href="{href}"></noscript>'
+    )
+    html = html.replace(old_css, new_css, 1)
 
 # ── 2. Kritik lazy chunk'lara modulepreload ekle ────────────────────────────
 critical_patterns = ['home-', 'app-layout-', 'video-card-', 'categories-', 'ui-radix-']
