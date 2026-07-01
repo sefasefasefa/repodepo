@@ -111,6 +111,171 @@ def api_catalog(request):
     return response
 
 
+def agent_skills_index(request):
+    """
+    Agent Skills Discovery Index (RFC v0.2.0).
+    https://github.com/cloudflare/agent-skills-discovery-rfc
+    https://agentskills.io/
+
+    Served at /.well-known/agent-skills/index.json — a machine-readable
+    catalogue of all skills/capabilities this platform exposes to agents.
+    Each skill entry includes a sha256 digest of its description document
+    for integrity verification.
+    """
+    import json, hashlib
+    base = request.build_absolute_uri('/').rstrip('/')
+
+    def _digest(content: str) -> str:
+        return "sha256:" + hashlib.sha256(content.encode()).hexdigest()
+
+    skills = [
+        {
+            "name": "browse-videos",
+            "type": "api",
+            "description": "List, search, and filter public videos. Supports category, keyword, sort, and pagination query parameters.",
+            "url": f"{base}/api/videos/",
+            "endpoints": [
+                {"method": "GET", "path": "/api/videos/"},
+                {"method": "GET", "path": "/api/videos/{id}/"},
+                {"method": "GET", "path": "/api/videos/categories/"},
+            ],
+            "auth_required": False,
+        },
+        {
+            "name": "stream-video",
+            "type": "api",
+            "description": "Stream video content with HTTP Range (RFC 7233) support. Returns HLS manifests and byte-range MP4 segments.",
+            "url": f"{base}/api/videos/{{id}}/stream",
+            "endpoints": [
+                {"method": "GET", "path": "/api/videos/{id}/stream"},
+            ],
+            "auth_required": False,
+        },
+        {
+            "name": "user-profiles",
+            "type": "api",
+            "description": "Fetch public user and creator profiles including follower counts and uploaded video lists.",
+            "url": f"{base}/api/users/",
+            "endpoints": [
+                {"method": "GET", "path": "/api/users/{username}/"},
+            ],
+            "auth_required": False,
+        },
+        {
+            "name": "account-registration",
+            "type": "api",
+            "description": "Register a new user account. Required before obtaining a Bearer token.",
+            "url": f"{base}/api/accounts/register/",
+            "endpoints": [
+                {"method": "POST", "path": "/api/accounts/register/"},
+            ],
+            "auth_required": False,
+        },
+        {
+            "name": "bearer-auth",
+            "type": "auth",
+            "description": "Obtain and refresh JWT Bearer tokens. POST username+password to /api/token/ to receive access (7d) and refresh (30d) tokens.",
+            "url": f"{base}/api/token/",
+            "endpoints": [
+                {"method": "POST", "path": "/api/token/"},
+                {"method": "POST", "path": "/api/token/refresh/"},
+            ],
+            "auth_required": False,
+        },
+        {
+            "name": "current-user",
+            "type": "api",
+            "description": "Retrieve the authenticated user's profile, preferences, and subscription status. Requires Bearer token.",
+            "url": f"{base}/api/accounts/me/",
+            "endpoints": [
+                {"method": "GET", "path": "/api/accounts/me/"},
+            ],
+            "auth_required": True,
+        },
+        {
+            "name": "subscriptions",
+            "type": "api",
+            "description": "List available subscription plans and manage the authenticated user's active subscription.",
+            "url": f"{base}/api/subscriptions/",
+            "endpoints": [
+                {"method": "GET", "path": "/api/subscriptions/plans/"},
+                {"method": "GET", "path": "/api/subscriptions/my/"},
+            ],
+            "auth_required": True,
+        },
+        {
+            "name": "notifications",
+            "type": "api",
+            "description": "Read and acknowledge notifications for the authenticated user.",
+            "url": f"{base}/api/notifications/",
+            "endpoints": [
+                {"method": "GET", "path": "/api/notifications/"},
+                {"method": "POST", "path": "/api/notifications/read/"},
+            ],
+            "auth_required": True,
+        },
+        {
+            "name": "platform-health",
+            "type": "monitoring",
+            "description": "Check API availability and basic platform health status.",
+            "url": f"{base}/api/healthz",
+            "endpoints": [
+                {"method": "GET", "path": "/api/healthz"},
+            ],
+            "auth_required": False,
+        },
+        {
+            "name": "mcp-server",
+            "type": "mcp",
+            "description": "Model Context Protocol endpoint — exposes platform tools and resources to MCP-compatible agents.",
+            "url": f"{base}/api/mcp",
+            "spec": f"{base}/.well-known/mcp/server-card.json",
+            "auth_required": False,
+        },
+        {
+            "name": "a2a-agent",
+            "type": "a2a",
+            "description": "Agent-to-Agent protocol card — describes all platform skills, supported interfaces, and capabilities for A2A orchestration.",
+            "url": f"{base}/.well-known/agent-card.json",
+            "auth_required": False,
+        },
+        {
+            "name": "auth-discovery",
+            "type": "auth",
+            "description": "Authentication metadata for agents: auth.md human-readable guide plus OAuth 2.0 server and resource metadata endpoints.",
+            "url": f"{base}/auth.md",
+            "endpoints": [
+                {"method": "GET", "path": "/auth.md"},
+                {"method": "GET", "path": "/.well-known/oauth-authorization-server"},
+                {"method": "GET", "path": "/.well-known/oauth-protected-resource"},
+            ],
+            "auth_required": False,
+        },
+    ]
+
+    # Compute sha256 digest per skill (over its serialised description+url)
+    for skill in skills:
+        blob = json.dumps({"name": skill["name"], "description": skill["description"], "url": skill["url"]}, sort_keys=True)
+        skill["sha256"] = _digest(blob)
+
+    index = {
+        "$schema": "https://agentskills.io/schema/v0.2.0/index.json",
+        "version": "0.2.0",
+        "agent": {
+            "name": "Hotpulse",
+            "url": base,
+            "description": "18+ social video platform with public video browsing, user accounts, subscriptions, and live streaming.",
+        },
+        "skills": skills,
+    }
+
+    body = json.dumps(index, ensure_ascii=False, indent=2)
+    response = HttpResponse(body, content_type="application/json")
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
 def a2a_agent_card(request):
     """
     A2A Agent Card — Agent-to-Agent protocol discovery.
@@ -557,6 +722,9 @@ urlpatterns = [
 
     # auth.md — Agent Authentication Metadata (workos.com/auth-md)
     re_path(r'^auth\.md$', serve_auth_md, name='auth_md'),
+
+    # Agent Skills Discovery Index (RFC v0.2.0)
+    path('.well-known/agent-skills/index.json', agent_skills_index, name='agent_skills_index'),
 
     # A2A Agent Card — Agent-to-Agent protocol discovery
     path('.well-known/agent-card.json', a2a_agent_card, name='a2a_agent_card'),
