@@ -15,7 +15,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 
 from apps.core.sitemap import sitemap_xml, robots_txt
 from apps.core.seo_views import video_seo_page, global_seo_page
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 
 
 def jwks_directory(request):
@@ -65,34 +65,50 @@ def jwks_directory(request):
 
 
 def api_catalog(request):
-    """RFC 8288 / RFC 9727 — Agent discovery API catalog."""
+    """
+    RFC 9727 — API Catalog (application/linkset+json).
+    RFC 9264 — Linkset format.
+    """
+    import json
     base = request.build_absolute_uri('/').rstrip('/')
-    return JsonResponse({
-        "apis": [
-            {
-                "id": f"{base}/api/",
-                "title": "Hotpulse REST API",
-                "description": "Video platformu için kimlik doğrulama, video, sosyal ve abonelik API'leri.",
-                "urls": [
-                    {"url": f"{base}/api/init", "description": "Platform init verisi (site config, özellikler, geo)"},
-                    {"url": f"{base}/api/videos/", "description": "Video listeleme ve arama"},
-                    {"url": f"{base}/api/healthz", "description": "Sağlık kontrolü"},
-                    {"url": f"{base}/api/token/", "description": "JWT token alma"},
-                    {"url": f"{base}/api/token/refresh/", "description": "JWT token yenileme"},
-                    {"url": f"{base}/sitemap.xml", "description": "Sitemap"},
-                    {"url": f"{base}/.well-known/http-message-signatures-directory", "description": "Web Bot Auth — JWKS (Ed25519 public key, RFC 8037)"},
-                ],
-                "authentication": {
-                    "type": "http",
-                    "scheme": "bearer",
-                    "description": "JWT Bearer token. /api/token/ endpoint'inden alınır."
-                },
-            }
-        ]
-    }, headers={
-        "Access-Control-Allow-Origin": "*",
-        "Link": '</.well-known/api-catalog>; rel="self"',
-    })
+
+    # RFC 9264 linkset+json: her API için anchor + ilişkili linkler
+    linkset = [
+        {
+            "anchor": f"{base}/api/",
+            "service-desc": [
+                {"href": f"{base}/api/healthz", "type": "application/json"}
+            ],
+            "service-doc": [
+                {"href": f"{base}/docs/", "type": "text/html"}
+            ],
+            "status": [
+                {"href": f"{base}/api/healthz"}
+            ],
+        },
+        {
+            "anchor": f"{base}/api/videos/",
+            "service-desc": [{"href": f"{base}/api/videos/", "type": "application/json"}],
+            "type": [{"href": "https://schema.org/VideoObject"}],
+        },
+        {
+            "anchor": f"{base}/api/token/",
+            "service-desc": [{"href": f"{base}/api/token/", "type": "application/json"}],
+            "type": [{"href": "https://www.iana.org/assignments/media-types/application/json"}],
+        },
+        {
+            "anchor": f"{base}/.well-known/api-catalog",
+            "self": [{"href": f"{base}/.well-known/api-catalog"}],
+            "type": [{"href": "https://www.rfc-editor.org/rfc/rfc9727"}],
+        },
+    ]
+
+    body = json.dumps({"linkset": linkset}, ensure_ascii=False, indent=2)
+    response = HttpResponse(body, content_type="application/linkset+json")
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Link"] = f'<{base}/.well-known/api-catalog>; rel="self"; type="application/linkset+json"'
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
 
 
 urlpatterns = [
