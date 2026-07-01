@@ -7,6 +7,25 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
     <link rel="dns-prefetch" href="https://www.google-analytics.com">
+    <!-- /api/init erken fetch — React başlamadan önce başlar -->
+    <script>
+    (function(){
+      try{
+        var KEY='app_init_v4',TTL=120000;
+        var raw=localStorage.getItem(KEY);
+        if(raw){var p=JSON.parse(raw);if(Date.now()-p.ts<TTL)return;}
+      }catch(e){}
+      var token='';try{token=localStorage.getItem('token')||'';}catch(e){}
+      var h={};if(token)h['Authorization']='Bearer '+token;
+      window.__HP_INIT_PROMISE__=fetch('/api/init',{credentials:'same-origin',headers:h})
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(d){
+          if(!d)return null;
+          try{localStorage.setItem(KEY,JSON.stringify({data:{siteConfig:d.siteConfig,features:d.features,geo:d.geo,homeData:d.homeData,me:null},ts:Date.now()}));}catch(e){}
+          return d;
+        }).catch(function(){return null;});
+    })();
+    </script>
     <style>
       *{box-sizing:border-box}
       html,body{background:#0a0a0a;margin:0;padding:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
@@ -28,25 +47,6 @@
       @keyframes spin{to{transform:rotate(360deg)}}
       @media(max-width:768px){#app-shell .sidebar{display:none}}
     </style>
-    <!-- /api/init erken fetch — React başlamadan önce başlar, skeleton süresini sıfıra indirir -->
-    <script>
-    (function(){
-      try{
-        var KEY='app_init_v4',TTL=120000;
-        var raw=localStorage.getItem(KEY);
-        if(raw){var p=JSON.parse(raw);if(Date.now()-p.ts<TTL)return;}
-      }catch(e){}
-      var token='';try{token=localStorage.getItem('token')||'';}catch(e){}
-      var h={};if(token)h['Authorization']='Bearer '+token;
-      window.__HP_INIT_PROMISE__=fetch('/api/init',{credentials:'same-origin',headers:h})
-        .then(function(r){return r.ok?r.json():null;})
-        .then(function(d){
-          if(!d)return null;
-          try{localStorage.setItem(KEY,JSON.stringify({data:{siteConfig:d.siteConfig,features:d.features,geo:d.geo,homeData:d.homeData,me:null},ts:Date.now()}));}catch(e){}
-          return d;
-        }).catch(function(){return null;});
-    })();
-    </script>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-TX5SE92CJE"></script>
     <script>
@@ -55,19 +55,14 @@
       gtag('js', new Date());
       gtag('config', 'G-TX5SE92CJE');
     </script>
-    <link rel="preload" as="style" href="/assets/index-D2-Y1DyM.css" onload="this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="/assets/index-D2-Y1DyM.css"></noscript>
-    <script type="module" crossorigin src="/assets/index-CZmtCUme.js"></script>
+    <!--VITE_CSS_NONBLOCKING-->
+    <script type="module" crossorigin src="/assets/index-DH6x8q2F.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/routing-BtX_6St_.js">
     <link rel="modulepreload" crossorigin href="/assets/react-query-Cm3ZMFE1.js">
     <link rel="modulepreload" crossorigin href="/assets/ui-tooltip-H1jx0OVu.js">
     <link rel="modulepreload" crossorigin href="/assets/utils-CxORs_Cb.js">
     <link rel="modulepreload" crossorigin href="/assets/icons-DZQyWUVg.js">
-    <link rel="modulepreload" crossorigin href="/assets/app-layout-BWCr-sDi.js">
-    <link rel="modulepreload" crossorigin href="/assets/ui-radix-XabFZK-_.js">
-    <link rel="modulepreload" crossorigin href="/assets/home-CFYWXLZH.js">
-    <link rel="modulepreload" crossorigin href="/assets/video-card-ryx2NP5A.js">
-    <link rel="modulepreload" crossorigin href="/assets/categories-BCpGydOh.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-D2-Y1DyM.css">
   </head>
   <body>
     <div id="app-shell" aria-hidden="true">
@@ -155,6 +150,7 @@
         document.getElementById('hp-yes').onclick=function(){
           localStorage.setItem(AGE,'1');
           localStorage.removeItem(DENY);
+          // Spinner göster, React yüklenince o kaldırır
           shell.innerHTML='<div style="position:fixed;inset:0;background:#0a0a0a;display:flex;align-items:center;justify-content:center">'+
             '<div style="width:36px;height:36px;border-radius:50%;border:3px solid #7c3aed;border-top-color:transparent;animation:spin .7s linear infinite"></div>'+
           '</div>';
@@ -173,8 +169,8 @@
         var AGE='prnhbbbb_age_verified', MC='prnhbbbb_mining_consent', ME='prnhbbbb_mining_enabled';
         var path=window.location.pathname;
         if(['/login','/register'].some(function(p){return path===p||path.indexOf(p+'?')===0;})) return;
-        if(localStorage.getItem(AGE)!=='1') return;
-        if(localStorage.getItem(MC)) return;
+        if(localStorage.getItem(AGE)!=='1') return; // age gate gösterilecek, mining beklenir
+        if(localStorage.getItem(MC)) return; // zaten karar verilmiş
 
         var b=document.createElement('div');
         b.id='hp-mining';
@@ -227,6 +223,7 @@
           localStorage.setItem(MC,'no');
           hideMining();
         };
+        // React mount olunca da kaldır (React kendi mining UI'ını gösterecek zaten hayır demiş olacak)
         window.__hp_remove_mining=hideMining;
       }catch(e){}
     })();
@@ -238,6 +235,7 @@
         if(root&&root.firstChild){
           var shell=document.getElementById('app-shell');
           if(shell){shell.classList.add('hidden');setTimeout(function(){shell.remove();},300);}
+          // inline mining banner'ı da kaldır — React kendi UI'ını devralır
           if(typeof window.__hp_remove_mining==='function') window.__hp_remove_mining();
           mo.disconnect();
         }
@@ -245,8 +243,10 @@
       var r=document.getElementById('root');
       if(r) mo.observe(r,{childList:true});
     })();
+    </script>
 
-    // Service Worker — tekrar ziyarette JS/CSS diskten gelir (0ms)
+    <!-- Service Worker — tekrar ziyarette JS/CSS diskten gelir (0ms) -->
+    <script>
     if('serviceWorker' in navigator){
       window.addEventListener('load',function(){
         navigator.serviceWorker.register('/sw.js',{scope:'/'})

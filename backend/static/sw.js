@@ -1,15 +1,15 @@
 /**
- * Hotpulse Service Worker
+ * Hotpulse Service Worker v5
  *
- * Cache-First : /assets/, /static/, /media/  → disk'ten (0ms, immutable)
- * Network-First: HTML sayfaları              → taze, offline fallback
- * API (/api/)  : doğrudan network, CACHE YAPILMAZ
- *   — tüm API yanıtları Cache-Control: private, no-store içerir;
- *     bu başlığa saygı göstererek özel/oturum verisi asla önbelleklenmez.
+ * Cache-First  : /assets/, /static/, /media/ — immutable (0ms)
+ * Stale-While-Revalidate: /api/init          — anında + arka planda yenile
+ * Network-First: diğer HTML                  — taze, offline fallback
  */
 
-const CACHE_VER   = 'v4';
+const CACHE_VER    = 'v5';
 const STATIC_CACHE = `hp-static-${CACHE_VER}`;
+const API_CACHE    = `hp-api-${CACHE_VER}`;
+const INIT_TTL_MS  = 5 * 60 * 1000; // 5 dakika
 
 // ── Install: hemen etkinleş ──────────────────────────────────────────
 self.addEventListener('install', () => self.skipWaiting());
@@ -20,7 +20,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k.startsWith('hp-') && k !== STATIC_CACHE)
+          .filter(k => k.startsWith('hp-') && k !== STATIC_CACHE && k !== API_CACHE)
           .map(k => caches.delete(k))
       )
     ).then(() => self.clients.claim())
@@ -34,38 +34,79 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(req.url);
 
-  // Farklı origin (Google Analytics vb.) — atla
   if (url.origin !== self.location.origin) return;
 
   const p = url.pathname;
 
-  // SW'nin kendisi — asla önbellekleme
   if (p === '/sw.js') return;
 
-  // Admin + Django admin — her zaman network
   if (p.startsWith('/django-admin') || p.startsWith('/admin')) return;
 
-  // ── API: CACHE YAPILMAZ ──────────────────────────────────────────
-  // Tüm /api/ yanıtları "Cache-Control: private, no-store" içerir.
-  // Oturum/kimlik verisinin shared cihazlarda sızmaması için geçiyoruz.
+  // /api/init → Stale-While-Revalidate (anında + arka planda yenile)
+  if (p === '/api/init') {
+    event.respondWith(staleWhileRevalidateInit(req));
+    return;
+  }
+
+  // Diğer API → her zaman network
   if (p.startsWith('/api/')) return;
 
-  // ── Medya dosyaları: Cache-First (büyük, nadiren değişir) ──────────
+  // Medya dosyaları: Cache-First
   if (p.startsWith('/media/')) {
     event.respondWith(cacheFirst(req, true));
     return;
   }
 
-  // ── Hashed static varlıklar: Cache-First + sonsuz TTL ─────────────
-  // Vite, değişen her dosyaya yeni hash verir → sürüm çakışması yok.
+  // Hashed static varlıklar: Cache-First + sonsuz TTL
   if (p.startsWith('/assets/') || p.startsWith('/static/')) {
     event.respondWith(cacheFirst(req, false));
     return;
   }
 
-  // ── HTML sayfaları: Network-First, offline varsa cache ─────────────
+  // HTML sayfaları: Network-First, offline fallback
   event.respondWith(networkFirstHtml(req));
 });
+
+// ── Stale-While-Revalidate: /api/init ───────────────────────────────
+// Önce cache'den döner (0ms), arka planda network'ten günceller
+async function staleWhileRevalidateInit(request) {
+  const cache  = await caches.open(API_CACHE);
+  const cached = await cache.match(request);
+
+  const fetchAndCache = fetch(request.clone()).then(async res => {
+    if (res.ok) {
+      const cloned = res.clone();
+      const headers = new Headers(cloned.headers);
+      // TTL bilgisini custom header ile sakla
+      headers.set('x-sw-cached-at', Date.now().toString());
+      const bodyText = await cloned.text();
+      const newRes = new Response(bodyText, {
+        status: cloned.status,
+        statusText: cloned.statusText,
+        headers,
+      });
+      cache.put(request, newRes);
+    }
+    return res;
+  }).catch(() => null);
+
+  if (cached) {
+    // TTL kontrolü: süresi dolmuşsa arka planda yenile ama hemen cache'i dön
+    const cachedAt = parseInt(cached.headers.get('x-sw-cached-at') || '0');
+    if (Date.now() - cachedAt < INIT_TTL_MS) {
+      // Taze — hemen dön, arka planda yenile
+      fetchAndCache;
+      return cached;
+    }
+    // Süresi dolmuş — network'i bekle ama hata olursa cache'i kullan
+    const fresh = await fetchAndCache;
+    return fresh || cached;
+  }
+
+  // Cache yok — network'ten al
+  const fresh = await fetchAndCache;
+  return fresh || new Response('{}', { status: 503 });
+}
 
 // ── Cache-First ──────────────────────────────────────────────────────
 async function cacheFirst(request, limitLargeFiles) {
@@ -79,7 +120,6 @@ async function cacheFirst(request, limitLargeFiles) {
       if (!limitLargeFiles) {
         cache.put(request, response.clone());
       } else {
-        // Medya: 50 MB üstünü cache'leme
         const cl = response.headers.get('content-length');
         if (!cl || parseInt(cl) < 50 * 1024 * 1024) {
           cache.put(request, response.clone());
@@ -97,9 +137,7 @@ async function networkFirstHtml(request) {
   const cache = await caches.open(STATIC_CACHE);
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response.clone());
-    }
+    if (response.ok) cache.put(request, response.clone());
     return response;
   } catch {
     const cached = await cache.match(request) || await cache.match('/');

@@ -132,11 +132,10 @@ PASSWORD_HASHERS = [
 ]
 
 STATIC_URL = '/static/'
-# STATIC_ROOT = doğrudan static/ klasörü.
-# collectstatic buraya yazar; React dosyaları zaten burada;
-# staticfiles/ diye ayrı bir kopyaya gerek yok → Windows OSError yok.
 STATIC_ROOT = BASE_DIR / 'static'
-STATICFILES_DIRS = []   # static/ zaten STATIC_ROOT, çift kayıt olmaz
+# Frontend build output — collectstatic copies + gzips these into STATIC_ROOT
+_FRONTEND_DIST = BASE_DIR / 'artifacts' / 'streamvid' / 'dist' / 'public'
+STATICFILES_DIRS = [_FRONTEND_DIST] if _FRONTEND_DIST.exists() else []
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # WhiteNoise doğrudan static/ klasörünü serve eder.

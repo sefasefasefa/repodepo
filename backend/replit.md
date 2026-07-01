@@ -4,23 +4,21 @@ An 18+ social video platform with video uploading/streaming, subscriptions, live
 
 ## Run & Operate
 
-Workflow **"Start application"** runs both services:
-- Django backend on `http://0.0.0.0:6000` (`cd backend && python manage.py runserver 0.0.0.0:6000`)
-- React/Vite frontend on `http://0.0.0.0:5000` (`cd backend/artifacts/streamvid && pnpm dev --port 5000`)
-
-Vite proxies `/api`, `/media`, and `/django-admin` → `http://127.0.0.1:6000`.
+Workflow **"Start application"** runs a single server:
+- Django on `http://0.0.0.0:5000` — serves API + pre-built, gzip-compressed frontend assets
 
 ### Useful commands
 
 ```bash
+# Rebuild frontend after code changes (run both commands)
+cd backend/artifacts/streamvid && pnpm build
+cd backend && python manage.py collectstatic --noinput --clear
+
 # Run migrations
 cd backend && python manage.py migrate
 
 # Create a superuser
 cd backend && python manage.py createsuperuser
-
-# Collect static files (for production)
-cd backend && python manage.py collectstatic --noinput
 
 # Install/update Python deps
 pip install -r backend/requirements.txt
