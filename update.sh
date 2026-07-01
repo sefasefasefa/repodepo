@@ -295,13 +295,29 @@ else
     python manage.py collectstatic --noinput -v 0
 fi
 
-# ── 7. Önbellek temizle ─────────────────────────────────────────────
+# ── 7. Önbellek ısıt (temizle + hemen yeniden doldur) ───────────────
 echo ""
-echo "[7/7] Onbellek temizleniyor..."
+echo "[7/7] Onbellek isitiliyor..."
 python manage.py shell -c "
 from django.core.cache import cache
-cache.clear()
-print('  Onbellek temizlendi.')
+
+# Eski anahtarları temizle (sürüm değişikliklerini geçersiz kıl)
+stale_keys = [
+    'init:combined:v1', 'init:anon:full:v1', 'init:anon:full:v2',
+    'init:anon:full:v3', 'home_page:v2', 'geo_settings:v1',
+    'core:defaults_done:v1',
+]
+cache.delete_many(stale_keys)
+
+# Anonim init yanıtını önceden oluştur → ilk kullanıcı soğuk cache görmez
+try:
+    from apps.core.views import _build_init_anon, _ANON_INIT_CACHE_KEY, _ANON_INIT_TTL
+    result = _build_init_anon()
+    cache.set(_ANON_INIT_CACHE_KEY, result, _ANON_INIT_TTL)
+    print('  Onbellek isitildi (init + homeData hazir).')
+except Exception as e:
+    print(f'  [UYARI] Cache isitma basarisiz: {e}')
+    print('  Onbellek temizlendi (sonraki istek yeniden dolduracak).')
 "
 
 # ── 8. Video durumu ─────────────────────────────────────────────────

@@ -124,97 +124,114 @@ def update_feature(request, key):
     return Response({'key': flag.key, 'state': flag.state, 'label': flag.label})
 
 
+def _build_init_anon():
+    """
+    Anonim kullanıcı için tam /api/init yanıtını oluşturur.
+    Sadece cache süresi dolduğunda çağrılır; sonuç 30 sn önbellekte kalır.
+    """
+    from apps.admin_panel.models import SiteSettings
+    from .visitor_views import _get_geo_settings
+
+    # ── siteConfig ──────────────────────────────────────────────────────
+    s, _ = SiteSettings.objects.get_or_create(id=1)
+    site_config = {
+        'siteName': s.site_name,
+        'siteDescription': s.site_description,
+        'logoUrl': s.logo_url,
+        'faviconUrl': s.favicon_url,
+        'primaryColor': s.primary_color,
+        'registrationEnabled': s.registration_enabled,
+        'maintenanceMode': s.maintenance_mode,
+    }
+
+    # ── features ────────────────────────────────────────────────────────
+    ensure_defaults()
+    flags_qs = FeatureFlag.objects.all()
+    flag_map = {f.key: f.state for f in flags_qs}
+    details = []
+    for f in flags_qs:
+        defaults = DEFAULT_FLAG_MAP.get(f.key, {})
+        details.append({
+            'key': f.key, 'state': f.state,
+            'label': f.label or defaults.get('label', f.key),
+            'description': f.description or defaults.get('description', ''),
+            'group': defaults.get('group', 'Diğer'),
+        })
+    features = {'flags': flag_map, 'details': details}
+
+    # ── geo (geo kısıtlama etkin değilse varsayılan) ─────────────────────
+    geo_s = _get_geo_settings()
+    if not geo_s.is_enabled:
+        geo = {'blocked': False, 'country': None, 'enabled': False}
+    else:
+        geo = {
+            'blocked': False, 'country': 'XX', 'enabled': True,
+            'mode': geo_s.mode, 'message': geo_s.message,
+            'redirectUrl': geo_s.redirect_url,
+        }
+
+    # ── homeData ─────────────────────────────────────────────────────────
+    try:
+        from apps.videos.views import _build_home_data_anon
+        home_data = _build_home_data_anon()
+    except Exception:
+        home_data = None
+
+    return {
+        'siteConfig': site_config,
+        'features': features,
+        'geo': geo,
+        'homeData': home_data,
+        'me': None,
+    }
+
+
+# Tam anonim yanıt için cache anahtarı (versiyon değişince eski cache geçersiz olur)
+_ANON_INIT_CACHE_KEY = 'init:anon:full:v3'
+_ANON_INIT_TTL = 30  # saniye — düşük TTL ile admin değişiklikleri hızlı yansır
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def app_init(request):
-    """Tek round-trip ile site-config + features + geo/check döner."""
-    from apps.admin_panel.models import SiteSettings
-    from .visitor_views import _get_geo_settings, _get_client_ip, _is_local_ip
+    """
+    Tek round-trip ile site-config + features + geo + homeData döner.
 
-    CACHE_KEY = 'init:combined:v1'
-    cached_static = cache.get(CACHE_KEY)
-
-    if cached_static is None:
-        s, _ = SiteSettings.objects.get_or_create(id=1)
-        site_config = {
-            'siteName': s.site_name,
-            'siteDescription': s.site_description,
-            'logoUrl': s.logo_url,
-            'faviconUrl': s.favicon_url,
-            'primaryColor': s.primary_color,
-            'registrationEnabled': s.registration_enabled,
-            'maintenanceMode': s.maintenance_mode,
-        }
-
-        ensure_defaults()
-        flags_qs = FeatureFlag.objects.all()
-        flag_map = {f.key: f.state for f in flags_qs}
-        details = []
-        for f in flags_qs:
-            defaults = DEFAULT_FLAG_MAP.get(f.key, {})
-            details.append({
-                'key': f.key, 'state': f.state,
-                'label': f.label or defaults.get('label', f.key),
-                'description': f.description or defaults.get('description', ''),
-                'group': defaults.get('group', 'Diğer'),
-            })
-        features = {'flags': flag_map, 'details': details}
-
-        cached_static = {'siteConfig': site_config, 'features': features}
-        cache.set(CACHE_KEY, cached_static, 120)
-
-    geo_cached = cache.get('geo_settings:v1')
-    if geo_cached is None:
-        from .visitor_views import _get_geo_settings
-        s = _get_geo_settings()
-        geo_cached = {
-            'is_enabled': s.is_enabled, 'mode': s.mode,
-            'countries': s.countries or [], 'message': s.message,
-            'redirect_url': s.redirect_url,
-        }
-        cache.set('geo_settings:v1', geo_cached, 300)
-
-    if not geo_cached['is_enabled']:
-        geo = {'blocked': False, 'country': None, 'enabled': False}
-    else:
-        from .visitor_views import _get_client_ip, _is_local_ip
-        ip = _get_client_ip(request)
-        is_local = _is_local_ip(ip)
-        country = 'LOCAL' if is_local else 'XX'
-        countries = geo_cached['countries']
-        mode = geo_cached['mode']
-        if country == 'XX':
-            blocked = False
-        elif mode == 'allowlist':
-            blocked = not is_local and bool(countries) and country not in countries
-        else:
-            blocked = country in countries
-        geo = {
-            'blocked': blocked, 'country': country, 'enabled': True,
-            'mode': mode, 'message': geo_cached['message'],
-            'redirectUrl': geo_cached['redirect_url'],
-        }
-
-    home_data = None
+    Anonim istekler: tüm yanıt 30 sn önbellekte → DB'ye hiç gitmez.
+    Giriş yapmış kullanıcılar: /api/me eklendiği için kişisel önbellek kullanılır.
+    """
     if not request.user.is_authenticated:
-        try:
-            from apps.videos.views import HOME_CACHE_KEY, _build_home_data_anon
-            home_data = cache.get(HOME_CACHE_KEY)
-            if home_data is None:
-                home_data = _build_home_data_anon()
-        except Exception:
-            home_data = None
+        # ── Tam anonim yanıt önbelleği ──────────────────────────────────
+        cached = cache.get(_ANON_INIT_CACHE_KEY)
+        if cached is not None:
+            resp = Response(cached)
+            resp['Cache-Control'] = 'private, no-store'
+            resp['X-Cache'] = 'HIT'
+            return resp
 
-    # Giriş yapmış kullanıcı için /api/me verisini ekle → frontend ayrı istek yapmaz
+        result = _build_init_anon()
+        cache.set(_ANON_INIT_CACHE_KEY, result, _ANON_INIT_TTL)
+        resp = Response(result)
+        resp['Cache-Control'] = 'private, no-store'
+        resp['X-Cache'] = 'MISS'
+        return resp
+
+    # ── Giriş yapmış kullanıcı: statik kısımlar önbellekten, me kişisel ──
+    STATIC_KEY = 'init:combined:v1'
+    cached_static = cache.get(STATIC_KEY)
+    if cached_static is None:
+        base = _build_init_anon()
+        cached_static = {k: base[k] for k in ('siteConfig', 'features', 'geo')}
+        cache.set(STATIC_KEY, cached_static, 120)
+
     me_data = None
-    if request.user.is_authenticated:
-        try:
-            from apps.accounts.views import format_user
-            me_data = format_user(request.user)
-        except Exception:
-            me_data = None
+    try:
+        from apps.accounts.views import format_user
+        me_data = format_user(request.user)
+    except Exception:
+        pass
 
-    result = {**cached_static, 'geo': geo, 'homeData': home_data, 'me': me_data}
+    result = {**cached_static, 'homeData': None, 'me': me_data}
     resp = Response(result)
     resp['Cache-Control'] = 'private, no-store'
     return resp
