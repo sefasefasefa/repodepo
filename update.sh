@@ -229,7 +229,58 @@ fi
 # ── 5. Migrate ─────────────────────────────────────────────────────────
 echo "[5/6] Veritabani migrate ediliyor..."
 cd backend
-python manage.py migrate --noinput
+
+# PostgreSQL kullanılıyorsa önce bağlantıyı test et (5 sn timeout)
+# Bağlantı başarısızsa migrate'i atla — asılı kalmak yerine hızlıca geç
+_DB_URL="${DATABASE_URL:-}"
+_FORCE_SQLITE="${FORCE_SQLITE:-}"
+_SKIP_MIGRATE=false
+
+if [ -n "$_DB_URL" ] && [ "$_FORCE_SQLITE" != "true" ] && [ "$_FORCE_SQLITE" != "1" ]; then
+    # DATABASE_URL'den host ve port çıkar (postgresql://user:pass@host:port/db)
+    _PG_HOST=$(python - <<'PYEOF'
+import os, urllib.parse
+url = os.environ.get("DATABASE_URL", "")
+try:
+    p = urllib.parse.urlparse(url)
+    print(p.hostname or "localhost")
+except Exception:
+    print("localhost")
+PYEOF
+)
+    _PG_PORT=$(python - <<'PYEOF'
+import os, urllib.parse
+url = os.environ.get("DATABASE_URL", "")
+try:
+    p = urllib.parse.urlparse(url)
+    print(p.port or 5432)
+except Exception:
+    print(5432)
+PYEOF
+)
+    echo "   PostgreSQL baglantisi kontrol ediliyor: $_PG_HOST:$_PG_PORT (5 sn timeout)..."
+    # Python ile TCP bağlantı dene (nc/telnet her ortamda yok)
+    if ! python - <<PYEOF 2>/dev/null; then
+import socket, sys
+try:
+    s = socket.create_connection(("$_PG_HOST", $_PG_PORT), timeout=5)
+    s.close()
+    sys.exit(0)
+except Exception as e:
+    print(f"   [HATA] PostgreSQL'e bagilanamadi: {e}")
+    sys.exit(1)
+PYEOF
+        echo "   [UYARI] PostgreSQL erisilemez — migrate atlaniyor."
+        echo "           Servisin calistigini dogrulayin: 'pg_ctl status' veya 'sc query postgresql-*'"
+        _SKIP_MIGRATE=true
+    else
+        echo "   PostgreSQL erislebilir."
+    fi
+fi
+
+if [ "$_SKIP_MIGRATE" = "false" ]; then
+    python manage.py migrate --noinput
+fi
 
 # ── 6. Collectstatic ───────────────────────────────────────────────
 echo "[6/6] Statik dosyalar toplaniyor..."
