@@ -17,14 +17,6 @@ case "$(uname -s)" in
     *) OS="linux" ;;
 esac
 
-# ── Windows: git gc.auto=0 — "Unlink of file... Should I try again?" sorununu önle
-# Windows'ta git pull kullanmayın; bu script tarball yöntemiyle günceller.
-# gc.auto 0 ayarı sonraki git pull çağrılarının da GC başlatmasını engeller.
-if [ "$OS" = "windows" ]; then
-    git config gc.auto 0 2>/dev/null || true
-    git config gc.autopacklimit 0 2>/dev/null || true
-fi
-
 # ══════════════════════════════════════════════════════════════════════
 # [0] LINUX: Nginx + HTTPS kurulumu (sadece ilk seferinde, sonra atlar)
 # ══════════════════════════════════════════════════════════════════════
