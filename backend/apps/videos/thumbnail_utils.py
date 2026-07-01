@@ -199,6 +199,14 @@ def auto_generate_thumbnail(video) -> bool:
         return False
 
     logger.info("Thumbnail üretildi: video_id=%s -> %s", video.id, thumb_url)
+
+    try:
+        from django.core.cache import cache as _cache
+        _cache.delete('home_page:v2')
+        _cache.delete('init_anon:v1')
+    except Exception:
+        pass
+
     return True
 
 

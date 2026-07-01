@@ -336,6 +336,13 @@ def upload_thumbnail(request):
     except Exception as e:
         return Response({'error': f'Video güncellenemedi: {e}'}, status=400)
 
+    try:
+        from django.core.cache import cache as _cache
+        _cache.delete('home_page:v2')
+        _cache.delete('init_anon:v1')
+    except Exception:
+        pass
+
     return Response({'thumbnailUrl': thumb_url}, status=200)
 
 

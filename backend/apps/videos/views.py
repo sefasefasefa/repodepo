@@ -529,6 +529,8 @@ def get_video(request, video_id):
             if value is not None:
                 setattr(video, field, value)
         video.save()
+        cache.delete(HOME_CACHE_KEY)
+        cache.delete('init_anon:v1')
         return Response(enrich_video(video, request.user))
     v = _resolve_video(video_id)
     if not v:
@@ -955,6 +957,8 @@ def update_video(request, video_id):
         if value is not None:
             setattr(video, field, value)
     video.save()
+    cache.delete(HOME_CACHE_KEY)
+    cache.delete('init_anon:v1')
     # M2M kategoriler güncelle
     category_ids_upd = data.get('categoryIds')
     if category_ids_upd is not None:
