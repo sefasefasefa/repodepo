@@ -469,15 +469,33 @@ if [ "$OS" = "linux" ]; then
 else
     # Windows: önce Waitress'i arka planda başlat, sonra nginx'i yeniden başlat
     if [ -n "$NGINX_WIN" ]; then
-        echo "Nginx baslatiliyor: $NGINX_WIN"
-        # Nginx'i kendi dizininden başlat (nginx.conf'u oradan okur)
-        (cd "$NGINX_DIR" && "$NGINX_WIN" -p "$NGINX_DIR") &
-        sleep 1
-        # Başarılı mı?
+        # nginx.conf'u otomatik güncelle
+        REPO_NGINX_CONF="$(cd "$(dirname "$0")" && pwd)/nginx.conf"
+        NGINX_CONF_DEST="$NGINX_DIR/conf/nginx.conf"
+        if [ -f "$REPO_NGINX_CONF" ]; then
+            cp "$REPO_NGINX_CONF" "$NGINX_CONF_DEST" 2>/dev/null && \
+                echo "   nginx.conf guncellendi: $NGINX_CONF_DEST" || \
+                echo "   [UYARI] nginx.conf kopyalanamadi."
+        fi
+
+        # Proxy cache dizini yoksa oluştur
+        mkdir -p "C:/nginx/cache" 2>/dev/null || true
+
+        # Çalışıyor mu? Reload, değilse başlat
         if tasklist 2>/dev/null | grep -qi "nginx.exe"; then
-            echo "   Nginx calisiyor."
+            echo "   Nginx yeniden yukleniyor (reload)..."
+            "$NGINX_WIN" -p "$NGINX_DIR" -s reload 2>/dev/null && \
+                echo "   Nginx yeniden yuklendi." || \
+                echo "   [UYARI] Nginx reload basarisiz, manuel baslatmaniz gerekebilir."
         else
-            echo "   [UYARI] Nginx baslatılamadı — manuel olarak baslatın."
+            echo "   Nginx baslatiliyor: $NGINX_WIN"
+            (cd "$NGINX_DIR" && "$NGINX_WIN" -p "$NGINX_DIR") &
+            sleep 1
+            if tasklist 2>/dev/null | grep -qi "nginx.exe"; then
+                echo "   Nginx calisiyor."
+            else
+                echo "   [UYARI] Nginx baslatılamadı — manuel olarak baslatın."
+            fi
         fi
     else
         echo "   [BILGI] Nginx bulunamadı (C:\\nginx\\nginx.exe yok)."
