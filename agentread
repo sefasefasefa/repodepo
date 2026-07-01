@@ -34,3 +34,6 @@ Windows'ta git pull yerine tarball indiriyor (Defender + CONIN$ sorunu) — upda
 locmem cache kullanılıyor; Waitress restart = cache sıfır → update.sh sonunda cache ısıtıyor
 Admin paneli is_staff değil, custom role alanıyla çalışıyor
 CORS_ALLOW_ALL_ORIGINS = True prod'da kapatılmadı (henüz
+
+
+her zaman agentread dosyasını yeni bir bilgi eklendiği zaman güncelle.
