@@ -41,9 +41,12 @@ Thumbs.db
 *.log
 logs/
 
-# Media uploads (large binary files — keep watermarks dir structure only)
-backend/media/videos/
-backend/media/shorts/
+# Media uploads — tüm kullanıcı dosyaları (VDS'de üretilir, git'e girmez)
+backend/media/*
+!backend/media/.gitkeep
+
+# Replit agent memory (internal, not for source control)
+.agents/memory/
 
 # NOTE: backend/db.sqlite3 is intentionally NOT ignored.
 # The database file is kept alongside code so agents and team members

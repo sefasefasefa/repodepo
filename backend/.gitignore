@@ -15,7 +15,8 @@ build/
 .pytest_cache/
 *.log
 local_settings.py
-media/uploads/
+media/*
+!media/.gitkeep
 staticfiles/
 .env
 *.mo

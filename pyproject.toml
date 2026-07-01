@@ -1,9 +1,0 @@
-[project]
-name = "repl-nix-workspace"
-version = "0.1.0"
-description = "Add your description here"
-requires-python = ">=3.11"
-dependencies = [
-    # Python deps are managed in backend/requirements.txt
-    # This file is kept minimal for tooling compatibility
-]

@@ -13,10 +13,11 @@ description: Core technical facts about the Hotpulse (Soci) platform stack that 
 
 # Deployment (Production — Windows VDS)
 
-- **Server:** Waitress (`start.sh`) behind nginx (`C:\nginx\`)
-- **Deploy:** `./update.sh` — pulls code (tarball, not git fetch), builds frontend, updates nginx.conf, warms cache, restarts Waitress
+- **Server:** Waitress (`scripts/start.sh`) behind nginx (`C:\nginx\`)
+- **Deploy:** `./scripts/update.sh` — pulls code (tarball, not git fetch), builds frontend, updates nginx conf, warms cache, restarts Waitress
 - **Frontend build:** `cd backend/artifacts/streamvid && pnpm build` → `python manage.py collectstatic --noinput --clear`
 - **CDN:** Cloudflare in front of nginx
+- **nginx configs:** `infra/nginx/nginx-windows.conf` (Windows VDS), `infra/nginx/nginx-linux.conf` (Linux VDS)
 
 # Non-obvious Auth Quirks
 

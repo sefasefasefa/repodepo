@@ -241,7 +241,7 @@ python manage.py migrate
 
 80/443 portundan erişim ve SSL için Nginx kullanın.
 
-`nginx.conf` örneği:
+`infra/nginx/nginx-windows.conf` dosyasını `C:\nginx\conf\nginx.conf` konumuna kopyalayın. Örnek:
 
 ```nginx
 server {
@@ -279,29 +279,55 @@ server {
 ## 12. Klasör Yapısı
 
 ```
-C:\soci\
-├── backend\
-│   ├── apps\                  # Django uygulamaları
-│   │   ├── accounts\          # Kullanıcı & kimlik doğrulama
-│   │   ├── videos\            # Video yükleme & akış
-│   │   ├── social\            # Takip, hikayeler, rozetler
-│   │   ├── live\              # Canlı yayın
-│   │   ├── messaging\         # Özel mesajlar
-│   │   ├── tokens\            # Token & bahşiş sistemi
-│   │   ├── subscriptions\     # Abonelik yönetimi
-│   │   ├── notifications\     # Bildirimler
-│   │   ├── affiliate\         # Affiliate sistemi
-│   │   ├── admin_panel\       # Platform yönetimi
-│   │   └── ai\                # AI özellikleri
-│   ├── artifacts\
-│   │   └── streamvid\         # React frontend kaynak kodu
-│   ├── config\                # Django ayarları (settings.py, urls.py)
-│   ├── static\                # Derlenmiş frontend (index.html, assets/)
-│   ├── staticfiles\           # collectstatic çıktısı (Whitenoise servis eder)
-│   ├── media\                 # Kullanıcı yüklemeleri (videolar, görseller)
-│   ├── venv\                  # Python sanal ortamı
+hotpulse/
+├── backend/                        # Django backend
+│   ├── apps/                       # Django uygulamaları
+│   │   ├── accounts/               # Kullanıcı & kimlik doğrulama
+│   │   ├── videos/                 # Video yükleme & akış
+│   │   ├── social/                 # Takip, hikayeler, rozetler
+│   │   ├── live/                   # Canlı yayın
+│   │   ├── messaging/              # Özel mesajlar
+│   │   ├── tokens/                 # Token & bahşiş sistemi
+│   │   ├── subscriptions/          # Abonelik yönetimi
+│   │   ├── notifications/          # Bildirimler
+│   │   ├── affiliate/              # Affiliate sistemi
+│   │   ├── admin_panel/            # Platform yönetimi
+│   │   └── ai/                     # AI özellikleri
+│   ├── artifacts/streamvid/        # React + Vite frontend kaynak kodu
+│   ├── config/                     # Django ayarları (settings.py, urls.py)
+│   ├── static/                     # Derlenmiş frontend (WhiteNoise serve eder)
+│   ├── media/                      # Kullanıcı yüklemeleri (videolar, görseller)
 │   ├── manage.py
+│   ├── gunicorn.conf.py
 │   └── requirements.txt
+│
+├── docs/                           # Dokümantasyon
+│   ├── cloudflare.md               # Cloudflare hızlandırma rehberi
+│   ├── seo.md                      # SEO rehberi
+│   └── aktarim-prompt.md           # Platform aktarım bilgileri
+│
+├── infra/                          # Altyapı konfigürasyonları
+│   └── nginx/
+│       ├── nginx-windows.conf      # Windows VDS nginx yapılandırması
+│       └── nginx-linux.conf        # Linux VDS nginx yapılandırması
+│
+├── scripts/                        # Operasyonel scriptler
+│   ├── setup.sh                    # İlk kurulum (Linux)
+│   ├── start.sh                    # Sunucu başlatma (Linux)
+│   ├── run.sh                      # Tam başlatma: migrate + static + gunicorn
+│   ├── update.sh                   # Güncelleme & deploy
+│   ├── backup.sh                   # Veritabanı yedeği
+│   ├── restore.sh                  # Yedekten geri yükleme
+│   ├── sqlite-to-postgres.sh       # SQLite → PostgreSQL veri aktarma
+│   └── windows/                    # Windows scriptleri
+│       ├── setup.ps1 / setup.bat
+│       ├── start.ps1 / start.bat
+│       ├── update.bat
+│       └── sqlite-to-postgres.bat
+│
+├── backups/                        # Otomatik yedekler (git ignore'da)
+├── .env.example                    # Ortam değişkenleri şablonu
+├── .gitignore
 └── README.md
 ```
 
