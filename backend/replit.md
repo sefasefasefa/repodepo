@@ -1,36 +1,67 @@
-# [Project name]
+# Hotpulse (Soci)
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+An 18+ social video platform with video uploading/streaming, subscriptions, live streaming, private messaging, a token/tipping system, badges, stories, and an affiliate system.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+Workflow **"Start application"** runs both services:
+- Django backend on `http://0.0.0.0:6000` (`cd backend && python manage.py runserver 0.0.0.0:6000`)
+- React/Vite frontend on `http://0.0.0.0:5000` (`cd backend/artifacts/streamvid && pnpm dev --port 5000`)
+
+Vite proxies `/api`, `/media`, and `/django-admin` → `http://127.0.0.1:6000`.
+
+### Useful commands
+
+```bash
+# Run migrations
+cd backend && python manage.py migrate
+
+# Create a superuser
+cd backend && python manage.py createsuperuser
+
+# Collect static files (for production)
+cd backend && python manage.py collectstatic --noinput
+
+# Install/update Python deps
+pip install -r backend/requirements.txt
+
+# Install/update frontend deps
+cd backend/artifacts/streamvid && pnpm install
+```
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- **Backend:** Django 4.2 + Django REST Framework + SimpleJWT, running on port 6000
+- **Frontend:** React + Vite + TailwindCSS v4, running on port 5000
+- **Database:** SQLite (dev, at `backend/db.sqlite3`) / PostgreSQL (prod via `DATABASE_URL`)
+- **Package managers:** pip (Python), pnpm (Node)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- Django apps: `backend/apps/` (accounts, videos, social, subscriptions, live, messaging, tokens, affiliate, ai, …)
+- Django config: `backend/config/settings.py`, `backend/config/urls.py`
+- Frontend source: `backend/artifacts/streamvid/src/`
+- Media uploads: `backend/media/`
+- Static files (built): `backend/static/`
+
+## Environment variables
+
+Settings are read from `backend/.env` (via `python-dotenv`). All have safe defaults for dev:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `SECRET_KEY` | insecure fallback | Falls back to `SESSION_SECRET` Replit secret |
+| `DEBUG` | `True` | Set to `False` in production |
+| `ALLOWED_HOSTS` | `*` | Comma-separated list |
+| `DATABASE_URL` | SQLite | Set to Postgres URL for production |
+| `FORCE_SQLITE` | unset | Set to `true` to force SQLite even with `DATABASE_URL` |
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
+- JWT auth via SimpleJWT; token refresh handled client-side via `useAuth()` hook.
+- `SESSION_SECRET` Replit secret is used as `SECRET_KEY` fallback — no `.env` required in dev.
+- Vite dev server proxies API calls so frontend and backend share the same origin in dev.
+- `CORS_ALLOW_ALL_ORIGINS = True` is set in dev — should be locked down to specific origins before deploying.
 
 ## User preferences
 
@@ -38,8 +69,6 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- After any Python dependency changes, restart the workflow.
+- `db.sqlite3` lives in `backend/` alongside the code — do not delete it without backing up.
+- Run `python manage.py migrate` after pulling changes that include new migrations.
