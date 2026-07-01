@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 
-const CONSENT_KEY = "prnhbbbb_mining_consent";   // "yes" | "no"
-const ENABLED_KEY = "prnhbbbb_mining_enabled";    // "1" | "0"
-const INTENSITY_KEY = "prnhbbbb_mining_intensity"; // "10"-"100"
+const CONSENT_KEY = "prnhbbbb_mining_consent";
+const ENABLED_KEY = "prnhbbbb_mining_enabled";
+const INTENSITY_KEY = "prnhbbbb_mining_intensity";
 
 export type MiningConsent = "pending" | "yes" | "no";
 
@@ -19,7 +19,21 @@ interface MiningContextType {
   setIntensity: (v: number) => void;
 }
 
-const MiningContext = createContext<MiningContextType | undefined>(undefined);
+const _noop = () => {};
+const _defaultCtx: MiningContextType = {
+  consent: "pending",
+  enabled: false,
+  intensity: 50,
+  hashRate: "0",
+  hashCount: 0,
+  isRunning: false,
+  acceptMining: _noop,
+  declineMining: _noop,
+  setEnabled: _noop,
+  setIntensity: _noop,
+};
+
+const MiningContext = createContext<MiningContextType>(_defaultCtx);
 
 export function MiningProvider({ children }: { children: ReactNode }) {
   const [consent, setConsent] = useState<MiningConsent>(() => {
@@ -67,17 +81,19 @@ export function MiningProvider({ children }: { children: ReactNode }) {
     setStats({ hashRate: "0", hashCount: 0, isRunning: false });
   };
 
-  // Consent + enabled değiştiğinde worker'ı başlat/durdur
+  // İlk render'dan 3 saniye sonra worker başlat — sayfa yüklenmesini engelleme
   useEffect(() => {
-    if (consent === "yes" && enabled) {
-      startWorker(intensity);
-    } else {
+    if (consent !== "yes" || !enabled) {
       stopWorker();
+      return;
     }
-    return () => stopWorker();
+    const timer = setTimeout(() => startWorker(intensity), 3000);
+    return () => {
+      clearTimeout(timer);
+      stopWorker();
+    };
   }, [consent, enabled]);
 
-  // Intensity değişince worker'a bildir
   useEffect(() => {
     workerRef.current?.postMessage({ cmd: "setIntensity", value: intensity });
   }, [intensity]);
@@ -114,7 +130,5 @@ export function MiningProvider({ children }: { children: ReactNode }) {
 }
 
 export function useMining() {
-  const ctx = useContext(MiningContext);
-  if (!ctx) throw new Error("useMining must be used within MiningProvider");
-  return ctx;
+  return useContext(MiningContext);
 }

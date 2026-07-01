@@ -1,6 +1,6 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { SidebarProvider } from "@/lib/sidebar-context";
@@ -10,14 +10,16 @@ import { SiteConfigProvider } from "@/lib/use-site-config";
 import { FeatureFlagsProvider } from "@/lib/feature-flags";
 import { PublicSiteSettingsProvider } from "@/lib/use-public-site-settings";
 import { AgeGate } from "@/components/age-gate";
-import { AdBlockDetector } from "@/components/adblock-detector";
-import { MiningConsent } from "@/components/mining-consent";
 import { GeoGuard } from "@/components/geo-block";
-import { lazy, Suspense } from "react";
 import { usePageTracking } from "@/hooks/use-page-tracking";
 import { ThemeProvider } from "@/lib/use-theme";
 import { gated } from "@/components/layout/feature-gate";
-import { ThemePicker } from "@/components/theme-picker";
+
+// İlk render için gerekli değil — ayrı chunk olarak yüklenir
+const Toaster        = lazy(() => import("@/components/ui/toaster").then(m => ({ default: m.Toaster })));
+const AdBlockDetector = lazy(() => import("@/components/adblock-detector").then(m => ({ default: m.AdBlockDetector })));
+const MiningConsent  = lazy(() => import("@/components/mining-consent").then(m => ({ default: m.MiningConsent })));
+const ThemePicker    = lazy(() => import("@/components/theme-picker").then(m => ({ default: m.ThemePicker })));
 
 const Home             = lazy(() => import("@/pages/home"));
 const Videos           = lazy(() => import("@/pages/videos"));
@@ -144,10 +146,12 @@ function App() {
                   <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                     <RouterInner />
                   </WouterRouter>
-                  <Toaster />
-                  <AdBlockDetector />
-                  <MiningConsent />
-                  <ThemePicker />
+                  <Suspense fallback={null}>
+                    <Toaster />
+                    <AdBlockDetector />
+                    <MiningConsent />
+                    <ThemePicker />
+                  </Suspense>
                 </TooltipProvider>
               </SidebarProvider>
             </NotificationProvider>

@@ -49,17 +49,20 @@ export default defineConfig({
           "react-query":  ["@tanstack/react-query"],
           "charts":       ["recharts"],
           "icons":        ["lucide-react"],
+          // Tooltip yalnızca TooltipProvider tarafından eager yükleniyor → ayrı küçük chunk
+          "ui-tooltip":   ["@radix-ui/react-tooltip"],
+          // Kalan Radix bileşenleri yalnızca lazy sayfalarda kullanılıyor → ilk yüklemede gelmez
           "ui-radix":     [
             "@radix-ui/react-dialog",
             "@radix-ui/react-dropdown-menu",
             "@radix-ui/react-select",
             "@radix-ui/react-tabs",
-            "@radix-ui/react-tooltip",
             "@radix-ui/react-switch",
             "@radix-ui/react-slider",
             "@radix-ui/react-avatar",
             "@radix-ui/react-label",
             "@radix-ui/react-checkbox",
+            "@radix-ui/react-toast",
           ],
           "routing":      ["wouter"],
           "utils":        ["date-fns", "clsx", "tailwind-merge", "class-variance-authority"],
