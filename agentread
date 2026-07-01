@@ -1,0 +1,36 @@
+Hotpulse (Soci) — Yeni hesap için özet
+
+Stack
+
+Django 4.2 backend, React + Vite frontend
+SQLite (dev: backend/db.sqlite3) / PostgreSQL (prod: DATABASE_URL)
+Tek workflow: cd backend && python manage.py runserver 0.0.0.0:5000
+Deployment (Windows VDS + Cloudflare)
+
+Prod sunucu: Waitress (start.sh) + nginx (C:\nginx\)
+Tek deploy komutu: ./update.sh — kodu çeker, build eder, nginx.conf'u günceller, cache'i ısıtır, Waitress'i başlatır
+Frontend build: cd backend/artifacts/streamvid && pnpm build → cd backend && python manage.py collectstatic --noinput --clear
+Kritik dosyalar
+
+backend/config/settings.py — tüm Django ayarları
+backend/apps/core/views.py — /api/init endpoint'i (anonim önbellek 5 dk, init:anon:full:v3)
+backend/apps/core/seo_views.py — Django HTML'e init datasını gömer (__HP_INIT__ script tag)
+nginx.conf — proxy cache + akıllı /api/ cache (Authorization header yoksa cache'ler)
+backend/artifacts/streamvid/src/lib/init-prefetch.ts — React, __HP_INIT__ varsa network isteği atmaz
+Yapılmış hız optimizasyonları
+
+Anonim /api/init, /api/home, /api/categories → public, s-maxage=X (Cloudflare + nginx cache'ler)
+Avatar upload → WebP 400×400 (Pillow)
+Thumbnail → WebP (ffmpeg JPEG → Pillow WebP)
+Notification fetch → sayfa açılışından 3 sn sonra başlar
+Video sayfaları da inline init data alıyor (anon için)
+Yapılmayı bekleyen (Cloudflare paneli)
+
+Cache Rule: hotpulse.me/api/init GET → Edge TTL 1 dakika
+Cache Rule: hotpulse.me/api/home* GET → Edge TTL 2 dakika
+Gotcha'lar
+
+Windows'ta git pull yerine tarball indiriyor (Defender + CONIN$ sorunu) — update.sh hallediyor
+locmem cache kullanılıyor; Waitress restart = cache sıfır → update.sh sonunda cache ısıtıyor
+Admin paneli is_staff değil, custom role alanıyla çalışıyor
+CORS_ALLOW_ALL_ORIGINS = True prod'da kapatılmadı (henüz
