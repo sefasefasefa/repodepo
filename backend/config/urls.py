@@ -111,6 +111,120 @@ def api_catalog(request):
     return response
 
 
+def mcp_server_card(request):
+    """
+    MCP Server Card (SEP-1649) — Model Context Protocol agent discovery.
+    https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2127
+
+    Advertises this server's MCP transport endpoint and capabilities so
+    agents can auto-discover and connect without manual configuration.
+    """
+    import json
+    base = request.build_absolute_uri('/').rstrip('/')
+    card = {
+        "schema_version": "1.0",
+        "serverInfo": {
+            "name": "Hotpulse",
+            "version": "1.0.0",
+            "description": "Hotpulse social video platform — public video metadata, user accounts, subscriptions, and live streaming.",
+            "homepage": base,
+            "contact": f"{base}/about",
+        },
+        "transport": [
+            {
+                "type": "http",
+                "endpoint": f"{base}/api/mcp",
+                "protocol": "mcp/1.0",
+            }
+        ],
+        "authentication": {
+            "type": "bearer",
+            "token_endpoint": f"{base}/api/token/",
+            "register_uri": f"{base}/api/accounts/register/",
+            "auth_md": f"{base}/auth.md",
+        },
+        "capabilities": {
+            "tools": True,
+            "resources": True,
+            "prompts": False,
+            "sampling": False,
+            "logging": False,
+        },
+        "tools": [
+            {
+                "name": "list_videos",
+                "description": "List public videos with optional filtering by category, search query, or sort order.",
+                "endpoint": f"{base}/api/videos/",
+                "method": "GET",
+            },
+            {
+                "name": "get_video",
+                "description": "Get full metadata for a single video by ID or slug.",
+                "endpoint": f"{base}/api/videos/{{id}}/",
+                "method": "GET",
+            },
+            {
+                "name": "list_categories",
+                "description": "List all video categories available on the platform.",
+                "endpoint": f"{base}/api/videos/categories/",
+                "method": "GET",
+            },
+            {
+                "name": "get_user_profile",
+                "description": "Get a user's public profile by username.",
+                "endpoint": f"{base}/api/users/{{username}}/",
+                "method": "GET",
+            },
+            {
+                "name": "get_current_user",
+                "description": "Get the authenticated user's profile (requires Bearer token).",
+                "endpoint": f"{base}/api/accounts/me/",
+                "method": "GET",
+                "auth_required": True,
+            },
+            {
+                "name": "health_check",
+                "description": "Check platform health status.",
+                "endpoint": f"{base}/api/healthz",
+                "method": "GET",
+            },
+        ],
+        "resources": [
+            {
+                "uri_template": f"{base}/api/videos/{{id}}/",
+                "name": "video",
+                "description": "A video resource with metadata, thumbnails, and stream URLs.",
+                "media_type": "application/json",
+            },
+            {
+                "uri_template": f"{base}/api/users/{{username}}/",
+                "name": "user_profile",
+                "description": "A user's public profile page.",
+                "media_type": "application/json",
+            },
+        ],
+        "rateLimit": {
+            "requests_per_minute": 120,
+            "note": "Cloudflare DDoS protection applies. Add 500ms delay between bulk requests.",
+        },
+        "discovery": {
+            "api_catalog": f"{base}/.well-known/api-catalog",
+            "oauth_server": f"{base}/.well-known/oauth-authorization-server",
+            "oauth_resource": f"{base}/.well-known/oauth-protected-resource",
+            "auth_md": f"{base}/auth.md",
+        },
+    }
+    body = json.dumps(card, ensure_ascii=False, indent=2)
+    response = HttpResponse(body, content_type="application/json")
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Cache-Control"] = "public, max-age=3600"
+    response["Link"] = (
+        f'<{base}/.well-known/oauth-authorization-server>; rel="oauth-authorization-server", '
+        f'<{base}/auth.md>; rel="auth-md"'
+    )
+    return response
+
+
 def serve_auth_md(request):
     """
     auth.md — Agent Authentication Metadata (workos.com/auth-md spec).
@@ -292,6 +406,9 @@ urlpatterns = [
 
     # auth.md — Agent Authentication Metadata (workos.com/auth-md)
     re_path(r'^auth\.md$', serve_auth_md, name='auth_md'),
+
+    # MCP Server Card (SEP-1649) — Model Context Protocol agent discovery
+    path('.well-known/mcp/server-card.json', mcp_server_card, name='mcp_server_card'),
 
     # OAuth 2.0 / OIDC discovery (RFC 8414 + OpenID Connect Discovery 1.0)
     path('.well-known/openid-configuration', oauth_discovery, name='openid_configuration'),
