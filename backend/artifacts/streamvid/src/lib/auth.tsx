@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode } fro
 import { useGetMe, useLogin, useLogout, useRegister } from "@workspace/api-client-react";
 import type { LoginBody, RegisterBody, User } from "@workspace/api-client-react/src/generated/api.schemas";
 import { useLocation } from "wouter";
+import { getMeFromInit, invalidateInitCache } from "@/lib/init-prefetch";
 
 interface AuthContextType {
   user: User | null;
@@ -21,14 +22,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const tokenRef = useRef(token);
   tokenRef.current = token;
 
+  // init-prefetch'ten gelen me verisi — sayfa yüklenirken /api/me round-trip'i önler
+  const [initUser, setInitUser] = useState<User | null>(null);
+  const [initUserLoaded, setInitUserLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setInitUserLoaded(true);
+      return;
+    }
+    getMeFromInit().then((me) => {
+      if (me) setInitUser(me as unknown as User);
+      setInitUserLoaded(true);
+    }).catch(() => {
+      setInitUserLoaded(true);
+    });
+  }, []); // sadece mount'ta bir kez çalışır
+
   const {
-    data: user,
+    data: fetchedUser,
     isLoading: isUserLoading,
     refetch,
     error: userError,
   } = useGetMe({
     query: {
-      enabled: !!token,
+      enabled: !!token && initUserLoaded && !initUser,
       retry: 1,
       retryDelay: 2000,
       staleTime: 3 * 60 * 1000,
@@ -63,9 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleLogin = async (data: LoginBody) => {
     localStorage.removeItem("token");
     setToken(null);
+    setInitUser(null);
     const res = await loginMutation.mutateAsync({ data });
     const newToken = (res as any).access ?? res.token;
     localStorage.setItem("token", newToken);
+    invalidateInitCache();
     setToken(newToken);
     await refetch();
   };
@@ -73,9 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleRegister = async (data: RegisterBody) => {
     localStorage.removeItem("token");
     setToken(null);
+    setInitUser(null);
     const res = await registerMutation.mutateAsync({ data });
     const newToken = (res as any).access ?? res.token;
     localStorage.setItem("token", newToken);
+    invalidateInitCache();
     setToken(newToken);
     await refetch();
   };
@@ -86,13 +108,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Logout failed", error);
     } finally {
+      setInitUser(null);
       setToken(null);
       setLocation("/");
     }
   };
 
+  // initUser varsa onu kullan (hızlı), yoksa useGetMe'den gelen veriyi kullan
+  const user = initUser ?? fetchedUser ?? null;
   const isAuthenticated = !!token;
-  const isLoading = !!token && isUserLoading;
+  const isLoading = !!token && !initUserLoaded && isUserLoading;
 
   return (
     <AuthContext.Provider

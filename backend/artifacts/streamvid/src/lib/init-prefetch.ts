@@ -1,7 +1,7 @@
 /**
  * React mount olmadan önce /api/init'i tek seferde çeker.
- * Provider'lar bu promise'i bekleyerek ayrı ayrı fetch yapmaktan kurtulur.
- * homeData anonim kullanıcılar için /api/home verisini de içerir.
+ * Token varsa Authorization header'ı ile gönderir → backend me verisini de döner.
+ * Bu sayede frontend ayrıca /api/me çağırmak zorunda kalmaz.
  */
 
 export interface HomeData {
@@ -39,9 +39,10 @@ export interface InitData {
     redirectUrl?: string;
   };
   homeData: HomeData | null;
+  me: Record<string, unknown> | null;
 }
 
-const INIT_CACHE_KEY = "app_init_v3";
+const INIT_CACHE_KEY = "app_init_v4";
 const INIT_CACHE_TTL = 2 * 60 * 1000;
 
 function loadInitCache(): InitData | null {
@@ -66,14 +67,26 @@ function startPrefetch(): Promise<InitData | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 4000);
 
-  return fetch("/api/init", { credentials: "same-origin", signal: controller.signal })
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  return fetch("/api/init", {
+    credentials: "same-origin",
+    signal: controller.signal,
+    headers,
+  })
     .then((r) => {
       clearTimeout(timeout);
       if (!r.ok) return null;
       return r.json() as Promise<InitData>;
     })
     .then((data) => {
-      if (data) saveInitCache(data);
+      if (data) {
+        // Token varsa me verisini localStorage'a yazma — hassas veri
+        // Sadece bellekte tutar, auth.tsx bunu okur
+        saveInitCache({ ...data, me: null }); // me'yi cache'leme
+      }
       return data;
     })
     .catch(() => {
@@ -85,7 +98,7 @@ function startPrefetch(): Promise<InitData | null> {
 const cached = loadInitCache();
 if (cached) {
   _promise = Promise.resolve(cached);
-  startPrefetch();
+  startPrefetch(); // Arka planda tazele
 } else {
   _promise = startPrefetch();
 }
@@ -101,4 +114,8 @@ export function invalidateInitCache() {
 
 export function getHomeDataFromInit(): Promise<HomeData | null> {
   return getInitData().then(d => d?.homeData ?? null);
+}
+
+export function getMeFromInit(): Promise<Record<string, unknown> | null> {
+  return getInitData().then(d => d?.me ?? null);
 }
