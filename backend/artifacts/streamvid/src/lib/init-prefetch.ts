@@ -109,34 +109,43 @@ function fetchInit(): Promise<InitData | null> {
 }
 
 let _promise: Promise<InitData | null>;
+// Senkron erişim için — modül yüklendiğinde hemen mevcut olan veri
+let _syncData: InitData | null = null;
 
 // Önce inline, sonra cache, sonra fetch
 const inline = readInlineInit();
 if (inline) {
-  // Inline veri var → anında çözülen promise; arka planda token'lı fetch başlat
+  _syncData = inline;
   _promise = Promise.resolve(inline);
-  // localStorage'a yaz (sonraki sayfalar için)
   saveCache(inline);
-  // Oturum açıksa /api/init'i token'la arka planda çağır (me verisini almak için)
   if (localStorage.getItem("token")) {
     fetchInit().then((fresh) => {
-      if (fresh) _promise = Promise.resolve(fresh);
+      if (fresh) { _syncData = fresh; _promise = Promise.resolve(fresh); }
     });
   }
 } else {
   const cached = loadCache();
   if (cached) {
+    _syncData = cached;
     _promise = Promise.resolve(cached);
     fetchInit().then((fresh) => {
-      if (fresh) _promise = Promise.resolve(fresh);
+      if (fresh) { _syncData = fresh; _promise = Promise.resolve(fresh); }
     });
   } else {
-    _promise = fetchInit();
+    _promise = fetchInit().then((fresh) => {
+      if (fresh) _syncData = fresh;
+      return fresh;
+    });
   }
 }
 
 export function getInitData(): Promise<InitData | null> {
   return _promise;
+}
+
+/** Senkron — Promise döndürmez. Inline veya cache varsa anında döner, yoksa null. */
+export function getInitDataSync(): InitData | null {
+  return _syncData;
 }
 
 export function invalidateInitCache() {

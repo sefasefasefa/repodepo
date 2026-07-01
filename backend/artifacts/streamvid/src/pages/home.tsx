@@ -20,7 +20,7 @@ import { useFeatureState } from "@/lib/feature-flags";
 import type { Video, Category } from "@workspace/api-client-react";
 import { JsonLd } from "@/components/json-ld";
 import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
-import { getHomeDataFromInit } from "@/lib/init-prefetch";
+import { getHomeDataFromInit, getInitDataSync } from "@/lib/init-prefetch";
 
 function SectionSkeleton({ count = 4 }: { count?: number }) {
   return (
@@ -398,19 +398,33 @@ export default function Home() {
   const ffSubscriptions = useFeatureState("subscriptions");
 
   // ── Tek API isteğiyle tüm anasayfa verisi ───────────────────────────────
-  const [homeData, setHomeData] = useState<any>(null);
-  const [homeLoading, setHomeLoading] = useState(true);
+  // Senkron başlangıç: __HP_INIT__ veya localStorage cache varsa ilk render'da skeleton yok
+  const [homeData, setHomeData] = useState<any>(() => {
+    const sync = getInitDataSync();
+    if (sync?.homeData && (sync.homeData as any).trending?.length > 0) return sync.homeData;
+    return null;
+  });
+  const [homeLoading, setHomeLoading] = useState(() => {
+    const sync = getInitDataSync();
+    return !(sync?.homeData && (sync.homeData as any).trending?.length > 0);
+  });
+
+  // Senkron veri varsa homeFilters de hemen yükle
+  useEffect(() => {
+    const sync = getInitDataSync();
+    if (sync?.homeData && (sync.homeData as any).home_filters) {
+      setHomeFilters((sync.homeData as any).home_filters);
+    }
+  }, []);
 
   useEffect(() => {
-    setHomeLoading(true);
-
     const applyData = (d: any) => {
       setHomeData(d);
       if (d.home_filters) setHomeFilters(d.home_filters);
       setHomeLoading(false);
     };
 
-    // Giriş yapmış kullanıcılar her zaman taze veri çeker (localStorage cache atlanır)
+    // Giriş yapmış kullanıcılar her zaman taze veri çeker
     if (user) {
       const headers: any = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -421,7 +435,10 @@ export default function Home() {
       return;
     }
 
-    // Anonim kullanıcılar için init cache kullan, yoksa /api/home çek
+    // Senkron veri varsa ek fetch gerekmez
+    if (!homeLoading) return;
+
+    // Anonim kullanıcılar için init cache dene, yoksa /api/home çek
     getHomeDataFromInit().then(cached => {
       if (cached && (cached as any).trending?.length > 0) {
         applyData(cached);

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { JsonLd } from "@/components/json-ld";
-import { getInitData, invalidateInitCache } from "./init-prefetch";
+import { getInitData, getInitDataSync, invalidateInitCache } from "./init-prefetch";
 
 export interface PublicSiteSettings {
   siteName: string;
@@ -65,7 +65,17 @@ function applyPrimaryColor(hex: string) {
 }
 
 export function PublicSiteSettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<PublicSiteSettings>(DEFAULT);
+  // Senkron başlangıç — inline/cache varsa site adı/renk ilk render'da hazır
+  const [settings, setSettings] = useState<PublicSiteSettings>(() => {
+    const sync = getInitDataSync();
+    if (sync?.siteConfig) {
+      const cfg = sync.siteConfig as PublicSiteSettings;
+      if (cfg.primaryColor) applyPrimaryColor(cfg.primaryColor);
+      if (cfg.siteName) document.title = cfg.siteName;
+      return cfg;
+    }
+    return DEFAULT;
+  });
 
   const apply = useCallback((data: PublicSiteSettings) => {
     setSettings(data);
@@ -82,9 +92,12 @@ export function PublicSiteSettingsProvider({ children }: { children: ReactNode }
   }, [apply]);
 
   useEffect(() => {
-    getInitData().then((init) => {
-      if (init?.siteConfig) apply(init.siteConfig as PublicSiteSettings);
-    });
+    // Senkron veri yoksa async fetch ile doldur
+    if (settings === DEFAULT) {
+      getInitData().then((init) => {
+        if (init?.siteConfig) apply(init.siteConfig as PublicSiteSettings);
+      });
+    }
   }, [apply]);
 
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";

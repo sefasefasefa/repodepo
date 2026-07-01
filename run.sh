@@ -26,16 +26,35 @@ fi
 # Cache temizle (eski boş cache sorununu önle)
 python manage.py shell -c "from django.core.cache import cache; cache.clear()" 2>/dev/null | grep -v "^80 objects" || true
 
-# Static dosyalar değiştiyse (yeni build geldi) collectstatic çalıştır
+# Frontend build hash'ini dist/public'ten hesapla (static/'ten değil)
+# Böylece collectstatic --clear sonrası tekrar tetiklenmez
 STATIC_MARKER=".static_done"
-STATIC_HASH=$(find static -name "*.js" -o -name "*.css" 2>/dev/null | sort | xargs md5sum 2>/dev/null | md5sum | cut -d' ' -f1)
+DIST_DIR="artifacts/streamvid/dist/public"
+
+if [ -d "$DIST_DIR" ]; then
+  STATIC_HASH=$(find "$DIST_DIR" -name "*.js" -o -name "*.css" 2>/dev/null | sort | xargs md5sum 2>/dev/null | md5sum | cut -d' ' -f1)
+else
+  STATIC_HASH="no-dist"
+fi
 
 if [ ! -f "$STATIC_MARKER" ] || [ "$(cat $STATIC_MARKER 2>/dev/null)" != "$STATIC_HASH" ]; then
   echo "Collecting and compressing static files..."
+  # 1. Django uygulamalarının static dosyalarını topla (admin, rest_framework vb.)
   python manage.py collectstatic --clear --noinput -v 0
+  # 2. Frontend build çıktısını static/'e kopyala (collectstatic --clear sonrası)
+  if [ -d "$DIST_DIR" ]; then
+    cp -r "$DIST_DIR/." static/
+    echo "Frontend build dosyaları kopyalandı."
+  fi
   echo "$STATIC_HASH" > "$STATIC_MARKER"
 else
-  echo "Static files up to date, skipping."
+  # Hash aynı ama index.html yoksa (ilk kurulum edge case) yine kopyala
+  if [ ! -f "static/index.html" ] && [ -d "$DIST_DIR" ]; then
+    cp -r "$DIST_DIR/." static/
+    echo "Frontend build dosyaları (recovery) kopyalandı."
+  else
+    echo "Static files up to date, skipping."
+  fi
 fi
 
 echo "Starting Django + Gunicorn on port 5000..."
