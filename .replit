@@ -19,6 +19,10 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Django Backend"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -28,8 +32,19 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "bash run.sh"
+args = "cd backend && PORT=5000 pnpm --filter @workspace/streamvid run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Django Backend"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && python manage.py runserver 127.0.0.1:8000"
 
 [[ports]]
 localPort = 5000
@@ -49,3 +64,5 @@ build = ["bash", "-c", "cd backend && pip install -r requirements.txt && pnpm in
 [userenv.shared]
 DEBUG = "True"
 FORCE_SQLITE = "true"
+ALLOWED_HOSTS = "*"
+CORS_ALLOW_ALL_ORIGINS = "True"
