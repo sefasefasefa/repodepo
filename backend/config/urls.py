@@ -111,8 +111,44 @@ def api_catalog(request):
     return response
 
 
+def oauth_discovery(request):
+    """
+    RFC 8414 — OAuth 2.0 Authorization Server Metadata.
+    OpenID Connect Discovery 1.0 — /.well-known/openid-configuration.
+    Agents use this to discover token endpoints and supported grant types.
+    """
+    base = request.build_absolute_uri('/').rstrip('/')
+    meta = {
+        # Core (RFC 8414)
+        "issuer": base,
+        "token_endpoint": f"{base}/api/token/",
+        "token_endpoint_auth_methods_supported": ["none", "client_secret_post"],
+        "grant_types_supported": ["password", "refresh_token"],
+        "jwks_uri": f"{base}/.well-known/http-message-signatures-directory",
+        "response_types_supported": ["token"],
+        "scopes_supported": ["openid", "profile", "email"],
+        # OIDC extras (makes it valid openid-configuration too)
+        "subject_types_supported": ["public"],
+        "id_token_signing_alg_values_supported": ["HS256"],
+        "userinfo_endpoint": f"{base}/api/accounts/me/",
+        "registration_endpoint": f"{base}/api/accounts/register/",
+        # Capabilities
+        "claims_supported": ["sub", "email", "username", "role"],
+        "token_endpoint_auth_signing_alg_values_supported": ["HS256", "EdDSA"],
+        "service_documentation": f"{base}/.well-known/api-catalog",
+    }
+    response = JsonResponse(meta)
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
 urlpatterns = [
     path('django-admin/', admin.site.urls),
+
+    # OAuth 2.0 / OIDC discovery (RFC 8414 + OpenID Connect Discovery 1.0)
+    path('.well-known/openid-configuration', oauth_discovery, name='openid_configuration'),
+    path('.well-known/oauth-authorization-server', oauth_discovery, name='oauth_authorization_server'),
 
     # Agent discovery (RFC 8288 / RFC 9727)
     path('.well-known/api-catalog', api_catalog, name='api_catalog'),
