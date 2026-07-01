@@ -1,7 +1,10 @@
 /**
- * React mount olmadan önce /api/init'i tek seferde çeker.
- * Token varsa Authorization header'ı ile gönderir → backend me verisini de döner.
- * Bu sayede frontend ayrıca /api/me çağırmak zorunda kalmaz.
+ * Sayfa yükleme optimizasyonu:
+ * 1. Önce Django'nun HTML'e gömdüğü __HP_INIT__ script tag'ini okur (0ms)
+ * 2. Yoksa localStorage cache'ini kontrol eder (0ms)
+ * 3. Hiçbiri yoksa /api/init fetch yapar (network round-trip)
+ *
+ * Anonim kullanıcılar için skeleton süresi sıfıra yaklaşır.
  */
 
 export interface HomeData {
@@ -37,7 +40,7 @@ export interface InitData {
     mode?: string;
     message?: string;
     redirectUrl?: string;
-  };
+  } | null;
   homeData: HomeData | null;
   me: Record<string, unknown> | null;
 }
@@ -45,7 +48,21 @@ export interface InitData {
 const INIT_CACHE_KEY = "app_init_v4";
 const INIT_CACHE_TTL = 2 * 60 * 1000;
 
-function loadInitCache(): InitData | null {
+// ── 1. DOM'daki gömülü veri (en hızlı — sıfır network) ───────────────────────
+function readInlineInit(): InitData | null {
+  try {
+    const el = document.getElementById("__HP_INIT__");
+    if (!el) return null;
+    const data = JSON.parse(el.textContent || "");
+    el.remove(); // DOM'dan temizle, hafızayı boşalt
+    return data as InitData;
+  } catch {
+    return null;
+  }
+}
+
+// ── 2. localStorage cache ────────────────────────────────────────────────────
+function loadCache(): InitData | null {
   try {
     const raw = localStorage.getItem(INIT_CACHE_KEY);
     if (!raw) return null;
@@ -55,15 +72,15 @@ function loadInitCache(): InitData | null {
   return null;
 }
 
-function saveInitCache(data: InitData) {
+function saveCache(data: InitData) {
   try {
-    localStorage.setItem(INIT_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+    // me verisini cache'leme (hassas + token'a bağlı)
+    localStorage.setItem(INIT_CACHE_KEY, JSON.stringify({ data: { ...data, me: null }, ts: Date.now() }));
   } catch {}
 }
 
-let _promise: Promise<InitData | null> | null = null;
-
-function startPrefetch(): Promise<InitData | null> {
+// ── 3. Network fetch ─────────────────────────────────────────────────────────
+function fetchInit(): Promise<InitData | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 4000);
 
@@ -82,11 +99,7 @@ function startPrefetch(): Promise<InitData | null> {
       return r.json() as Promise<InitData>;
     })
     .then((data) => {
-      if (data) {
-        // Token varsa me verisini localStorage'a yazma — hassas veri
-        // Sadece bellekte tutar, auth.tsx bunu okur
-        saveInitCache({ ...data, me: null }); // me'yi cache'leme
-      }
+      if (data) saveCache(data);
       return data;
     })
     .catch(() => {
@@ -95,21 +108,40 @@ function startPrefetch(): Promise<InitData | null> {
     });
 }
 
-const cached = loadInitCache();
-if (cached) {
-  _promise = Promise.resolve(cached);
-  startPrefetch(); // Arka planda tazele
+let _promise: Promise<InitData | null>;
+
+// Önce inline, sonra cache, sonra fetch
+const inline = readInlineInit();
+if (inline) {
+  // Inline veri var → anında çözülen promise; arka planda token'lı fetch başlat
+  _promise = Promise.resolve(inline);
+  // localStorage'a yaz (sonraki sayfalar için)
+  saveCache(inline);
+  // Oturum açıksa /api/init'i token'la arka planda çağır (me verisini almak için)
+  if (localStorage.getItem("token")) {
+    fetchInit().then((fresh) => {
+      if (fresh) _promise = Promise.resolve(fresh);
+    });
+  }
 } else {
-  _promise = startPrefetch();
+  const cached = loadCache();
+  if (cached) {
+    _promise = Promise.resolve(cached);
+    fetchInit().then((fresh) => {
+      if (fresh) _promise = Promise.resolve(fresh);
+    });
+  } else {
+    _promise = fetchInit();
+  }
 }
 
 export function getInitData(): Promise<InitData | null> {
-  return _promise!;
+  return _promise;
 }
 
 export function invalidateInitCache() {
   try { localStorage.removeItem(INIT_CACHE_KEY); } catch {}
-  _promise = startPrefetch();
+  _promise = fetchInit();
 }
 
 export function getHomeDataFromInit(): Promise<HomeData | null> {

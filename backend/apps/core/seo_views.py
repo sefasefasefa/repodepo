@@ -187,10 +187,66 @@ def _build_global_meta(seo, base_url: str, canonical: str) -> str:
     return "\n".join(parts)
 
 
+def _build_inline_init() -> str:
+    """
+    Anonim kullanıcılar için HTML'e gömülecek init JSON'unu hazırlar.
+    Tek bir <script> tag'i döner — React bunu DOM'dan okuyarak /api/init fetch'ini atlar.
+    """
+    try:
+        from django.core.cache import cache as _cache
+
+        INLINE_KEY = "inline_init:v1"
+        cached = _cache.get(INLINE_KEY)
+        if cached is not None:
+            return cached
+
+        from apps.admin_panel.models import SiteSettings
+        s, _ = SiteSettings.objects.get_or_create(id=1)
+        site_config = {
+            "siteName": s.site_name,
+            "siteDescription": s.site_description,
+            "logoUrl": s.logo_url,
+            "faviconUrl": s.favicon_url,
+            "primaryColor": s.primary_color,
+            "registrationEnabled": s.registration_enabled,
+            "maintenanceMode": s.maintenance_mode,
+        }
+
+        from apps.core.views import ensure_defaults, DEFAULT_FLAG_MAP
+        from apps.core.models import FeatureFlag
+        ensure_defaults()
+        flags_qs = FeatureFlag.objects.all()
+        flag_map = {f.key: f.state for f in flags_qs}
+        details = [
+            {
+                "key": f.key, "state": f.state,
+                "label": f.label or DEFAULT_FLAG_MAP.get(f.key, {}).get("label", f.key),
+                "description": f.description or DEFAULT_FLAG_MAP.get(f.key, {}).get("description", ""),
+                "group": DEFAULT_FLAG_MAP.get(f.key, {}).get("group", "Diğer"),
+            }
+            for f in flags_qs
+        ]
+        features = {"flags": flag_map, "details": details}
+
+        from apps.videos.views import _build_home_data_anon
+        home_data = _build_home_data_anon()
+
+        payload = json.dumps(
+            {"siteConfig": site_config, "features": features, "homeData": home_data, "me": None, "geo": None},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        tag = f'<script id="__HP_INIT__" type="application/json">{payload}</script>'
+        _cache.set(INLINE_KEY, tag, 120)
+        return tag
+    except Exception:
+        return ""
+
+
 def global_seo_page(request):
     """
     Tüm SPA sayfaları için global SEO meta enjekte edilmiş index.html döner.
-    Cache-Control: no-cache (tarayıcı önbelleğe alır ama her ziyarette doğrular).
+    Anonim kullanıcılar için init verisi HTML içine gömülür → sıfır ekstra API isteği.
     """
     html = _read_index_html()
     if not html:
@@ -206,6 +262,12 @@ def global_seo_page(request):
     meta = _build_global_meta(seo, base, canonical)
     if meta:
         html = _inject_into_head(html, meta)
+
+    # Anonim kullanıcılar için init verisini HTML'e göm
+    if not request.user.is_authenticated:
+        inline = _build_inline_init()
+        if inline:
+            html = _inject_into_head(html, inline)
 
     resp = HttpResponse(html, content_type="text/html; charset=utf-8")
     resp["Cache-Control"] = "no-cache"
