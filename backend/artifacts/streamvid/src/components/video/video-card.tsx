@@ -5,7 +5,6 @@ import { Video } from "@workspace/api-client-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Play, Volume2, VolumeX } from "lucide-react";
-import Hls from "hls.js";
 
 interface VideoCardProps {
   video: Video;
@@ -30,7 +29,8 @@ export function VideoCard({ video }: VideoCardProps) {
   const [previewing, setPreviewing] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const hlsRef = useRef<any>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressActive = useRef(false);
 
@@ -65,14 +65,19 @@ export function VideoCard({ video }: VideoCardProps) {
       el.play().catch(() => {});
     };
 
-    if (isHlsUrl(previewUrl) && Hls.isSupported()) {
-      const hls = new Hls({ maxBufferLength: 10, startLevel: 0 });
-      hlsRef.current = hls;
-      hls.loadSource(previewUrl);
-      hls.attachMedia(el);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        el.muted = true;
-        tryPlay();
+    if (isHlsUrl(previewUrl)) {
+      // hls.js yalnızca hover preview başladığında lazy yüklenir (510KB ilk yüklemeye katılmaz)
+      import("hls.js").then(({ default: Hls }) => {
+        if (destroyed || !Hls.isSupported()) {
+          el.src = previewUrl; el.load();
+          el.addEventListener("canplay", tryPlay, { once: true });
+          return;
+        }
+        const hls = new Hls({ maxBufferLength: 10, startLevel: 0 });
+        hlsRef.current = hls;
+        hls.loadSource(previewUrl);
+        hls.attachMedia(el);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => { el.muted = true; tryPlay(); });
       });
     } else {
       // Native (Safari HLS veya MP4/WebM)

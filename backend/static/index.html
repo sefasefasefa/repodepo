@@ -26,6 +26,25 @@
       @keyframes spin{to{transform:rotate(360deg)}}
       @media(max-width:768px){#app-shell .sidebar{display:none}}
     </style>
+    <!-- /api/init erken fetch — React başlamadan önce başlar, skeleton süresini sıfıra indirir -->
+    <script>
+    (function(){
+      try{
+        var KEY='app_init_v4',TTL=120000;
+        var raw=localStorage.getItem(KEY);
+        if(raw){var p=JSON.parse(raw);if(Date.now()-p.ts<TTL)return;}
+      }catch(e){}
+      var token='';try{token=localStorage.getItem('token')||'';}catch(e){}
+      var h={};if(token)h['Authorization']='Bearer '+token;
+      window.__HP_INIT_PROMISE__=fetch('/api/init',{credentials:'same-origin',headers:h})
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(d){
+          if(!d)return null;
+          try{localStorage.setItem(KEY,JSON.stringify({data:{siteConfig:d.siteConfig,features:d.features,geo:d.geo,homeData:d.homeData,me:null},ts:Date.now()}));}catch(e){}
+          return d;
+        }).catch(function(){return null;});
+    })();
+    </script>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-TX5SE92CJE"></script>
     <script>

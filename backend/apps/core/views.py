@@ -190,7 +190,7 @@ def _build_init_anon():
 # Tam anonim yanıt için cache anahtarları
 _ANON_INIT_CACHE_KEY = 'init:anon:full:v3'
 _ANON_INIT_LOCK_KEY  = 'init:anon:building:v3'   # thundering-herd lock
-_ANON_INIT_TTL = 30  # saniye — düşük TTL ile admin değişiklikleri hızlı yansır
+_ANON_INIT_TTL = 300  # saniye — 5 dakika cache; admin değişikliği anında invalidate_init_cache() ile temizlenir
 
 # Admin yazma işlemlerinde temizlenecek tüm init cache anahtarları
 INIT_CACHE_KEYS = [

@@ -112,7 +112,7 @@ let _promise: Promise<InitData | null>;
 // Senkron erişim için — modül yüklendiğinde hemen mevcut olan veri
 let _syncData: InitData | null = null;
 
-// Önce inline, sonra cache, sonra fetch
+// Önce inline, sonra window.__HP_INIT_PROMISE__ (erken fetch), sonra cache, sonra fetch
 const inline = readInlineInit();
 if (inline) {
   _syncData = inline;
@@ -126,16 +126,28 @@ if (inline) {
 } else {
   const cached = loadCache();
   if (cached) {
+    // localStorage cache var — hemen kullan, arka planda tazele
     _syncData = cached;
     _promise = Promise.resolve(cached);
-    fetchInit().then((fresh) => {
-      if (fresh) { _syncData = fresh; _promise = Promise.resolve(fresh); }
+    // Erken fetch zaten başladıysa onu kullan, yoksa yeni fetch başlat
+    const earlyP = (window as any).__HP_INIT_PROMISE__;
+    (earlyP || fetchInit()).then((fresh: InitData | null) => {
+      if (fresh) { _syncData = fresh; _promise = Promise.resolve(fresh); saveCache(fresh); }
     });
   } else {
-    _promise = fetchInit().then((fresh) => {
-      if (fresh) _syncData = fresh;
-      return fresh;
-    });
+    // Cache yok — erken fetch varsa onu bekle (duplicate istek olmaz)
+    const earlyP = (window as any).__HP_INIT_PROMISE__;
+    if (earlyP) {
+      _promise = Promise.resolve(earlyP).then((data: InitData | null) => {
+        if (data) { _syncData = data; saveCache(data); }
+        return data;
+      }).catch(() => fetchInit().then((f) => { if (f) _syncData = f; return f; }));
+    } else {
+      _promise = fetchInit().then((fresh) => {
+        if (fresh) _syncData = fresh;
+        return fresh;
+      });
+    }
   }
 }
 
