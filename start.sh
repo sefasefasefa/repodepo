@@ -41,12 +41,12 @@ try:
     import psutil
     ram_mb = psutil.virtual_memory().total // (1024 * 1024)
 except ImportError:
-    # psutil yoksa Windows WMI ile dene
+    # psutil yoksa Windows WMI ile dene (5 sn timeout — asılı kalmasın)
     try:
         import subprocess
         out = subprocess.check_output(
             'wmic ComputerSystem get TotalPhysicalMemory /Value',
-            shell=True, stderr=subprocess.DEVNULL
+            shell=True, stderr=subprocess.DEVNULL, timeout=5
         ).decode(errors='ignore')
         for line in out.splitlines():
             if '=' in line:
@@ -55,7 +55,7 @@ except ImportError:
                     ram_mb = int(val) // (1024 * 1024)
                     break
     except Exception:
-        pass
+        pass  # Her hata durumunda guvenli varsayilan (1024 MB) kullanilir
 
 # ── En iyi Waitress parametreleri ────────────────────────────────────────────
 # Threads: Django I/O-bound oldugu icin cpu*8, en az 16, en fazla 64
