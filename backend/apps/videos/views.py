@@ -162,6 +162,39 @@ def enrich_video(v, user=None):
     }
 
 
+def slim_video_for_card(v):
+    """Ana sayfa kartı için minimum alan seti — description/videoUrl/hlsUrl gönderilmez."""
+    cat = v.category
+    creator = v.creator
+    return {
+        'id': v.id,
+        'slug': v.slug or None,
+        'title': v.title,
+        'thumbnailUrl': v.thumbnail_url,
+        'duration': v.duration,
+        'viewCount': v.view_count,
+        'likeCount': v.like_count,
+        'commentCount': v.comment_count,
+        'type': v.type,
+        'isPremium': v.is_premium,
+        'isPPV': v.is_ppv,
+        'ppvPrice': float(v.ppv_price) if v.ppv_price else None,
+        'categoryId': v.category_id,
+        'category': {
+            'id': cat.id, 'name': cat.name, 'slug': cat.slug,
+        } if cat else None,
+        'creator': {
+            'id': creator.id,
+            'username': creator.username,
+            'displayName': creator.display_name,
+            'avatarUrl': creator.avatar_url,
+        } if creator else None,
+        'isLiked': False,
+        'isBookmarked': False,
+        'createdAt': v.created_at.isoformat(),
+    }
+
+
 def enrich_videos_bulk(videos, user=None):
     if not videos:
         return []
@@ -388,12 +421,12 @@ def _build_home_data_anon():
         home_filters = []
 
     result = {
-        'trending':     enrich_videos_bulk(trending, None),
-        'newest':       enrich_videos_bulk(newest, None),
-        'most_viewed':  enrich_videos_bulk(most_viewed, None),
-        'most_liked':   enrich_videos_bulk(most_liked, None),
-        'shorts':       enrich_videos_bulk(shorts, None),
-        'premium':      enrich_videos_bulk(premium, None),
+        'trending':     [slim_video_for_card(v) for v in trending],
+        'newest':       [slim_video_for_card(v) for v in newest],
+        'most_viewed':  [slim_video_for_card(v) for v in most_viewed],
+        'most_liked':   [slim_video_for_card(v) for v in most_liked],
+        'shorts':       [slim_video_for_card(v) for v in shorts],
+        'premium':      [slim_video_for_card(v) for v in premium],
         'categories':   categories,
         'creators':     creators,
         'home_filters': home_filters,

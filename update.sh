@@ -297,7 +297,8 @@ fi
 
 # ── 6b. CSS blocking + .gz ön-sıkıştırma + Service Worker ──────────
 
-# CSS async → blocking: app-shell skeleton zaten saklıyor, FOUC olmaz
+# CSS non-blocking: blocking <link rel="stylesheet"> → preload+onload
+# JS CSS yüklenmesini beklemeden başlar; app-shell skeleton FOUC'u saklar
 python - <<'PYEOF'
 import re
 idx = "staticfiles/index.html"
@@ -305,31 +306,30 @@ try:
     with open(idx, encoding="utf-8") as f:
         html = f.read()
 
-    # Önce CSS href'i bul
     css_match = re.search(r'href=["\']([^"\']+\.css)["\']', html)
     if css_match:
         css_href = css_match.group(1)
-        link_tag = '<link rel="stylesheet" crossorigin href="' + css_href + '">'
-        # Async preload + noscript bloğunu blocking link ile değiştir
-        patched = re.sub(
-            r'<link[^>]+rel=["\']preload["\'][^>]+as=["\']style["\'][^>]*>[\s\S]*?<noscript>[\s\S]*?</noscript>',
-            link_tag,
-            html
-        )
-        if patched == html:
-            # Alternatif: DOTALL ile dene
-            patched = re.sub(
-                r'<link[^>]+rel=["\']preload["\'][^>]+as=["\']style["\'][^>]*>.*?<noscript>.*?</noscript>',
-                link_tag,
-                html,
-                flags=re.DOTALL
-            )
-        if patched != html:
-            with open(idx, "w", encoding="utf-8") as f:
-                f.write(patched)
-            print("   CSS blocking yapildi (FOUC giderildi).")
+        # Zaten non-blocking mı?
+        if 'rel="preload" as="style"' in html or "rel='preload' as='style'" in html:
+            print("   CSS zaten non-blocking, atlanıyor.")
         else:
-            print("   CSS zaten blocking veya patch uygulanamadi.")
+            # blocking → non-blocking dönüştür
+            blocking = '<link rel="stylesheet" crossorigin href="' + css_href + '">'
+            nonblocking = (
+                '<link rel="preload" as="style" href="' + css_href + '" onload="this.rel=\'stylesheet\'">'
+                + '<noscript><link rel="stylesheet" href="' + css_href + '"></noscript>'
+            )
+            patched = html.replace(blocking, nonblocking, 1)
+            if patched == html:
+                # crossorigin olmayan varyant
+                blocking2 = '<link rel="stylesheet" href="' + css_href + '">'
+                patched = html.replace(blocking2, nonblocking, 1)
+            if patched != html:
+                with open(idx, "w", encoding="utf-8") as f:
+                    f.write(patched)
+                print("   CSS non-blocking yapildi (JS artik CSS beklemez).")
+            else:
+                print("   CSS link degistirilemedi, manuel kontrol gerekebilir.")
     else:
         print("   CSS link bulunamadi, atlanıyor.")
 except FileNotFoundError:
