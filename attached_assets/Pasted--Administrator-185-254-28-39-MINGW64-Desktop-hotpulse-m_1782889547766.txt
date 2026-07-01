@@ -1,0 +1,119 @@
+
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ ./update.sh
+=== Hotpulse Guncelleme ===
+[1/6] Sunucu durduruluyor...
+   Nginx durduruluyor...
+[2/6] Kod guncelleniyor...
+   Indiriliyor: https://github.com/sefasefasefa/repodepo/archive/refs/heads/main.tar.gz
+   Kod guncellendi.
+[3/6] Python paketleri guncelleniyor...
+[4/6] Frontend kontrol ediliyor...
+   Windows: git'ten gelen onceden derlenmiş dosyalar kullaniliyor.
+   (pnpm build atlandı — backend/static/ git'ten geldi)
+[5/6] Veritabani migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, tokens, videos
+Running migrations:
+  No migrations to apply.
+[6/6] Statik dosyalar toplaniyor...
+   Statik dosyalar kopyalandi (Windows modu).
+
+[7/7] Onbellek temizleniyor...
+  Onbellek temizlendi.
+
+[8/7] Video durumu kontrol ediliyor...
+  Toplam video : 13
+  Yayinda      : 13
+  Taslak       : 0
+  Tum videolar yayinda.
+
+Guncelleme tamamlandi! Sunucu baslatiliyor...
+
+Nginx baslatiliyor: C:/nginx/nginx.exe
+   Nginx calisiyor.
+Statik dosyalar hazirlaniyor...
+Windows: Donanim analiz ediliyor...
+
+  Donanim  : 3 CPU cekirdek, 4095MB GB RAM
+  Threads  : 24  (cpu_core x8, min=16, max=64)
+  Conn Lmt : 579  (RAM'e gore otomatik)
+  Timeout  : 120 s
+
+Waitress sunucusu baslatiliyor (port 8000)...
+INFO 2026-07-01 10:00:01,072 wasyncore Serving on http://0.0.0.0:8000
+ERROR 2026-07-01 10:01:20,815 exception Invalid HTTP_HOST header: '185.254.28.39'. You may need to add '185.254.28.39' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\utils\deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\middleware\common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\http\request.py", line 150, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: '185.254.28.39'. You may need to add '185.254.28.39' to ALLOWED_HOSTS.
+WARNING 2026-07-01 10:01:21,029 log Bad Request: /SDK/webLanguage
+ERROR 2026-07-01 10:03:29,207 exception Invalid HTTP_HOST header: '185.254.28.39:8000'. You may need to add '185.254.28.39' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\utils\deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\middleware\common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\http\request.py", line 150, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: '185.254.28.39:8000'. You may need to add '185.254.28.39' to ALLOWED_HOSTS.
+WARNING 2026-07-01 10:03:29,270 log Bad Request: /
+ERROR 2026-07-01 10:04:34,711 exception Invalid HTTP_HOST header: '185.254.28.39'. You may need to add '185.254.28.39' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\utils\deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\middleware\common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\http\request.py", line 150, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: '185.254.28.39'. You may need to add '185.254.28.39' to ALLOWED_HOSTS.
+WARNING 2026-07-01 10:04:34,759 log Bad Request: /device.rsp
+ERROR 2026-07-01 10:05:10,244 exception Invalid HTTP_HOST header: 'api.ipify.org'. You may need to add 'api.ipify.org' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\utils\deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\middleware\common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\http\request.py", line 150, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'api.ipify.org'. You may need to add 'api.ipify.org' to ALLOWED_HOSTS.
+WARNING 2026-07-01 10:05:10,275 log Bad Request: /
+ERROR 2026-07-01 10:05:25,467 exception Invalid HTTP_HOST header: 'www.shadowserver.org'. You may need to add 'www.shadowserver.org' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\utils\deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\middleware\common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\hotpulse\venv\Lib\site-packages\django\http\request.py", line 150, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'www.shadowserver.org'. You may need to add 'www.shadowserver.org' to ALLOWED_HOSTS.
+WARNING 2026-07-01 10:05:25,514 log Bad Request: /443

@@ -24,7 +24,10 @@ echo.
 :: --channel-timeout   : boşta kalan bağlantıyı kes (saniye)
 :: --cleanup-interval  : kapalı bağlantıları temizle (saniye)
 :: --backlog           : TCP bağlantı kuyruğu
+:: GÜVENLIK: Sadece localhost'tan dinle — nginx zaten arkada proxy yapıyor.
+:: 0.0.0.0 kullanılırsa port 8000 internete açık kalır ve bot saldırılarına maruz kalır.
 python -m waitress ^
+    --host=127.0.0.1 ^
     --port=8000 ^
     --threads=%THREADS% ^
     --connection-limit=1000 ^
