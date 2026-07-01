@@ -4,7 +4,8 @@ set -e
 echo "=== Hotpulse Guncelleme ==="
 
 # ── venv'deki pip'i PATH'e ekle (Git Bash uyumlulugu) ─────────────────────
-cd "$(dirname "$0")"
+# scripts/ altında olduğumuz için bir üst dizine (proje kökü) geç
+cd "$(dirname "$0")/.."
 if [ -d "venv/Scripts" ]; then
     export PATH="$PWD/venv/Scripts:$PATH"
 elif [ -d "venv/bin" ]; then

@@ -5,7 +5,7 @@ echo "=== Hotpulse Kurulum ==="
 echo ""
 
 # ── venv'deki pip'i PATH'e ekle ───────────────────────────────────────────────
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 if [ -d "venv/Scripts" ]; then
     export PATH="$PWD/venv/Scripts:$PATH"
 elif [ -d "venv/bin" ]; then
