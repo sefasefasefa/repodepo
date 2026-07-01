@@ -27,6 +27,9 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# Derlenmiş frontend + collectstatic çıktısı — git'e girmez, sunucuda üretilir
+backend/static/
+
 # IDE
 .idea/
 .vscode/

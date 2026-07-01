@@ -1,0 +1,214 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse/backend (main)
+$ # 1. Mevcut değişiklikleri geçici olarak kenara koy
+git stash
+
+# 2. GitHub'ı temel alarak rebase et (204 commit'i al, kendi 1 commit'ini üstüne koy)
+git pull --rebase origin main
+
+# 3. Kenara koyduklarını geri al (conflict çıkarsa söyle)
+git stash pop
+
+# 4. GitHub'a gönder
+git push origin main
+warning: in the working copy of 'backup.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'restore.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'run.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'setup.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'start.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'update.sh', LF will be replaced by CRLF the next time Git touches it
+Saved working directory and index state WIP on main: 748eba8 VDS ek dosyaları
+remote: Enumerating objects: 769, done.
+remote: Counting objects: 100% (769/769), done.
+remote: Compressing objects: 100% (564/564), done.
+remote: Total 701 (delta 195), reused 632 (delta 130), pack-reused 0 (from 0)
+Receiving objects: 100% (701/701), 3.00 MiB | 6.03 MiB/s, done.
+Resolving deltas: 100% (195/195), completed with 56 local objects.
+From https://github.com/sefasefasefa/repodepo
+ * branch            main       -> FETCH_HEAD
+   18cbd94..914e3ea  main       -> origin/main
+Performing inexact rename detection: 100% (107590/107590), done.
+CONFLICT (modify/delete): backend/replit.md deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/replit.md left in tree.
+CONFLICT (rename/delete): backend/static/assets/affiliate-CKZRb2fh.js renamed to backend/static/assets/affiliate-3w9oAXjh.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/affiliate-3w9oAXjh.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/affiliate-3w9oAXjh.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/app-layout-DaNjrMZx.js renamed to backend/static/assets/app-layout--SMvtUSl.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/app-layout--SMvtUSl.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/app-layout--SMvtUSl.js left in tree.
+Auto-merging backend/static/assets/badge-CUFxqDJr.js
+CONFLICT (rename/rename): backend/static/assets/badge-CUFxqDJr.js renamed to backend/static/assets/badge-CTBL4k3k.js in HEAD and to backend/static/assets/badge-9MiAX4-v.js in 748eba8 (VDS ek dosyaları).
+CONFLICT (rename/delete): backend/static/assets/become-creator-Btz0b1W8.js renamed to backend/static/assets/become-creator-B1MD7Ba5.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/become-creator-B1MD7Ba5.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/become-creator-B1MD7Ba5.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/bookmarks-B_-fcJ5F.js renamed to backend/static/assets/bookmarks-DFfpZ6GC.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/bookmarks-DFfpZ6GC.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/bookmarks-DFfpZ6GC.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/button-BP259fLA.js renamed to backend/static/assets/button-1cQShqwt.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/button-1cQShqwt.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/button-1cQShqwt.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/category-detail-VhhyydyC.js renamed to backend/static/assets/category-detail-DcwkEy49.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/category-detail-DcwkEy49.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/category-detail-DcwkEy49.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/creator-profile-DpFBmQeL.js renamed to backend/static/assets/creator-profile-CVZyaRH3.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/creator-profile-CVZyaRH3.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/creator-profile-CVZyaRH3.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/creators-C5xPLgan.js renamed to backend/static/assets/creators-15acUzB2.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/creators-15acUzB2.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/creators-15acUzB2.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/crosspost-jobs-DacD6ZZO.js renamed to backend/static/assets/crosspost-jobs-C_fiye7T.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/crosspost-jobs-C_fiye7T.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/crosspost-jobs-C_fiye7T.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/custom-page-CU7rfDtG.js renamed to backend/static/assets/custom-page-6TQFjvJO.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/custom-page-6TQFjvJO.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/custom-page-6TQFjvJO.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/custom-request-modal-D12sHxCR.js renamed to backend/static/assets/custom-request-modal-BvNkbq7_.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/custom-request-modal-BvNkbq7_.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/custom-request-modal-BvNkbq7_.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/developer-CPYAJ144.js renamed to backend/static/assets/developer-BD8klQ_7.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/developer-BD8klQ_7.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/developer-BD8klQ_7.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/downloads-CuVpDUY_.js renamed to backend/static/assets/downloads-BMpMMvXZ.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/downloads-BMpMMvXZ.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/downloads-BMpMMvXZ.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/form-5Jg_UwpQ.js renamed to backend/static/assets/form--yjHokYp.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/form--yjHokYp.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/form--yjHokYp.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/index-VWonPYt5.js renamed to backend/static/assets/index-BxgKzSyw.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/index-BxgKzSyw.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/index-BxgKzSyw.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/label-B4ipSNwY.js renamed to backend/static/assets/label-BuyrqY5n.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/label-BuyrqY5n.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/label-BuyrqY5n.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/leaderboard-C2BvBXS7.js renamed to backend/static/assets/leaderboard-BJ6xf0la.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/leaderboard-BJ6xf0la.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/leaderboard-BJ6xf0la.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/live-streams-CTCgzp8u.js renamed to backend/static/assets/live-streams-3Pv75npq.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/live-streams-3Pv75npq.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/live-streams-3Pv75npq.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/login-7rxIqPCq.js renamed to backend/static/assets/login-BICm270n.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/login-BICm270n.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/login-BICm270n.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/match-rooms-BGK_6kwd.js renamed to backend/static/assets/match-rooms-Ce5rm0IV.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/match-rooms-Ce5rm0IV.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/match-rooms-Ce5rm0IV.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/messages-Dtjkvu7D.js renamed to backend/static/assets/messages-BImi5C6u.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/messages-BImi5C6u.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/messages-BImi5C6u.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/my-requests-DxVyPko2.js renamed to backend/static/assets/my-requests-999MbR74.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/my-requests-999MbR74.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/my-requests-999MbR74.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/not-found-CHCIKH-x.js renamed to backend/static/assets/not-found--EG6_qLx.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/not-found--EG6_qLx.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/not-found--EG6_qLx.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/notifications-Bzn0uxFh.js renamed to backend/static/assets/notifications-BitRK7qs.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/notifications-BitRK7qs.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/notifications-BitRK7qs.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/payment-i0yAV8yv.js renamed to backend/static/assets/payment-B8tX_c69.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/payment-B8tX_c69.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/payment-B8tX_c69.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/playlist-detail-DLFCBmaA.js renamed to backend/static/assets/playlist-detail-BiStPp7l.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/playlist-detail-BiStPp7l.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/playlist-detail-BiStPp7l.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/playlists-DAW5jJJn.js renamed to backend/static/assets/playlists-B4-WcwlB.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/playlists-B4-WcwlB.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/playlists-B4-WcwlB.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/pricing-D8kih_4b.js renamed to backend/static/assets/pricing-B0acrVoM.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/pricing-B0acrVoM.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/pricing-B0acrVoM.js left in tree.
+Auto-merging backend/static/assets/profile-COwZe8hq.js
+CONFLICT (rename/rename): backend/static/assets/profile-COwZe8hq.js renamed to backend/static/assets/profile-CKKTFB_4.js in HEAD and to backend/static/assets/profile-BAC640pV.js in 748eba8 (VDS ek dosyaları).
+CONFLICT (rename/delete): backend/static/assets/register-_tygE8Kj.js renamed to backend/static/assets/register-B3EEee6C.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/register-B3EEee6C.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/register-B3EEee6C.js left in tree.
+Auto-merging backend/static/assets/screen-protection-overlay-zhcP68mo.js
+CONFLICT (rename/rename): backend/static/assets/screen-protection-overlay-zhcP68mo.js renamed to backend/static/assets/screen-protection-overlay-DNtqE62m.js in HEAD and to backend/static/assets/screen-protection-overlay-CRKIoSN2.js in 748eba8 (VDS ek dosyaları).
+CONFLICT (rename/delete): backend/static/assets/search-73gOau4D.js renamed to backend/static/assets/search-DzjU21Ba.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/search-DzjU21Ba.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/search-DzjU21Ba.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/shorts-D7yGzZam.js renamed to backend/static/assets/shorts-1Zw8FteD.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/shorts-1Zw8FteD.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/shorts-1Zw8FteD.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/stories-CIBEdmp4.js renamed to backend/static/assets/stories-3FnFDW_B.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/stories-3FnFDW_B.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/stories-3FnFDW_B.js left in tree.
+CONFLICT (rename/delete): backend/static/assets/subscriptions-7ktA9RGn.js renamed to backend/static/assets/subscriptions-BadOVvBN.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/subscriptions-BadOVvBN.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/subscriptions-BadOVvBN.js left in tree.
+Auto-merging backend/static/assets/tabs-BXSwHFCB.js
+CONFLICT (rename/rename): backend/static/assets/tabs-BXSwHFCB.js renamed to backend/static/assets/tabs-CwBoKNeZ.js in HEAD and to backend/static/assets/tabs-B0BuI3eP.js in 748eba8 (VDS ek dosyaları).
+Auto-merging backend/static/assets/textarea-DVpwz3KQ.js
+CONFLICT (rename/rename): backend/static/assets/textarea-DVpwz3KQ.js renamed to backend/static/assets/textarea-Ag1Ounwz.js in HEAD and to backend/static/assets/textarea-B_H4NZWo.js in 748eba8 (VDS ek dosyaları).
+CONFLICT (rename/delete): backend/static/assets/videos-DhQ-S48w.js renamed to backend/static/assets/videos-B6MUTQ_u.js in 748eba8 (VDS ek dosyaları), but deleted in HEAD.
+CONFLICT (modify/delete): backend/static/assets/videos-B6MUTQ_u.js deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of backend/static/assets/videos-B6MUTQ_u.js left in tree.
+CONFLICT (modify/delete): pyproject.toml deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of pyproject.toml left in tree.
+Auto-merging run.sh
+CONFLICT (add/add): Merge conflict in run.sh
+CONFLICT (add/add): Merge conflict in scripts/backup.sh
+CONFLICT (add/add): Merge conflict in scripts/restore.sh
+CONFLICT (add/add): Merge conflict in scripts/run.sh
+CONFLICT (add/add): Merge conflict in scripts/setup.sh
+CONFLICT (add/add): Merge conflict in scripts/sqlite-to-postgres.sh
+CONFLICT (add/add): Merge conflict in scripts/start.sh
+CONFLICT (add/add): Merge conflict in scripts/update.sh
+CONFLICT (add/add): Merge conflict in scripts/windows/setup.ps1
+CONFLICT (add/add): Merge conflict in scripts/windows/start.ps1
+Auto-merging setup.sh
+CONFLICT (content): Merge conflict in setup.sh
+Auto-merging start.sh
+CONFLICT (content): Merge conflict in start.sh
+CONFLICT (modify/delete): start_windows.bat deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of start_windows.bat left in tree.
+Auto-merging update.sh
+CONFLICT (content): Merge conflict in update.sh
+CONFLICT (modify/delete): uv.lock deleted in HEAD and modified in 748eba8 (VDS ek dosyaları).  Version 748eba8 (VDS ek dosyaları) of uv.lock left in tree.
+error: could not apply 748eba8... VDS ek dosyaları
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 748eba8... # VDS ek dosyaları
+backend/replit.md: needs merge
+backend/static/assets/affiliate-3w9oAXjh.js: needs merge
+backend/static/assets/app-layout--SMvtUSl.js: needs merge
+backend/static/assets/badge-9MiAX4-v.js: needs merge
+backend/static/assets/badge-CTBL4k3k.js: needs merge
+backend/static/assets/badge-CUFxqDJr.js: needs merge
+backend/static/assets/become-creator-B1MD7Ba5.js: needs merge
+backend/static/assets/bookmarks-DFfpZ6GC.js: needs merge
+backend/static/assets/button-1cQShqwt.js: needs merge
+backend/static/assets/category-detail-DcwkEy49.js: needs merge
+backend/static/assets/creator-profile-CVZyaRH3.js: needs merge
+backend/static/assets/creators-15acUzB2.js: needs merge
+backend/static/assets/crosspost-jobs-C_fiye7T.js: needs merge
+backend/static/assets/custom-page-6TQFjvJO.js: needs merge
+backend/static/assets/custom-request-modal-BvNkbq7_.js: needs merge
+backend/static/assets/developer-BD8klQ_7.js: needs merge
+backend/static/assets/downloads-BMpMMvXZ.js: needs merge
+backend/static/assets/form--yjHokYp.js: needs merge
+backend/static/assets/index-BxgKzSyw.js: needs merge
+backend/static/assets/label-BuyrqY5n.js: needs merge
+backend/static/assets/leaderboard-BJ6xf0la.js: needs merge
+backend/static/assets/live-streams-3Pv75npq.js: needs merge
+backend/static/assets/login-BICm270n.js: needs merge
+backend/static/assets/match-rooms-Ce5rm0IV.js: needs merge
+backend/static/assets/messages-BImi5C6u.js: needs merge
+backend/static/assets/my-requests-999MbR74.js: needs merge
+backend/static/assets/not-found--EG6_qLx.js: needs merge
+backend/static/assets/notifications-BitRK7qs.js: needs merge
+backend/static/assets/payment-B8tX_c69.js: needs merge
+backend/static/assets/playlist-detail-BiStPp7l.js: needs merge
+backend/static/assets/playlists-B4-WcwlB.js: needs merge
+backend/static/assets/pricing-B0acrVoM.js: needs merge
+backend/static/assets/profile-BAC640pV.js: needs merge
+backend/static/assets/profile-CKKTFB_4.js: needs merge
+backend/static/assets/profile-COwZe8hq.js: needs merge
+backend/static/assets/register-B3EEee6C.js: needs merge
+backend/static/assets/screen-protection-overlay-CRKIoSN2.js: needs merge
+backend/static/assets/screen-protection-overlay-DNtqE62m.js: needs merge
+backend/static/assets/screen-protection-overlay-zhcP68mo.js: needs merge
+backend/static/assets/search-DzjU21Ba.js: needs merge
+backend/static/assets/shorts-1Zw8FteD.js: needs merge
+backend/static/assets/stories-3FnFDW_B.js: needs merge
+backend/static/assets/subscriptions-BadOVvBN.js: needs merge
+backend/static/assets/tabs-B0BuI3eP.js: needs merge
+backend/static/assets/tabs-BXSwHFCB.js: needs merge
+backend/static/assets/tabs-CwBoKNeZ.js: needs merge
+backend/static/assets/textarea-Ag1Ounwz.js: needs merge
+backend/static/assets/textarea-B_H4NZWo.js: needs merge
+backend/static/assets/textarea-DVpwz3KQ.js: needs merge
+backend/static/assets/videos-B6MUTQ_u.js: needs merge
+pyproject.toml: needs merge
+run.sh: needs merge
+scripts/backup.sh: needs merge
+scripts/restore.sh: needs merge
+scripts/run.sh: needs merge
+scripts/setup.sh: needs merge
+scripts/sqlite-to-postgres.sh: needs merge
+scripts/start.sh: needs merge
+scripts/update.sh: needs merge
+scripts/windows/setup.ps1: needs merge
+scripts/windows/start.ps1: needs merge
+setup.sh: needs merge
+start.sh: needs merge
+start_windows.bat: needs merge
+update.sh: needs merge
+uv.lock: needs merge
+error: could not write index
+The stash entry is kept in case you need it again.
+To https://github.com/sefasefasefa/repodepo
+ ! [rejected]        main -> main (non-fast-forward)
+error: failed to push some refs to 'https://github.com/sefasefasefa/repodepo'
+hint: Updates were rejected because a pushed branch tip is behind its remote
+hint: counterpart. If you want to integrate the remote changes, use 'git pull'
+hint: before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse/backend (main|REBASE 1/1)
+$ 
