@@ -166,7 +166,7 @@ async function staleWhileRevalidateHtml(request) {
 
   // İlk ziyaret: ağı bekle
   const fresh = await fetchAndCache;
-  return fresh || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+  return fresh || offlinePage();
 }
 
 // ── Cache-First ──────────────────────────────────────────────────────
@@ -189,6 +189,39 @@ async function cacheFirst(request, limitLargeFiles) {
     }
     return response;
   } catch {
-    return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+    return offlinePage();
   }
+}
+
+// ── Offline fallback sayfası ─────────────────────────────────────────
+function offlinePage() {
+  const html = `<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bağlantı Yok — Hotpulse</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0a0a;color:#fff;font-family:system-ui,sans-serif;
+         display:flex;align-items:center;justify-content:center;
+         min-height:100vh;padding:20px;text-align:center}
+    .icon{font-size:56px;margin-bottom:20px}
+    h1{font-size:22px;font-weight:700;margin-bottom:10px}
+    p{color:#888;font-size:14px;line-height:1.6;max-width:300px}
+    button{margin-top:24px;background:#7c3aed;color:#fff;border:none;
+           padding:12px 28px;border-radius:8px;font-size:15px;cursor:pointer}
+    button:hover{background:#6d28d9}
+  </style>
+</head>
+<body>
+  <div>
+    <div class="icon">📡</div>
+    <h1>Sunucuya ulaşılamıyor</h1>
+    <p>İnternet bağlantını kontrol et veya birkaç saniye sonra tekrar dene.</p>
+    <button onclick="location.reload()">Tekrar Dene</button>
+  </div>
+</body>
+</html>`;
+  return new Response(html, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
