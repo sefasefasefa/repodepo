@@ -12,6 +12,7 @@ import { PublicSiteSettingsProvider } from "@/lib/use-public-site-settings";
 import { AgeGate } from "@/components/age-gate";
 import { GeoGuard } from "@/components/geo-block";
 import { usePageTracking } from "@/hooks/use-page-tracking";
+import { useWebMCP } from "@/hooks/use-webmcp";
 import { ThemeProvider } from "@/lib/use-theme";
 import { gated } from "@/components/layout/feature-gate";
 
@@ -82,6 +83,7 @@ function PageLoader() {
 
 function RouterInner() {
   usePageTracking();
+  useWebMCP();
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
