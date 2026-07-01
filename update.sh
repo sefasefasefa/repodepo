@@ -295,7 +295,71 @@ else
     python manage.py collectstatic --noinput -v 0
 fi
 
-# ── 6b. Service Worker — sw.js kopyala + index.html'e kayıt inja ───
+# ── 6b. CSS blocking + .gz ön-sıkıştırma + Service Worker ──────────
+
+# CSS async → blocking: app-shell skeleton zaten saklıyor, FOUC olmaz
+python - <<'PYEOF'
+import re, glob
+idx = "staticfiles/index.html"
+try:
+    with open(idx, encoding="utf-8") as f:
+        html = f.read()
+    # Async CSS yükleme (onload trick) → doğrudan blocking stylesheet
+    patched = re.sub(
+        r'<link[^>]+rel=["\']preload["\'][^>]+as=["\']style["\'][^>]+href=["\']([^"\']+\.css)["\'][^>]*>[\s\S]*?<noscript>[\s\S]*?</noscript>',
+        lambda m: f'<link rel="stylesheet" crossorigin href="{re.search(r"href=[\"\'](.*?\.css)[\"']", m.group(0)).group(1)}">',
+        html
+    )
+    if patched != html:
+        with open(idx, "w", encoding="utf-8") as f:
+            f.write(patched)
+        print("   CSS blocking yapildi (FOUC giderildi).")
+    else:
+        # Basit string replace dene
+        import re as _re
+        m = _re.search(r'href=["\']([^"\']+\.css)["\']', html)
+        if m:
+            css_href = m.group(1)
+            # Eski async satırı bul ve değiştir
+            html2 = _re.sub(
+                r'<link[^>]+rel=["\']preload["\'][^>]+as=["\']style["\'][^>]*>.*?<noscript>.*?</noscript>',
+                f'<link rel="stylesheet" crossorigin href="{css_href}">',
+                html, flags=_re.DOTALL
+            )
+            if html2 != html:
+                with open(idx, "w", encoding="utf-8") as f:
+                    f.write(html2)
+                print("   CSS blocking yapildi (v2).")
+            else:
+                print("   CSS zaten blocking veya patch uygulanamadi.")
+        else:
+            print("   CSS link bulunamadi, atlanıyor.")
+except FileNotFoundError:
+    print("   [UYARI] staticfiles/index.html bulunamadi.")
+PYEOF
+
+# Pre-compressed .gz dosyaları üret → gzip_static on ile nginx CPU harcanmaz
+echo "   .gz on-sıkıştırma yapılıyor..."
+python - <<'PYEOF'
+import gzip, glob, os
+
+dirs = ["staticfiles/assets", "staticfiles/static"]
+total = 0
+for d in dirs:
+    if not os.path.isdir(d):
+        continue
+    for ext in ("*.js", "*.css", "*.svg", "*.json"):
+        for f in glob.glob(f"{d}/{ext}"):
+            gz = f + ".gz"
+            with open(f, "rb") as fi:
+                data = gzip.compress(fi.read(), compresslevel=9)
+            with open(gz, "wb") as fo:
+                fo.write(data)
+            total += 1
+print(f"   {total} .gz dosyasi uretildi.")
+PYEOF
+
+# ── 6c. Service Worker — sw.js kopyala + index.html'e kayıt inja ───
 _SW_REPO="$(dirname "$0")/backend/artifacts/streamvid/public/sw.js"
 _SW_STATIC="staticfiles/sw.js"
 
