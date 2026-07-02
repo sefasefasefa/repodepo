@@ -41,12 +41,3 @@ run = ["bash", "-c", "cd backend && gunicorn config.wsgi:application --bind 0.0.
 build = ["bash", "-c", "cd backend && pip install -r requirements.txt && pnpm install && pnpm --filter @workspace/streamvid run build && cp -r artifacts/streamvid/dist/public/. static/ && python manage.py migrate --run-syncdb && python manage.py collectstatic --noinput"]
 
 [userenv]
-
-[userenv.shared]
-DEBUG = "True"
-FORCE_SQLITE = "true"
-ALLOWED_HOSTS = "*"
-CORS_ALLOW_ALL_ORIGINS = "True"
-BOT_SIGNING_PRIVATE_KEY = "gll4kPN3YshluDq6cVzuyMH6sfLl8tXIh63aGic6R8Q"
-BOT_SIGNING_PUBLIC_KEY = "EAsokTVQeGWBnlh_v7cWeq6sF2cWRx0X9irDeuCstwI"
-BOT_SIGNING_KID = "hotpulse-bot-2026-01"
