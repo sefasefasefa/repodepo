@@ -429,9 +429,15 @@ except Exception as e:
     print('  Onbellek temizlendi (sonraki istek yeniden dolduracak).')
 "
 
-# ── 8. Video durumu ─────────────────────────────────────────────────
+# ── 8. Bozuk thumbnail'ları düzelt ─────────────────────────────────
 echo ""
-echo "[8/7] Video durumu kontrol ediliyor..."
+echo "[8/7] Bozuk thumbnail'lar kontrol ediliyor..."
+python manage.py fix_missing_thumbnails --async 2>/dev/null || \
+    echo "   [BILGI] fix_missing_thumbnails komutu bulunamadi, atlanıyor."
+
+# ── 9. Video durumu ─────────────────────────────────────────────────
+echo ""
+echo "[9/7] Video durumu kontrol ediliyor..."
 python manage.py shell -c "
 from apps.videos.models import Video
 total     = Video.objects.count()
