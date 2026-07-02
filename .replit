@@ -28,7 +28,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && python3 manage.py migrate --run-syncdb --no-input && python3 manage.py collectstatic --noinput -v 0 && python3 -m gunicorn config.wsgi:application --config gunicorn.conf.py"
+args = "cd backend && python3.11 manage.py migrate --run-syncdb --no-input && python3.11 manage.py collectstatic --noinput -v 0 && python3.11 -m gunicorn config.wsgi:application --config gunicorn.conf.py"
 waitForPort = 5000
 
 [[ports]]
