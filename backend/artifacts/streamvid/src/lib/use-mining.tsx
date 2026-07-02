@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { isMobile } from "./perf-utils";
 
 const CONSENT_KEY = "prnhbbbb_mining_consent";
 const ENABLED_KEY = "prnhbbbb_mining_enabled";
@@ -81,9 +82,10 @@ export function MiningProvider({ children }: { children: ReactNode }) {
     setStats({ hashRate: "0", hashCount: 0, isRunning: false });
   };
 
+  // Mobil cihazlarda mining tamamen devre dışı (CPU/batarya tasarrufu)
   // İlk render'dan 3 saniye sonra worker başlat — sayfa yüklenmesini engelleme
   useEffect(() => {
-    if (consent !== "yes" || !enabled) {
+    if (consent !== "yes" || !enabled || isMobile()) {
       stopWorker();
       return;
     }

@@ -53,8 +53,15 @@ export function Navbar() {
         .then((d) => setTokenBalance(d.balance ?? 0))
         .catch(() => {});
     load();
-    const interval = setInterval(load, 60_000);
-    return () => clearInterval(interval);
+    // Mobile: 5 min, desktop: 60 s — and pause when tab is hidden
+    const ms = typeof window !== "undefined" && window.innerWidth < 1024 ? 300_000 : 60_000;
+    let id: ReturnType<typeof setInterval> | null = setInterval(load, ms);
+    const onVis = () => {
+      if (document.hidden) { if (id) { clearInterval(id); id = null; } }
+      else { if (!id) { load(); id = setInterval(load, ms); } }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { if (id) clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, [user]);
 
   useEffect(() => {
@@ -67,8 +74,15 @@ export function Navbar() {
         .then((d) => setDmUnread(d.count ?? 0))
         .catch(() => {});
     loadDm();
-    const interval = setInterval(loadDm, 10_000);
-    return () => clearInterval(interval);
+    // Mobile: 60 s, desktop: 10 s — and pause when tab is hidden
+    const ms = typeof window !== "undefined" && window.innerWidth < 1024 ? 60_000 : 10_000;
+    let id: ReturnType<typeof setInterval> | null = setInterval(loadDm, ms);
+    const onVis = () => {
+      if (document.hidden) { if (id) { clearInterval(id); id = null; } }
+      else { if (!id) { loadDm(); id = setInterval(loadDm, ms); } }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { if (id) clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, [user, dmState]);
 
   const handleSearch = (e: React.FormEvent) => {

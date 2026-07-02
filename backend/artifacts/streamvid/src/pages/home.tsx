@@ -288,7 +288,7 @@ function ForYouSection() {
                     <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
                       <div className="w-6 h-6 rounded-full bg-[#2a2a2a] overflow-hidden shrink-0">
                         {cre.avatarUrl
-                          ? <img src={cre.avatarUrl} className="w-full h-full object-cover" />
+                          ? <img src={cre.avatarUrl} className="w-full h-full object-cover" loading="lazy" />
                           : <div className="w-full h-full flex items-center justify-center text-[9px] text-[#888]">
                               {cre.name.substring(0, 2).toUpperCase()}
                             </div>

@@ -30,13 +30,16 @@ export function usePageTracking() {
 
   useEffect(() => {
     const sessionId = getOrCreateSessionId();
+    // Mobile: 5 min, desktop: 60 s
+    const trackMs = typeof window !== "undefined" && window.innerWidth < 1024 ? 300_000 : 60_000;
     const interval = setInterval(() => {
+      if (document.hidden) return; // skip while tab is backgrounded
       fetch("/api/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ page: lastPage.current || "/", sessionId, userId: (user as any)?.id }),
       }).catch(() => {});
-    }, 60_000);
+    }, trackMs);
     return () => clearInterval(interval);
   }, [user]);
 }

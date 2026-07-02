@@ -73,8 +73,15 @@ export function StoriesLiveBar({ onAddStory }: StoriesLiveBarProps) {
       setLoading(false);
     };
     load();
-    const iv = setInterval(load, 30_000);
-    return () => clearInterval(iv);
+    // Mobile: 3 min, desktop: 30 s — pause when tab hidden
+    const ms = typeof window !== "undefined" && window.innerWidth < 1024 ? 180_000 : 30_000;
+    let iv: ReturnType<typeof setInterval> | null = setInterval(load, ms);
+    const onVis = () => {
+      if (document.hidden) { if (iv) { clearInterval(iv); iv = null; } }
+      else { if (!iv) iv = setInterval(load, ms); }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { if (iv) clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
   }, [token]);
 
   if (loading) {

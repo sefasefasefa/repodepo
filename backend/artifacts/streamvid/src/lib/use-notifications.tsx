@@ -23,7 +23,8 @@ interface NotifCtx {
 
 const Ctx = createContext<NotifCtx>({ unreadCount: 0, notifications: [], markRead: () => {}, markAllRead: () => {}, connected: false });
 
-const POLL_INTERVAL = 30000;
+// Mobile: 2 min, desktop: 30 s
+const POLL_INTERVAL = typeof window !== "undefined" && window.innerWidth < 1024 ? 120_000 : 30_000;
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user, token } = useAuth() as any;
@@ -72,9 +73,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         fetchNotifications();
         timerRef.current = setInterval(fetchNotifications, POLL_INTERVAL);
       }, 3000);
+      const onVis = () => {
+        if (document.hidden) {
+          if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        } else {
+          if (!timerRef.current) { fetchNotifications(); timerRef.current = setInterval(fetchNotifications, POLL_INTERVAL); }
+        }
+      };
+      document.addEventListener("visibilitychange", onVis);
       return () => {
         clearTimeout(startDelay);
         if (timerRef.current) clearInterval(timerRef.current);
+        document.removeEventListener("visibilitychange", onVis);
       };
     } else {
       setConnected(false);
