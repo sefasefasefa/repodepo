@@ -27,8 +27,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# Derlenmiş frontend + collectstatic çıktısı — git'e girmez, sunucuda üretilir
-backend/static/
+# Derlenmiş frontend + collectstatic çıktısı
+# Sadece Django admin/RF ignore edilir; frontend asset'leri Windows VDS için git'te tutulur
+backend/static/admin/
+backend/static/rest_framework/
 
 # IDE
 .idea/
