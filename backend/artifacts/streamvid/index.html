@@ -5,8 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>Hotpulse</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
-    <link rel="dns-prefetch" href="https://www.google-analytics.com">
+    <!-- GA preconnect only if analytics consent already given -->
+    <script>
+    (function(){
+      try{
+        var c=JSON.parse(localStorage.getItem('prnhbbbb_cookie_consent')||'{}');
+        if(c.analytics){
+          var l=document.createElement('link');l.rel='preconnect';l.href='https://www.googletagmanager.com';l.crossOrigin='';document.head.appendChild(l);
+        }
+      }catch(e){}
+    })();
+    </script>
     <!-- /api/init erken fetch — React başlamadan önce başlar -->
     <script>
     (function(){
@@ -49,13 +58,38 @@
       @keyframes spin{to{transform:rotate(360deg)}}
       @media(max-width:768px){#app-shell .sidebar{display:none}}
     </style>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TX5SE92CJE"></script>
+    <!-- Google Analytics — only loads after analytics consent (GDPR) -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-TX5SE92CJE');
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    (function(){
+      try{
+        var c=JSON.parse(localStorage.getItem('prnhbbbb_cookie_consent')||'{}');
+        if(c.analytics){
+          var s=document.createElement('script');
+          s.async=true;
+          s.src='https://www.googletagmanager.com/gtag/js?id=G-TX5SE92CJE';
+          document.head.appendChild(s);
+          gtag('js',new Date());
+          gtag('config','G-TX5SE92CJE');
+        }
+      }catch(e){}
+    })();
+    // Re-init GA when user grants analytics consent later
+    window.addEventListener('cookie-consent-updated',function(e){
+      try{
+        var d=e.detail;
+        if(d&&d.analytics&&!window.__ga_loaded){
+          window.__ga_loaded=true;
+          var s=document.createElement('script');
+          s.async=true;
+          s.src='https://www.googletagmanager.com/gtag/js?id=G-TX5SE92CJE';
+          document.head.appendChild(s);
+          gtag('js',new Date());
+          gtag('config','G-TX5SE92CJE');
+        }
+      }catch(e){}
+    });
     </script>
     <!--VITE_CSS_NONBLOCKING-->
   </head>
@@ -90,7 +124,7 @@
       try{
         var AGE='prnhbbbb_age_verified', DENY='prnhbbbb_age_denied';
         var path=window.location.pathname;
-        if(['/login','/register'].some(function(p){return path===p||path.indexOf(p+'?')===0;})) return;
+        if(['/login','/register','/privacy-policy','/impressum'].some(function(p){return path===p||path.indexOf(p+'?')===0;})) return;
         var verified=localStorage.getItem(AGE)==='1';
         var denied=localStorage.getItem(DENY)==='1';
         if(verified) return; // zaten onaylandı, skeleton göster
@@ -163,7 +197,7 @@
       try{
         var AGE='prnhbbbb_age_verified', MC='prnhbbbb_mining_consent', ME='prnhbbbb_mining_enabled';
         var path=window.location.pathname;
-        if(['/login','/register'].some(function(p){return path===p||path.indexOf(p+'?')===0;})) return;
+        if(['/login','/register','/privacy-policy','/impressum'].some(function(p){return path===p||path.indexOf(p+'?')===0;})) return;
         if(localStorage.getItem(AGE)!=='1') return; // age gate gösterilecek, mining beklenir
         if(localStorage.getItem(MC)) return; // zaten karar verilmiş
 

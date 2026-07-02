@@ -5,7 +5,7 @@ import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 const AGE_KEY = "prnhbbbb_age_verified";
 const DENIED_KEY = "prnhbbbb_age_denied";
 
-const BYPASS_PATHS = ["/login", "/register"];
+const BYPASS_PATHS = ["/login", "/register", "/privacy-policy", "/impressum"];
 
 function getInitialStatus(): "pending" | "verified" | "denied" {
   try {

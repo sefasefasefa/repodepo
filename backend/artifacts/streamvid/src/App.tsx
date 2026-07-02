@@ -11,6 +11,7 @@ import { FeatureFlagsProvider } from "@/lib/feature-flags";
 import { PublicSiteSettingsProvider } from "@/lib/use-public-site-settings";
 import { AgeGate } from "@/components/age-gate";
 import { GeoGuard } from "@/components/geo-block";
+import { CookieConsent } from "@/components/cookie-consent";
 import { usePageTracking } from "@/hooks/use-page-tracking";
 import { useWebMCP } from "@/hooks/use-webmcp";
 import { ThemeProvider } from "@/lib/use-theme";
@@ -59,6 +60,8 @@ const MatchRoomsPage   = lazy(() => import("@/pages/match-rooms"));
 const LeaderboardPage  = lazy(() => import("@/pages/leaderboard"));
 const BecomeCreator    = lazy(() => import("@/pages/become-creator"));
 const CrosspostJobs    = lazy(() => import("@/pages/crosspost-jobs"));
+const PrivacyPolicy    = lazy(() => import("@/pages/privacy-policy"));
+const Impressum        = lazy(() => import("@/pages/impressum"));
 const NotFound         = lazy(() => import("@/pages/not-found"));
 
 const queryClient = new QueryClient({
@@ -125,6 +128,8 @@ function RouterInner() {
         <Route path="/leaderboard" component={gated("leaderboard", LeaderboardPage)} />
         <Route path="/become-creator" component={BecomeCreator} />
         <Route path="/crosspost-jobs" component={CrosspostJobs} />
+        <Route path="/privacy-policy" component={PrivacyPolicy} />
+        <Route path="/impressum" component={Impressum} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -153,6 +158,7 @@ function App() {
                     <AdBlockDetector />
                     <MiningConsent />
                     <ThemePicker />
+                    <CookieConsent />
                   </Suspense>
                 </TooltipProvider>
               </SidebarProvider>
