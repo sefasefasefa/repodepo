@@ -68,11 +68,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (timerRef.current) clearInterval(timerRef.current);
 
     if (user && token) {
-      // İlk fetch'i 3 saniye geciktir — sayfa yükünün kritik isteklerine bant genişliği bırak
+      // Mobilde 12s, masaüstünde 3s gecikme — kritik sayfa yükü bitmeden istek yok
+      const isMob = typeof window !== "undefined" && window.innerWidth < 1024;
       const startDelay = setTimeout(() => {
         fetchNotifications();
         timerRef.current = setInterval(fetchNotifications, POLL_INTERVAL);
-      }, 3000);
+      }, isMob ? 12_000 : 3_000);
       const onVis = () => {
         if (document.hidden) {
           if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }

@@ -45,6 +45,11 @@ export function Navbar() {
 
   useEffect(() => {
     if (!user) return;
+    const isMob = typeof window !== "undefined" && window.innerWidth < 1024;
+    // Mobilde 5dk, masaüstünde 60s — sekme arka plandayken durdur
+    const ms = isMob ? 300_000 : 60_000;
+    // Mobilde ilk fetch'i 10s geciktir (sayfa yükü bitmeden istek yok)
+    const initDelay = isMob ? 10_000 : 0;
     const load = () =>
       fetch("/api/tokens/balance", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
@@ -52,20 +57,22 @@ export function Navbar() {
         .then((r) => r.json())
         .then((d) => setTokenBalance(d.balance ?? 0))
         .catch(() => {});
-    load();
-    // Mobile: 5 min, desktop: 60 s — and pause when tab is hidden
-    const ms = typeof window !== "undefined" && window.innerWidth < 1024 ? 300_000 : 60_000;
-    let id: ReturnType<typeof setInterval> | null = setInterval(load, ms);
-    const onVis = () => {
-      if (document.hidden) { if (id) { clearInterval(id); id = null; } }
-      else { if (!id) { load(); id = setInterval(load, ms); } }
-    };
+    let id: ReturnType<typeof setInterval> | null = null;
+    const start = () => { if (!id) { load(); id = setInterval(load, ms); } };
+    const pause = () => { if (id) { clearInterval(id); id = null; } };
+    const onVis = () => document.hidden ? pause() : start();
+    const initTimer = setTimeout(start, initDelay);
     document.addEventListener("visibilitychange", onVis);
-    return () => { if (id) clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+    return () => { clearTimeout(initTimer); pause(); document.removeEventListener("visibilitychange", onVis); };
   }, [user]);
 
   useEffect(() => {
     if (!user || dmState === "disabled") return;
+    const isMob = typeof window !== "undefined" && window.innerWidth < 1024;
+    // Mobilde 90s, masaüstünde 10s — sekme arka plandayken durdur
+    const ms = isMob ? 90_000 : 10_000;
+    // Mobilde ilk fetch'i 15s geciktir
+    const initDelay = isMob ? 15_000 : 0;
     const loadDm = () =>
       fetch("/api/messages/unread-count", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
@@ -73,16 +80,13 @@ export function Navbar() {
         .then((r) => r.json())
         .then((d) => setDmUnread(d.count ?? 0))
         .catch(() => {});
-    loadDm();
-    // Mobile: 60 s, desktop: 10 s — and pause when tab is hidden
-    const ms = typeof window !== "undefined" && window.innerWidth < 1024 ? 60_000 : 10_000;
-    let id: ReturnType<typeof setInterval> | null = setInterval(loadDm, ms);
-    const onVis = () => {
-      if (document.hidden) { if (id) { clearInterval(id); id = null; } }
-      else { if (!id) { loadDm(); id = setInterval(loadDm, ms); } }
-    };
+    let id: ReturnType<typeof setInterval> | null = null;
+    const start = () => { if (!id) { loadDm(); id = setInterval(loadDm, ms); } };
+    const pause = () => { if (id) { clearInterval(id); id = null; } };
+    const onVis = () => document.hidden ? pause() : start();
+    const initTimer = setTimeout(start, initDelay);
     document.addEventListener("visibilitychange", onVis);
-    return () => { if (id) clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+    return () => { clearTimeout(initTimer); pause(); document.removeEventListener("visibilitychange", onVis); };
   }, [user, dmState]);
 
   const handleSearch = (e: React.FormEvent) => {

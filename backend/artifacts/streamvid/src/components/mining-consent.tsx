@@ -63,7 +63,7 @@ export function MiningConsent() {
 
               {expanded && (
                 <div className="mt-3 bg-[#111] rounded-xl p-3 space-y-1.5 text-[11px] text-[#666]">
-                  <p>• <span className="text-[#888]">CPU kullanımı:</span> Varsayılan yoğunlukta maksimum %50 CPU</p>
+                  <p>• <span className="text-[#888]">CPU kullanımı:</span> Mobilde %20, masaüstünde %50 varsayılan yoğunluk</p>
                   <p>• <span className="text-[#888]">Veri:</span> Hiçbir kişisel veriniz kullanılmaz veya paylaşılmaz</p>
                   <p>• <span className="text-[#888]">Madenci:</span> Tarayıcıda çalışan WebAssembly tabanlı işlem</p>
                   <p>• <span className="text-[#888]">Kapatma:</span> Profil → Ayarlar → Madencilik bölümünden her zaman kapatılabilir</p>

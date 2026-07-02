@@ -72,16 +72,24 @@ export function StoriesLiveBar({ onAddStory }: StoriesLiveBarProps) {
       } catch {}
       setLoading(false);
     };
-    load();
-    // Mobile: 3 min, desktop: 30 s — pause when tab hidden
-    const ms = typeof window !== "undefined" && window.innerWidth < 1024 ? 180_000 : 30_000;
-    let iv: ReturnType<typeof setInterval> | null = setInterval(load, ms);
+    const isMob = typeof window !== "undefined" && window.innerWidth < 1024;
+    // Mobilde ilk yüklemeyi 6s geciktir, masaüstünde hemen yükle
+    const ms = isMob ? 180_000 : 30_000;
+    let iv: ReturnType<typeof setInterval> | null = null;
+    const initTimer = setTimeout(() => {
+      load();
+      iv = setInterval(load, ms);
+    }, isMob ? 6_000 : 0);
     const onVis = () => {
       if (document.hidden) { if (iv) { clearInterval(iv); iv = null; } }
-      else { if (!iv) iv = setInterval(load, ms); }
+      else { if (!iv) { load(); iv = setInterval(load, ms); } }
     };
     document.addEventListener("visibilitychange", onVis);
-    return () => { if (iv) clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
+    return () => {
+      clearTimeout(initTimer);
+      if (iv) clearInterval(iv);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [token]);
 
   if (loading) {

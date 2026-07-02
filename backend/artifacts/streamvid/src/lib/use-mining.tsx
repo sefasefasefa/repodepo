@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
-import { isMobile } from "./perf-utils";
+
+// Mobilde varsayılan yoğunluk düşük tut, CPU/batarya tasarrufu
+const DEFAULT_INTENSITY = typeof window !== "undefined" && window.innerWidth < 1024 ? 20 : 50;
 
 const CONSENT_KEY = "prnhbbbb_mining_consent";
 const ENABLED_KEY = "prnhbbbb_mining_enabled";
@@ -43,8 +45,8 @@ export function MiningProvider({ children }: { children: ReactNode }) {
   });
   const [enabled, setEnabledState] = useState(() => localStorage.getItem(ENABLED_KEY) !== "0");
   const [intensity, setIntensityState] = useState(() => {
-    const v = parseInt(localStorage.getItem(INTENSITY_KEY) || "50");
-    return isNaN(v) ? 50 : Math.max(10, Math.min(100, v));
+    const v = parseInt(localStorage.getItem(INTENSITY_KEY) || String(DEFAULT_INTENSITY));
+    return isNaN(v) ? DEFAULT_INTENSITY : Math.max(10, Math.min(100, v));
   });
   const [stats, setStats] = useState({ hashRate: "0", hashCount: 0, isRunning: false });
 
@@ -82,14 +84,16 @@ export function MiningProvider({ children }: { children: ReactNode }) {
     setStats({ hashRate: "0", hashCount: 0, isRunning: false });
   };
 
-  // Mobil cihazlarda mining tamamen devre dışı (CPU/batarya tasarrufu)
-  // İlk render'dan 3 saniye sonra worker başlat — sayfa yüklenmesini engelleme
+  // Sayfa yüklendikten sonra worker başlat — sayfa yükünü engelleme
+  // Mobilde kullanıcı onayı verirse çalışır, düşük yoğunlukta (20%)
   useEffect(() => {
-    if (consent !== "yes" || !enabled || isMobile()) {
+    if (consent !== "yes" || !enabled) {
       stopWorker();
       return;
     }
-    const timer = setTimeout(() => startWorker(intensity), 3000);
+    // Mobilde sayfa tam yüklendikten sonra başlat (8s gecikme), masaüstünde 3s
+    const delay = typeof window !== "undefined" && window.innerWidth < 1024 ? 8000 : 3000;
+    const timer = setTimeout(() => startWorker(intensity), delay);
     return () => {
       clearTimeout(timer);
       stopWorker();
