@@ -28,15 +28,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# ── Media dosyaları (kullanıcı yüklemeleri — asla git'e girmesin) ─────────────
-# VDS'de backend/media/ altında tutulur, git ile senkronize edilmez.
-media/
-backend/media/*
-!backend/media/.gitkeep
-!backend/media/images/.gitkeep
-!backend/media/thumbnails/.gitkeep
-!backend/media/uploads/.gitkeep
-!backend/media/_chunks/.gitkeep
+# ── Media dosyaları ───────────────────────────────────────────────────────────
+# Şimdilik git'te takip ediliyor — ileride büyüyünce ignore eklenecek.
 
 # ── Derlenmiş static dosyalar ─────────────────────────────────────────────────
 # Django admin ve RF static'leri collectstatic ile gelir, git'te tutulmaz.
