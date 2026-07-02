@@ -1,0 +1,70 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ ./update.sh
+=== Hotpulse Guncelleme ===
+[1/6] Sunucu durduruluyor...
+   Nginx durduruluyor...
+[2/6] Kod guncelleniyor...
+   Indiriliyor: https://github.com/sefasefasefa/repodepo/archive/refs/heads/main.tar.gz
+   Kod guncellendi.
+[3/6] Python paketleri guncelleniyor...
+[4/6] Frontend kontrol ediliyor...
+   Windows: git'ten gelen onceden derlenmiş dosyalar kullaniliyor.
+   (pnpm build atlandı — backend/static/ git'ten geldi)
+[5/6] Veritabani migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, token_blacklist, tokens, videos
+Running migrations:
+  No migrations to apply.
+[6/6] Statik dosyalar toplaniyor...
+   Statik dosyalar kopyalandi (Windows modu).
+   CSS non-blocking yapildi (JS artik CSS beklemez).
+   .gz on-sıkıştırma yapılıyor...
+   4898 .gz dosyasi uretildi.
+   sw.js kopyalandi: staticfiles/sw.js
+
+[7/7] Onbellek isitiliyor...
+  Onbellek isitildi (init + homeData hazir).
+
+[8/7] Video durumu kontrol ediliyor...
+  Toplam video : 13
+  Yayinda      : 13
+  Taslak       : 0
+  Tum videolar yayinda.
+
+Guncelleme tamamlandi! Sunucu baslatiliyor...
+
+   nginx.conf guncellendi: C:/nginx/conf/nginx.conf
+   Nginx baslatiliyor: C:/nginx/nginx.exe
+   Nginx calisiyor.
+Statik dosyalar hazirlaniyor...
+Windows: Donanim analiz ediliyor...
+
+  Donanim  : 3 CPU cekirdek, 4095MB GB RAM
+  Threads  : 24  (cpu_core x8, min=16, max=64)
+  Conn Lmt : 579  (RAM'e gore otomatik)
+  Timeout  : 120 s
+
+Waitress sunucusu baslatiliyor (port 8000)...
+INFO 2026-07-02 23:34:49,136 wasyncore Serving on http://0.0.0.0:8000
+WARNING 2026-07-02 23:35:04,193 log Not Found: /media/thumbnails/auto_b9e033aa9aa6487d9184fa68331677be.jpg
+WARNING 2026-07-02 23:35:04,193 log Not Found: /media/thumbnails/auto_a1629a7deaf74555b0c78d47ac1fbae6.jpg
+WARNING 2026-07-02 23:35:04,193 log Not Found: /media/thumbnails/auto_c5a5867bad3248d187d86b3380eea12f.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_334c16c079fc4256952716fb31f95968.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_d2b916d578064b3f86c784fcad70cd80.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_2436d6550df9466e92b121fb9ff0ea4d.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_31a3ef8c7ee84884aaeeab307603fe1d.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_ef19c51387094e26a4a542d6846219af.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_361d6f990623466a8c2dfc7602b7e387.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_6513d42c4b894f7db670cc416ab970d5.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_08cbfcbc738b496bae7c0f6cab854a45.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_c1355622f0df41929ab68c314c1c49c8.jpg
+WARNING 2026-07-02 23:35:04,208 log Not Found: /media/thumbnails/auto_3c4f09da03924559bf271b21c2a2f909.jpg
+WARNING 2026-07-02 23:35:10,899 log Bad Request: /api/videos/9/stream
+WARNING 2026-07-02 23:35:11,153 log Bad Request: /api/videos/9/stream
+WARNING 2026-07-02 23:35:11,398 log Bad Request: /api/videos/9/stream
+WARNING 2026-07-02 23:35:12,501 log Bad Request: /api/videos/9/stream
+WARNING 2026-07-02 23:35:12,773 log Bad Request: /api/videos/9/stream
+WARNING 2026-07-02 23:38:38,127 log Bad Request: /api/videos/35/stream
+WARNING 2026-07-02 23:38:38,962 log Bad Request: /api/videos/35/stream
+WARNING 2026-07-02 23:38:39,370 log Bad Request: /api/videos/35/stream
