@@ -710,7 +710,15 @@ def stream_video(request, video_id):
                 break
 
     if not url:
-        return Response({'error': 'Stream edilebilir video kaynağı bulunamadı'}, status=400)
+        return Response({
+            'error': 'Stream edilebilir video kaynağı bulunamadı',
+            'detail': (
+                'Bu videoya ait video_url, hls_url veya tamamlanmış crosspost stream URL\'i yok. '
+                'Admin paneli → Video Yönetimi → Düzenle → video_url alanını doldurun '
+                'veya Dağıtım sekmesinden crosspost yapın.'
+            ),
+            'video_id': video_id,
+        }, status=400)
 
     # Doğrudan HTTP URL proxy'si (cloud.mail.ru olmayan)
     if url and 'cloud.mail.ru/public/' not in url:

@@ -1,0 +1,26 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "oYh5RWTtyP8OYvzbDE8tj"
+uri = "file://AKTARIM_PROMPT.md"
+type = "text"
+title = "Tam Aktarım Promptu"
+
+[[outputs]]
+id = "GQfgr8roV4bAKEmdux3Um"
+uri = "file://REPO_ARSIV.md"
+type = "text"
+title = "Tam Repo Arşivi (1.7 MB)"
+
+[[outputs]]
+id = "edU4xEpIQzEpWQ8QRMwTq"
+uri = "file://static_assets.zip"
+type = "unspecified"
+title = "Frontend Build Dosyaları (static_assets.zip)"
+
+[[outputs]]
+id = "YcHVox60L-1rBIlPOZ_eK"
+uri = "file://SEO_REHBERI.md"
+type = "text"
+title = "SEO Ayarları Rehberi"

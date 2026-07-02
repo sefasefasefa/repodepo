@@ -1,0 +1,61 @@
+(venv) 
+Administrator@185-254-28-39 MINGW64 ~/Desktop/hotpulse (main)
+$ ./update.sh
+=== Hotpulse Guncelleme ===
+[1/6] Sunucu durduruluyor...
+   Nginx durduruluyor...
+[2/6] Kod guncelleniyor...
+   Indiriliyor: https://github.com/sefasefasefa/repodepo/archive/refs/heads/main.tar.gz
+   Kod guncellendi.
+[3/6] Python paketleri guncelleniyor...
+[4/6] Frontend kontrol ediliyor...
+   Windows: git'ten gelen onceden derlenmiş dosyalar kullaniliyor.
+   (pnpm build atlandı — backend/static/ git'ten geldi)
+[5/6] Veritabani migrate ediliyor...
+Operations to perform:
+  Apply all migrations: accounts, admin, admin_panel, affiliate, ai, auth, contenttypes, core, crosspost, devices, live, messaging, notifications, sessions, social, subscriptions, token_blacklist, tokens, videos
+Running migrations:
+  No migrations to apply.
+[6/6] Statik dosyalar toplaniyor...
+   Statik dosyalar kopyalandi (Windows modu).
+   CSS non-blocking yapildi (JS artik CSS beklemez).
+   .gz on-sıkıştırma yapılıyor...
+   96 .gz dosyasi uretildi.
+
+[7/7] Onbellek isitiliyor...
+  Onbellek isitildi (init + homeData hazir).
+
+[8/7] Video durumu kontrol ediliyor...
+  Toplam video : 13
+  Yayinda      : 13
+  Taslak       : 0
+  Tum videolar yayinda.
+
+Guncelleme tamamlandi! Sunucu baslatiliyor...
+
+   nginx.conf guncellendi: C:/nginx/conf/nginx.conf
+   Nginx baslatiliyor: C:/nginx/nginx.exe
+   Nginx calisiyor.
+Statik dosyalar hazirlaniyor...
+Windows: Donanim analiz ediliyor...
+
+  Donanim  : 3 CPU cekirdek, 4095MB GB RAM
+  Threads  : 24  (cpu_core x8, min=16, max=64)
+  Conn Lmt : 579  (RAM'e gore otomatik)
+  Timeout  : 120 s
+
+Waitress sunucusu baslatiliyor (port 8000)...
+INFO 2026-07-02 03:57:10,674 wasyncore Serving on http://0.0.0.0:8000
+WARNING 2026-07-02 03:57:23,246 log Not Found: /assets/index-CB_55oNU.js
+WARNING 2026-07-02 03:57:23,407 log Not Found: /assets/icons-4HsT1XPB.js
+WARNING 2026-07-02 03:57:23,612 log Not Found: /assets/index-CB_55oNU.js
+WARNING 2026-07-02 03:57:23,625 log Not Found: /assets/icons-4HsT1XPB.js
+WARNING 2026-07-02 03:57:23,724 log Not Found: /assets/index-BYD4Ccjv.css
+WARNING 2026-07-02 03:57:35,575 log Not Found: /.well-known/mcp/server-cards.json
+ERROR 2026-07-02 03:57:35,528 log Service Unavailable: /.well-known/http-message-signatures-directory
+WARNING 2026-07-02 03:57:40,157 log Not Found: /assets/index-CB_55oNU.js
+WARNING 2026-07-02 03:57:40,172 log Not Found: /assets/index-BYD4Ccjv.css
+WARNING 2026-07-02 03:57:40,185 log Not Found: /assets/icons-4HsT1XPB.js
+WARNING 2026-07-02 03:57:40,344 log Not Found: /favicon.ico
+WARNING 2026-07-02 03:57:40,518 log Not Found: /.well-known/skills/index.json
+WARNING 2026-07-02 03:57:45,366 log Not Found: /.well-known/skills/index.json

@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments (NOT used on Replit — handled by .pythonlibs)
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Derlenmiş frontend + collectstatic çıktısı
+# Sadece Django admin/RF ignore edilir; frontend asset'leri Windows VDS için git'te tutulur
+backend/static/admin/
+backend/static/rest_framework/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Media uploads — tüm kullanıcı dosyaları (VDS'de üretilir, git'e girmez)
+backend/media/*
+!backend/media/.gitkeep
+
+# Replit agent memory (internal, not for source control)
+.agents/memory/
+
+# NOTE: backend/db.sqlite3 is intentionally NOT ignored.
+# The database file is kept alongside code so agents and team members
+# can use the same dev database without re-running seed_data.
+# Do NOT add db.sqlite3 to this file.

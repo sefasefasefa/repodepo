@@ -1,0 +1,1528 @@
+import { AppLayout } from "@/components/layout/app-layout";
+import { useAuth } from "@/lib/auth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCreateVideo } from "@workspace/api-client-react";
+import { useLocation } from "wouter";
+import { useState, useEffect, useRef } from "react";
+import { Upload, Lock, Clock, CheckCircle, XCircle, HelpCircle, AlertTriangle, Crown, FileVideo, Calendar, Stamp, Sparkles, Tag, ScanSearch, Link2, ImageIcon, X as XIcon, Share2, Loader2, ExternalLink, RefreshCw, Monitor } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useListCategories } from "@workspace/api-client-react";
+import { ChunkedUploadZone } from "@/components/upload/chunked-upload-zone";
+import { ProviderSelector } from "@/components/upload/provider-selector";
+import { toast } from "sonner";
+
+const uploadSchema = z.object({
+  title: z.string().min(3, "En az 3 karakter"),
+  description: z.string().optional(),
+  type: z.enum(["video", "short"]),
+  videoUrl: z.string().url("Geçerli URL girin").optional().or(z.literal("")),
+  thumbnailUrl: z.string().url("Geçerli URL girin").optional().or(z.literal("")),
+  isPremium: z.boolean().default(false),
+  isPPV: z.boolean().default(false),
+  ppvPrice: z.string().optional(),
+  categoryId: z.string().optional(),
+  watermarkEnabled: z.boolean().default(false),
+});
+
+const bulkUploadSchema = z.object({
+  prefix: z.string().min(3, "En az 3 karakter"),
+  titles: z.string().min(3, "En az 3 karakter"),
+  description: z.string().optional(),
+  videoUrls: z.string().min(3, "En az bir URL girin"),
+  type: z.enum(["video", "short"]),
+  thumbnailUrl: z.string().url("Geçerli URL girin").optional().or(z.literal("")),
+  isPremium: z.boolean().default(false),
+  isPPV: z.boolean().default(false),
+  ppvPrice: z.string().optional(),
+  categoryId: z.string().optional(),
+  watermarkEnabled: z.boolean().default(false),
+});
+
+const applySchema = z.object({
+  motivation: z.string().min(20, "En az 20 karakter gerekli"),
+  socialLinks: z.string().optional(),
+  contentType: z.string().min(3, "İçerik türünü belirtin"),
+});
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === "pending") return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-900/40 text-yellow-400 text-sm font-medium">
+      <Clock className="h-3.5 w-3.5" /> İnceleniyor
+    </span>
+  );
+  if (status === "approved") return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-900/40 text-green-400 text-sm font-medium">
+      <CheckCircle className="h-3.5 w-3.5" /> Onaylandı
+    </span>
+  );
+  if (status === "denied") return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-900/40 text-red-400 text-sm font-medium">
+      <XCircle className="h-3.5 w-3.5" /> Reddedildi
+    </span>
+  );
+  return null;
+}
+
+function LimitCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color?: string }) {
+  return (
+    <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4 flex items-center gap-3">
+      <div className={cn("p-2 rounded-lg bg-[#2a2a2a]", color)}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div>
+        <p className="text-xs text-[#666] mb-0.5">{label}</p>
+        <p className="text-sm font-semibold text-white">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function CloudMailResolveButton({ url, token, onResolved }: { url: string; token: string; onResolved: (url: string) => void }) {
+  const [loading, setLoading] = useState(false);
+
+  const resolve = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/resolve-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        onResolved(data.url);
+        toast.success('Direkt video URL\'si başarıyla çözümlendi!');
+      } else {
+        toast.error(data.error || 'URL çözümlenemedi');
+      }
+    } catch {
+      toast.error('Bağlantı hatası');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button type="button" onClick={resolve} disabled={loading} size="sm"
+      className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white gap-1.5">
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+      {loading ? 'Çözümleniyor...' : 'Çöz'}
+    </Button>
+  );
+}
+
+export default function UploadPage() {
+  const { user, token } = useAuth() as any;
+  const [, setLocation] = useLocation();
+  const [application, setApplication] = useState<any>(null);
+  const [limits, setLimits] = useState<any>(null);
+  const [uploadedToday, setUploadedToday] = useState(0);
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [applyDone, setApplyDone] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState("");
+  const createVideoMutation = useCreateVideo();
+
+  // Kendi Oynatıcı — video URL'i sitede doğrudan oynat (varsayılan: açık)
+  const [ownPlayerEnabled, setOwnPlayerEnabled] = useState(true);
+  // Crosspost — CDN sağlayıcılara gönder (varsayılan: açık)
+  const [crosspostEnabled, setCrosspostEnabled] = useState(true);
+  // Crosspost modu: 'all' → tüm aktif sitelere, 'select' → seçili
+  const [crosspostMode, setCrosspostMode] = useState<"all" | "select">("all");
+  const [urlCrosspostSiteIds, setUrlCrosspostSiteIds] = useState<number[]>([]);
+  const [configuredSites, setConfiguredSites] = useState<any[]>([]);
+
+  // Crosspost durum takibi
+  const [crosspostVideoId, setCrosspostVideoId] = useState<number | null>(null);
+  const [createdVideoPath, setCreatedVideoPath] = useState<string>("");
+  const [crosspostJobs, setCrosspostJobs] = useState<any[]>([]);
+  const [crosspostPolling, setCrosspostPolling] = useState(false);
+  const pollTimerRef = useRef<any>(null);
+
+  const startCrosspostPolling = (videoId: number) => {
+    setCrosspostPolling(true);
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/cross-post/jobs?videoId=${videoId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        const jobs: any[] = data.jobs ?? [];
+        setCrosspostJobs(jobs);
+        const allDone = jobs.length > 0 && jobs.every((j: any) => ["success", "failed", "skipped"].includes(j.status));
+        if (!allDone) {
+          pollTimerRef.current = setTimeout(poll, 3000);
+        } else {
+          setCrosspostPolling(false);
+        }
+      } catch {
+        pollTimerRef.current = setTimeout(poll, 5000);
+      }
+    };
+    // İlk poll 2sn sonra (job'ların oluşması için)
+    pollTimerRef.current = setTimeout(poll, 2000);
+  };
+
+  useEffect(() => {
+    return () => { if (pollTimerRef.current) clearTimeout(pollTimerRef.current); };
+  }, []);
+
+  // URL formu için lokal thumbnail seçici
+  const thumbFileRef = useRef<HTMLInputElement>(null);
+  const [thumbFile, setThumbFile] = useState<File | null>(null);
+  const [thumbPreview, setThumbPreview] = useState<string | null>(null);
+
+  // Zamanlanmış yayın (URL formu)
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleValue, setScheduleValue] = useState("");
+
+  // Toplu zamanlanmış yayın
+  const [bulkScheduleEnabled, setBulkScheduleEnabled] = useState(false);
+  const [bulkScheduleStart, setBulkScheduleStart] = useState("");
+  const [bulkScheduleInterval, setBulkScheduleInterval] = useState("24");
+  const [bulkScheduleUnit, setBulkScheduleUnit] = useState<"hours" | "days">("hours");
+  const [bulkSchedulePreview, setBulkSchedulePreview] = useState<string[]>([]);
+
+  const pickThumb = (file: File) => {
+    setThumbFile(file);
+    const url = URL.createObjectURL(file);
+    setThumbPreview(url);
+    uploadForm.setValue("thumbnailUrl", "");
+  };
+  const clearThumb = () => {
+    setThumbFile(null);
+    if (thumbPreview) URL.revokeObjectURL(thumbPreview);
+    setThumbPreview(null);
+    if (thumbFileRef.current) thumbFileRef.current.value = "";
+  };
+
+  const { data: catData } = useListCategories();
+  const categories: any[] = (catData as any)?.categories ?? [];
+
+  // Otomatik kategori önerisi
+  const [autoSuggest, setAutoSuggest] = useState<{ categoryId: number; name: string; confidence: number } | null>(null);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+
+  // Video benzerlik uyarısı (pasif)
+  const [similarityWarning, setSimilarityWarning] = useState<{
+    level: "high" | "medium"; message: string; matchTitle: string;
+  } | null>(null);
+  const [similarityChecking, setSimilarityChecking] = useState(false);
+  const [adminSimilarityApproved, setAdminSimilarityApproved] = useState(false);
+
+  const isCreator = user?.role === "creator" || user?.role === "admin" || user?.role === "moderator";
+  const isAdmin = user?.role === "admin";
+
+  useEffect(() => {
+    if (!user) return;
+    const headers: any = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    if (!isCreator) {
+      fetch("/api/creator-applications/my", { headers })
+        .then(r => r.json())
+        .then(d => setApplication(d.application));
+    } else {
+      fetch("/api/creator-limits/my", { headers })
+        .then(r => r.json())
+        .then(d => { setLimits(d.limits); setUploadedToday(d.uploadedToday ?? 0); });
+    }
+  }, [user, isCreator, token]);
+
+  // Çoklu kategori seçimi (yerel state)
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+
+  const toggleCategory = (id: number) => {
+    setSelectedCategoryIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  // Creator/Admin: yapılandırılmış crosspost sitelerini yükle
+  useEffect(() => {
+    if (!isCreator || !token) return;
+    fetch("/api/cross-post/sites", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setConfiguredSites(d.sites ?? []); })
+      .catch(() => {});
+  }, [isCreator, token]);
+
+  const uploadForm = useForm<z.infer<typeof uploadSchema>>({
+    resolver: zodResolver(uploadSchema),
+    defaultValues: { title: "", description: "", type: "video", isPremium: false, isPPV: false, watermarkEnabled: false },
+  });
+
+  const watchTitle = uploadForm.watch("title");
+  const watchDescription = uploadForm.watch("description");
+
+  // Benzerlik kontrolü — gerçek API çağrısı ile
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (!watchTitle || watchTitle.length < 5) { setSimilarityWarning(null); return; }
+      setAdminSimilarityApproved(false);
+      setSimilarityChecking(true);
+      try {
+        const res = await fetch(`/api/videos/search?q=${encodeURIComponent(watchTitle)}&limit=5`);
+        const data = await res.json();
+        const videos: any[] = data.videos || data.results || [];
+        const lower = watchTitle.toLowerCase();
+        const match = videos.find((v: any) => {
+          const vTitle: string = (v.title || "").toLowerCase();
+          const words = lower.split(" ").filter((w: string) => w.length > 3);
+          return words.some((w: string) => vTitle.includes(w));
+        });
+        if (match) {
+          setSimilarityWarning({ level: "medium", message: "Benzer başlıklı bir video zaten mevcut.", matchTitle: match.title });
+        } else {
+          setSimilarityWarning(null);
+        }
+      } catch {
+        setSimilarityWarning(null);
+      }
+      setSimilarityChecking(false);
+    }, 900);
+    return () => clearTimeout(t);
+  }, [watchTitle]);
+
+  const requiresAdminApproval = Boolean(similarityWarning) && !adminSimilarityApproved;
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (!watchTitle || watchTitle.length < 4) { setAutoSuggest(null); return; }
+      setSuggestLoading(true);
+      try {
+        const res = await fetch("/api/auto-categorize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: watchTitle, description: watchDescription ?? "" }),
+        });
+        const data = await res.json();
+        setAutoSuggest(data.suggestion ?? null);
+      } finally {
+        setSuggestLoading(false);
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [watchTitle, watchDescription]);
+
+  const bulkForm = useForm<z.infer<typeof bulkUploadSchema>>({
+    resolver: zodResolver(bulkUploadSchema),
+    defaultValues: { prefix: "", titles: "", description: "", videoUrls: "", type: "video", thumbnailUrl: "", isPremium: false, isPPV: false, watermarkEnabled: false },
+  });
+
+  const applyForm = useForm<z.infer<typeof applySchema>>({
+    resolver: zodResolver(applySchema),
+    defaultValues: { motivation: "", socialLinks: "", contentType: "" },
+  });
+
+  const onUploadSubmit = async (values: z.infer<typeof uploadSchema>) => {
+    if (requiresAdminApproval) return;
+    try {
+      // Lokal thumbnail seçildiyse önce yükle
+      let resolvedThumbUrl = values.thumbnailUrl || undefined;
+      if (thumbFile) {
+        const fd = new FormData();
+        fd.append("thumbnail", thumbFile, thumbFile.name);
+        const res = await fetch("/api/upload/thumbnail-image", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          resolvedThumbUrl = data.thumbnailUrl;
+        }
+      }
+
+      const payload: any = {
+        title: values.title,
+        description: values.description,
+        type: values.type,
+        videoUrl: values.videoUrl || undefined,
+        thumbnailUrl: resolvedThumbUrl,
+        isPremium: values.isPremium,
+        isPPV: values.isPPV,
+        ppvPrice: values.isPPV && values.ppvPrice ? parseFloat(values.ppvPrice) : undefined,
+        categoryId: selectedCategoryIds[0] || undefined,
+        categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
+        scheduledPublishAt: scheduleEnabled && scheduleValue ? new Date(scheduleValue).toISOString() : null,
+        saveToOwnPlayer: isCreator ? ownPlayerEnabled : true,
+        crossPostSiteIds: isCreator && crosspostEnabled && crosspostMode === "select" ? urlCrosspostSiteIds : undefined,
+        autoCrossPost: isCreator ? (crosspostEnabled && crosspostMode === "all") : false,
+      };
+      const res = await createVideoMutation.mutateAsync({ data: payload });
+      if (res) {
+        const videoPath = `/videos/${(res as any).uuid || (res as any).id}`;
+        const videoId = (res as any).id as number;
+        // Crosspost aktifse yönlendirme yapma, durumu göster
+        if (isCreator && crosspostEnabled) {
+          setCreatedVideoPath(videoPath);
+          setCrosspostVideoId(videoId);
+          startCrosspostPolling(videoId);
+        } else {
+          setLocation(videoPath);
+        }
+      }
+    } catch (e: any) {
+      console.error(e);
+      const msg =
+        e?.response?.data?.error ||
+        e?.data?.error ||
+        e?.message ||
+        "Video eklenemedi. Lütfen tekrar deneyin.";
+      toast.error(msg);
+    }
+  };
+
+  const onBulkUploadSubmit = async (values: z.infer<typeof bulkUploadSchema>) => {
+    setBulkMsg("");
+    const titles = values.titles.split("\n").map(v => v.trim()).filter(Boolean);
+    const videoUrls = values.videoUrls.split("\n").map(v => v.trim()).filter(Boolean);
+    if (!titles.length || !videoUrls.length) {
+      setBulkMsg("En az bir başlık ve bir video URL gerekli");
+      return;
+    }
+    if (titles.length !== videoUrls.length) {
+      setBulkMsg("Başlık ve URL sayısı eşleşmeli");
+      return;
+    }
+    if (bulkScheduleEnabled && !bulkScheduleStart) {
+      setBulkMsg("Zamanlanmış yayın için başlangıç tarihi seçmelisin");
+      return;
+    }
+    const intervalMs = parseFloat(bulkScheduleInterval || "24") *
+      (bulkScheduleUnit === "days" ? 86400000 : 3600000);
+    const startMs = bulkScheduleEnabled && bulkScheduleStart
+      ? new Date(bulkScheduleStart).getTime()
+      : null;
+    try {
+      for (let i = 0; i < titles.length; i++) {
+        const scheduledPublishAt = startMs !== null
+          ? new Date(startMs + i * intervalMs).toISOString()
+          : null;
+        await createVideoMutation.mutateAsync({
+          data: {
+            title: values.prefix ? `${values.prefix} ${titles[i]}` : titles[i],
+            description: values.description,
+            type: values.type,
+            videoUrl: videoUrls[i],
+            thumbnailUrl: values.thumbnailUrl || undefined,
+            isPremium: values.isPremium,
+            isPPV: values.isPPV,
+            ppvPrice: values.isPPV && values.ppvPrice ? parseFloat(values.ppvPrice) : undefined,
+            categoryId: selectedCategoryIds[0] || undefined,
+            categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
+            scheduledPublishAt,
+          },
+        });
+      }
+      setBulkMsg(
+        bulkScheduleEnabled
+          ? `✓ ${titles.length} video zamanlandı`
+          : "✓ Toplu yükleme tamamlandı"
+      );
+      bulkForm.reset();
+      setBulkScheduleEnabled(false);
+      setBulkScheduleStart("");
+      setBulkSchedulePreview([]);
+    } catch (e: any) {
+      setBulkMsg(e?.message || "Toplu yükleme başarısız");
+    }
+  };
+
+  // Önizleme listesini güncelle
+  const updateBulkPreview = (start: string, interval: string, unit: "hours" | "days", count: number) => {
+    if (!start || count < 1) { setBulkSchedulePreview([]); return; }
+    const intervalMs = parseFloat(interval || "24") * (unit === "days" ? 86400000 : 3600000);
+    const startMs = new Date(start).getTime();
+    const previews = Array.from({ length: Math.min(count, 10) }, (_, i) =>
+      new Date(startMs + i * intervalMs).toLocaleString("tr", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    );
+    setBulkSchedulePreview(previews);
+  };
+
+  const onApplySubmit = async (values: z.infer<typeof applySchema>) => {
+    setApplyLoading(true);
+    try {
+      const headers: any = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/creator-applications", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(values),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setApplication(data.application);
+        setApplyDone(true);
+      } else {
+        toast.error(data.error || "Başvuru gönderilemedi");
+      }
+    } finally {
+      setApplyLoading(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center h-96 gap-4">
+          <Lock className="h-12 w-12 text-[#555]" />
+          <p className="text-lg font-semibold">Giriş Gerekli</p>
+          <p className="text-[#888] text-sm">Video yüklemek için giriş yapman gerekiyor.</p>
+          <Button onClick={() => setLocation("/auth")}>Giriş Yap</Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // ── Yükleyici değil ───────────────────────────────────────────────
+  if (!isCreator) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 rounded-xl bg-primary/10">
+              <Upload className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Video Yükle</h1>
+              <p className="text-[#888] text-sm">Yükleyici hesabı gerekli</p>
+            </div>
+          </div>
+
+          {/* Mevcut başvuru durumu */}
+          {application && (
+            <div className={cn(
+              "rounded-xl border p-5 space-y-2",
+              application.status === "pending" ? "bg-yellow-900/10 border-yellow-800/40" :
+              application.status === "approved" ? "bg-green-900/10 border-green-800/40" :
+              "bg-red-900/10 border-red-800/40"
+            )}>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-sm">Başvuru Durumu</span>
+                <StatusBadge status={application.status} />
+              </div>
+              {application.reviewNote && (
+                <p className="text-sm text-[#aaa] bg-[#1a1a1a] rounded-lg p-3 mt-2">{application.reviewNote}</p>
+              )}
+              {application.status === "pending" && (
+                <p className="text-xs text-[#666]">Başvurun inceleniyor. Sonuç bildirilecek.</p>
+              )}
+              {application.status === "denied" && (
+                <p className="text-xs text-[#888]">Başvurun reddedildi. Yeni başvuru yapabilirsin.</p>
+              )}
+            </div>
+          )}
+
+          {/* Başvuru formu */}
+          {(!application || application.status === "denied") && !applyDone && (
+            <div className="bg-card border border-border p-6 rounded-xl space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-primary" /> Yükleyici Hesabı Başvurusu
+                </h2>
+                <p className="text-[#888] text-sm mt-1">
+                  Video yükleyebilmek için yükleyici hesabı başvurusu yapman gerekiyor.
+                  Başvurun admin tarafından onaylandığında video yükleyebileceksin.
+                </p>
+              </div>
+
+              <Form {...applyForm}>
+                <form onSubmit={applyForm.handleSubmit(onApplySubmit)} className="space-y-4">
+                  <FormField
+                    control={applyForm.control}
+                    name="contentType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>İçerik Türü</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Örn: Moda videoları, yaşam tarzı, dans..." {...field} className="bg-input/50" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={applyForm.control}
+                    name="motivation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Neden yükleyici olmak istiyorsun?</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Kendini ve içeriklerini anlat (en az 20 karakter)..."
+                            className="resize-none h-28 bg-input/50"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={applyForm.control}
+                    name="socialLinks"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sosyal medya linklerin <span className="text-[#666]">(isteğe bağlı)</span></FormLabel>
+                        <FormControl>
+                          <Input placeholder="Instagram, TikTok, YouTube linkin..." {...field} className="bg-input/50" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" disabled={applyLoading} className="w-full">
+                    {applyLoading ? "Gönderiliyor..." : "Başvuru Gönder"}
+                  </Button>
+                </form>
+              </Form>
+            </div>
+          )}
+
+          {applyDone && (
+            <div className="bg-green-900/10 border border-green-800/40 rounded-xl p-6 text-center space-y-2">
+              <CheckCircle className="h-10 w-10 text-green-400 mx-auto" />
+              <p className="font-semibold">Başvurun alındı!</p>
+              <p className="text-[#888] text-sm">Admin onayladıktan sonra video yükleyebileceksin.</p>
+            </div>
+          )}
+
+          {/* Bilgi kartları */}
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5 space-y-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <HelpCircle className="h-4 w-4 text-[#666]" /> Yükleyici hesabı nasıl çalışır?
+            </h3>
+            <ul className="space-y-2 text-sm text-[#888]">
+              <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span> Başvurun admin tarafından incelenir</li>
+              <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span> Onaylanırsan yükleyici hesabına geçersin</li>
+              <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span> Her yükleyiciye özel yükleme limitleri atanır</li>
+              <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span> Videolarını premium olarak işaretleyebilirsin</li>
+            </ul>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // ── Yükleyici — günlük limit kontrolü ────────────────────────────
+  const dailyMax = limits?.maxDailyUploads ?? 5;
+  const limitReached = uploadedToday >= dailyMax;
+  const [uploadMode, setUploadMode] = useState<"file" | "url">("file");
+
+  return (
+    <AppLayout>
+      <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2.5 rounded-xl bg-primary/10">
+            <Upload className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Video Yükle</h1>
+            <p className="text-[#888] text-sm">Yükleyici hesabı · @{user.username}</p>
+          </div>
+        </div>
+
+        {/* Limit göstergesi */}
+        {limits && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <LimitCard icon={Calendar} label="Bugün / Günlük" value={`${uploadedToday} / ${limits.maxDailyUploads}`} color={limitReached ? "text-red-400" : "text-primary"} />
+            <LimitCard icon={FileVideo} label="Maks. Boyut" value={`${limits.maxFileSizeMb >= 1024 ? `${(limits.maxFileSizeMb/1024).toFixed(1)} GB` : `${limits.maxFileSizeMb} MB`}`} />
+            <LimitCard icon={Clock} label="Maks. Süre" value={`${Math.floor(limits.maxDurationSec / 60)} dk`} />
+            <LimitCard icon={Crown} label="Çözünürlük" value={limits.maxResolution} color="text-yellow-400" />
+          </div>
+        )}
+
+        {limitReached && (
+          <div className="flex items-start gap-3 bg-red-900/10 border border-red-800/40 rounded-xl p-4">
+            <AlertTriangle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-400">Günlük limit doldu</p>
+              <p className="text-xs text-[#888] mt-0.5">Bugün {uploadedToday} video yükledin. Yarın tekrar deneyebilirsin.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Yükleme modu seçici */}
+        <div className="flex gap-2 bg-[#111] border border-[#1e1e1e] rounded-2xl p-1.5">
+          <button
+            onClick={() => setUploadMode("file")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all",
+              uploadMode === "file"
+                ? "bg-primary text-white shadow-[0_0_16px_rgba(168,85,247,0.3)]"
+                : "text-[#666] hover:text-[#aaa]"
+            )}
+          >
+            <FileVideo className="h-4 w-4" /> Dosyadan Yükle
+          </button>
+          <button
+            onClick={() => setUploadMode("url")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all",
+              uploadMode === "url"
+                ? "bg-primary text-white shadow-[0_0_16px_rgba(168,85,247,0.3)]"
+                : "text-[#666] hover:text-[#aaa]"
+            )}
+          >
+            <Link2 className="h-4 w-4" /> URL ile Ekle
+          </button>
+        </div>
+
+        {/* Dosyadan yükleme paneli */}
+        {uploadMode === "file" && !limitReached && (
+          <div className="bg-card border border-border p-6 md:p-8 rounded-xl">
+            <ChunkedUploadZone onDone={(videoId) => setLocation(`/videos/${videoId}`)} />
+          </div>
+        )}
+
+        <div className={cn(
+          uploadMode === "url" ? "block" : "hidden",
+          "bg-card border border-border p-6 md:p-8 rounded-xl",
+          limitReached && "opacity-50 pointer-events-none"
+        )}>
+          <div className="mb-6 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-sm">Toplu video ekleme</p>
+                <p className="text-xs text-[#777]">Pasif değil; her satıra bir başlık ve URL gir.</p>
+              </div>
+              <Button type="button" variant="outline" onClick={() => setBulkOpen(v => !v)} className="rounded-full">
+                {bulkOpen ? "Kapat" : "Aç"}
+              </Button>
+            </div>
+            {bulkOpen && (
+              <Form {...bulkForm}>
+                <form onSubmit={bulkForm.handleSubmit(onBulkUploadSubmit)} className="space-y-4">
+                  <FormField control={bulkForm.control} name="prefix" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ortak Ön Ek</FormLabel>
+                      <FormControl><Input placeholder="Örn: Seri 1 -" {...field} className="bg-input/50" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <FormField control={bulkForm.control} name="titles" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Başlıklar</FormLabel>
+                        <FormControl><Textarea placeholder={"Satır satır başlık\nSatır satır başlık"} className="h-32 resize-none bg-input/50" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={bulkForm.control} name="videoUrls" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Video URL’leri</FormLabel>
+                        <FormControl><Textarea placeholder={"Satır satır url\nSatır satır url"} className="h-32 resize-none bg-input/50" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <FormField control={bulkForm.control} name="description" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ortak Açıklama</FormLabel>
+                      <FormControl><Textarea placeholder="Tüm videolarda kullanılacak açıklama..." className="resize-none h-24 bg-input/50" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <FormField control={bulkForm.control} name="type" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Video Türü</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger className="bg-input/50"><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="video">Normal Video</SelectItem>
+                            <SelectItem value="short">Short</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={bulkForm.control} name="thumbnailUrl" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ortak Thumbnail URL</FormLabel>
+                        <FormControl><Input placeholder="https://..." {...field} className="bg-input/50" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <FormField control={bulkForm.control} name="isPremium" render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl><input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)} className="w-4 h-4 accent-primary" /></FormControl>
+                        <FormLabel className="text-sm font-normal">Premium</FormLabel>
+                      </FormItem>
+                    )} />
+                    <FormField control={bulkForm.control} name="isPPV" render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl><input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)} className="w-4 h-4 accent-primary" /></FormControl>
+                        <FormLabel className="text-sm font-normal">PPV</FormLabel>
+                      </FormItem>
+                    )} />
+                    <FormField control={bulkForm.control} name="watermarkEnabled" render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl><input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)} className="w-4 h-4 accent-primary" /></FormControl>
+                        <FormLabel className="text-sm font-normal">Filigran</FormLabel>
+                      </FormItem>
+                    )} />
+                  </div>
+                  {bulkForm.watch("isPPV") && (
+                    <FormField control={bulkForm.control} name="ppvPrice" render={({ field }) => (
+                      <FormItem className="max-w-xs">
+                        <FormLabel>PPV Fiyatı ($)</FormLabel>
+                        <FormControl><Input type="number" step="0.01" min="0.99" placeholder="4.99" {...field} className="bg-input/50" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
+                  {/* Toplu Zamanlanmış Yayın */}
+                  <div className="border border-[#2a2a2a] rounded-xl p-4 space-y-3 bg-[#111]">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" /> Aralıklı Zamanlama
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !bulkScheduleEnabled;
+                          setBulkScheduleEnabled(next);
+                          if (!next) { setBulkScheduleStart(""); setBulkSchedulePreview([]); }
+                        }}
+                        className={cn(
+                          "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                          bulkScheduleEnabled ? "bg-primary" : "bg-[#333]"
+                        )}
+                      >
+                        <span className={cn(
+                          "inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform",
+                          bulkScheduleEnabled ? "translate-x-4" : "translate-x-1"
+                        )} />
+                      </button>
+                    </div>
+
+                    {bulkScheduleEnabled && (
+                      <div className="space-y-3">
+                        {/* İlk video tarihi */}
+                        <div className="space-y-1">
+                          <label className="text-xs text-[#666]">1. videonun yayın tarihi</label>
+                          <input
+                            type="datetime-local"
+                            value={bulkScheduleStart}
+                            min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
+                            onChange={e => {
+                              setBulkScheduleStart(e.target.value);
+                              const count = bulkForm.getValues("titles").split("\n").filter(Boolean).length;
+                              updateBulkPreview(e.target.value, bulkScheduleInterval, bulkScheduleUnit, count);
+                            }}
+                            className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60 [color-scheme:dark]"
+                          />
+                        </div>
+
+                        {/* Aralık */}
+                        <div className="space-y-1">
+                          <label className="text-xs text-[#666]">Videolar arası aralık</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              max="720"
+                              value={bulkScheduleInterval}
+                              onChange={e => {
+                                setBulkScheduleInterval(e.target.value);
+                                const count = bulkForm.getValues("titles").split("\n").filter(Boolean).length;
+                                updateBulkPreview(bulkScheduleStart, e.target.value, bulkScheduleUnit, count);
+                              }}
+                              className="w-24 bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60"
+                            />
+                            <select
+                              value={bulkScheduleUnit}
+                              onChange={e => {
+                                const unit = e.target.value as "hours" | "days";
+                                setBulkScheduleUnit(unit);
+                                const count = bulkForm.getValues("titles").split("\n").filter(Boolean).length;
+                                updateBulkPreview(bulkScheduleStart, bulkScheduleInterval, unit, count);
+                              }}
+                              className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60"
+                            >
+                              <option value="hours">Saat</option>
+                              <option value="days">Gün</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Önizleme */}
+                        {bulkSchedulePreview.length > 0 && (
+                          <div className="rounded-xl bg-[#0d0d0d] border border-[#222] divide-y divide-[#1a1a1a] overflow-hidden">
+                            <p className="px-3 py-2 text-[11px] text-[#555] font-semibold uppercase tracking-wide">Yayın Takvimi Önizlemesi</p>
+                            {bulkSchedulePreview.map((date, i) => (
+                              <div key={i} className="flex items-center justify-between px-3 py-2">
+                                <span className="text-xs text-[#666]">Video {i + 1}</span>
+                                <span className="text-xs text-primary/80 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />{date}
+                                </span>
+                              </div>
+                            ))}
+                            {bulkSchedulePreview.length === 10 && (
+                              <p className="px-3 py-2 text-[11px] text-[#444] text-center">... ve devamı aynı aralıkta</p>
+                            )}
+                          </div>
+                        )}
+
+                        {!bulkScheduleStart && (
+                          <p className="text-xs text-[#555]">Başlangıç tarihi seçince tüm videolar için takvim oluşturulur.</p>
+                        )}
+                      </div>
+                    )}
+
+                    {!bulkScheduleEnabled && (
+                      <p className="text-xs text-[#555]">Aktif edilirse her video belirtilen aralıkla otomatik zamanlanır.</p>
+                    )}
+                  </div>
+
+                  <Button type="submit" variant="secondary" className="w-full">
+                    {bulkScheduleEnabled ? "Toplu Zamanla" : "Toplu Yükle"}
+                  </Button>
+                  {bulkMsg && <p className={cn("text-sm", bulkMsg.startsWith("✓") ? "text-green-400" : "text-[#888]")}>{bulkMsg}</p>}
+                </form>
+              </Form>
+            )}
+          </div>
+          <Form {...uploadForm}>
+            <form onSubmit={uploadForm.handleSubmit(onUploadSubmit)} className="space-y-6">
+              <FormField control={uploadForm.control} name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between mb-1">
+                      <FormLabel className="mb-0">Başlık</FormLabel>
+                      {similarityChecking && (
+                        <span className="text-[11px] text-[#555] flex items-center gap-1">
+                          <ScanSearch className="h-3 w-3 animate-pulse text-primary/60" /> Kontrol ediliyor...
+                        </span>
+                      )}
+                    </div>
+                    <FormControl><Input placeholder="Video başlığı..." {...field} className="bg-input/50" /></FormControl>
+                    {similarityWarning && (
+                      <div className={cn(
+                        "mt-1.5 flex items-start gap-2 rounded-lg px-3 py-2 text-[12px]",
+                        similarityWarning.level === "high"
+                          ? "bg-red-500/10 border border-red-500/30 text-red-400"
+                          : "bg-amber-500/10 border border-amber-500/30 text-amber-400"
+                      )}>
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <div>
+                          <span className="font-medium">Benzer içerik tespit edildi: </span>
+                          <span className="opacity-80">"{similarityWarning.matchTitle}" başlıklı video zaten mevcut. Başlığını özgünleştirmeyi düşün.</span>
+                        </div>
+                      </div>
+                    )}
+                    {similarityWarning && (
+                      <div className="mt-2 rounded-lg border border-[#2a2a2a] bg-[#171717] p-3 flex items-center justify-between gap-3">
+                        <div className="text-[12px] text-[#bbb]">
+                          Admin onayı olmadan bu video yüklenemez.
+                        </div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setAdminSimilarityApproved(true)}
+                        >
+                          Admin onayı verildi
+                        </Button>
+                      </div>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField control={uploadForm.control} name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Açıklama</FormLabel>
+                    <FormControl><Textarea placeholder="Videon hakkında..." className="resize-none h-28 bg-input/50" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Çoklu kategori seçimi + otomatik öneri */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm font-medium leading-none">Kategori</label>
+                  {suggestLoading && (
+                    <span className="text-[11px] text-[#555] flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 animate-pulse text-primary/60" /> Analiz ediliyor...
+                    </span>
+                  )}
+                  {!suggestLoading && autoSuggest && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const id = Number(autoSuggest.categoryId);
+                        if (!selectedCategoryIds.includes(id)) toggleCategory(id);
+                      }}
+                      className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 transition-all"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Öneri: <strong>{autoSuggest.name}</strong>
+                      <span className="text-[10px] opacity-70">({Math.round(autoSuggest.confidence * 100)}%)</span>
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((cat: any) => {
+                    const selected = selectedCategoryIds.includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => toggleCategory(cat.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                          selected
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-input/50 text-foreground/70 border-border hover:border-primary/50 hover:text-foreground"
+                        }`}
+                      >
+                        {cat.name}
+                      </button>
+                    );
+                  })}
+                  {categories.length === 0 && (
+                    <span className="text-xs text-[#555]">Kategori yükleniyor...</span>
+                  )}
+                </div>
+                {selectedCategoryIds.length > 0 && (
+                  <p className="text-[11px] text-primary/70">{selectedCategoryIds.length} kategori seçildi</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={uploadForm.control} name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Video Türü</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-input/50"><SelectValue /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {(limits?.allowedTypes ?? ["video","short"]).includes("video") && <SelectItem value="video">Normal Video</SelectItem>}
+                          {(limits?.allowedTypes ?? ["video","short"]).includes("short") && <SelectItem value="short">Short (Dikey)</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Thumbnail — URL veya lokal dosya */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-1.5">
+                    <ImageIcon className="h-3.5 w-3.5 text-[#777]" /> Thumbnail
+                  </label>
+
+                  {/* Önizleme */}
+                  {thumbPreview ? (
+                    <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#2a2a2a] bg-[#0d0d0d]">
+                      <img src={thumbPreview} alt="Thumbnail" className="w-full h-full object-contain" />
+                      <button
+                        type="button"
+                        onClick={clearThumb}
+                        className="absolute top-2 right-2 p-1.5 bg-black/70 rounded-lg text-white hover:bg-red-600/80 transition-all"
+                      >
+                        <XIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => thumbFileRef.current?.click()}
+                      className="w-full aspect-video rounded-xl border-2 border-dashed border-[#2a2a2a] bg-[#111] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all"
+                    >
+                      <ImageIcon className="h-6 w-6 text-[#444]" />
+                      <span className="text-xs text-[#555]">Tıkla veya sürükle — JPG, PNG, WebP</span>
+                    </div>
+                  )}
+
+                  <input
+                    ref={thumbFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) pickThumb(f); }}
+                  />
+
+                  {/* Ya da URL gir */}
+                  {!thumbPreview && (
+                    <FormField control={uploadForm.control} name="thumbnailUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="veya harici URL gir: https://..." {...field} className="bg-input/50 text-xs" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <FormField control={uploadForm.control} name="videoUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Video URL</FormLabel>
+                    <div className="flex gap-2 items-start">
+                      <FormControl className="flex-1">
+                        <Input placeholder="https://... veya cloud.mail.ru/public/..." {...field} className="bg-input/50" />
+                      </FormControl>
+                      {field.value && field.value.includes('cloud.mail.ru/public/') && (
+                        <CloudMailResolveButton
+                          url={field.value}
+                          token={token}
+                          onResolved={(resolvedUrl) => field.onChange(resolvedUrl)}
+                        />
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Premium / PPV — sadece izin verilmişse göster */}
+              {(limits?.premiumAllowed !== false || limits?.ppvAllowed !== false) && (
+                <div className="border border-[#2a2a2a] rounded-xl p-4 space-y-3 bg-[#1a1a1a]">
+                  <p className="text-sm font-semibold flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-yellow-400" /> Para Kazanma
+                  </p>
+                  <div className="flex gap-6 flex-wrap">
+                    {limits?.premiumAllowed !== false && (
+                      <FormField control={uploadForm.control} name="isPremium"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-2 space-y-0">
+                            <FormControl>
+                              <input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)}
+                                className="w-4 h-4 accent-primary cursor-pointer" />
+                            </FormControl>
+                            <FormLabel className="cursor-pointer font-normal text-sm">Premium (abonelik gerekli)</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                    {limits?.ppvAllowed !== false && (
+                      <FormField control={uploadForm.control} name="isPPV"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-2 space-y-0">
+                            <FormControl>
+                              <input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)}
+                                className="w-4 h-4 accent-primary cursor-pointer" />
+                            </FormControl>
+                            <FormLabel className="cursor-pointer font-normal text-sm">PPV (tek seferlik ödeme)</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+
+                  {uploadForm.watch("isPPV") && (
+                    <FormField control={uploadForm.control} name="ppvPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>PPV Fiyatı ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" min="0.99" placeholder="4.99" {...field} className="bg-input/50 max-w-[140px]" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Watermark */}
+              <div className="border border-[#2a2a2a] rounded-xl p-4 space-y-2 bg-[#1a1a1a]">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <Stamp className="h-4 w-4 text-blue-400" /> Filigran (Watermark)
+                </p>
+                <FormField control={uploadForm.control} name="watermarkEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)}
+                          className="w-4 h-4 accent-primary cursor-pointer" />
+                      </FormControl>
+                      <FormLabel className="cursor-pointer font-normal text-sm">Bu videoya site filigranı ekle</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <p className="text-xs text-[#555]">Filigran, videonun üzerinde yarı saydam site logosu/adı olarak görünür. Admin panelinden özelleştirilebilir.</p>
+              </div>
+
+              {/* Zamanlanmış Yayın */}
+              <div className="border border-[#2a2a2a] rounded-xl p-4 space-y-3 bg-[#1a1a1a]">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" /> Zamanlanmış Yayın
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setScheduleEnabled(v => !v); setScheduleValue(""); }}
+                    className={cn(
+                      "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                      scheduleEnabled ? "bg-primary" : "bg-[#333]"
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform",
+                      scheduleEnabled ? "translate-x-4" : "translate-x-1"
+                    )} />
+                  </button>
+                </div>
+                {scheduleEnabled ? (
+                  <div className="space-y-2">
+                    <input
+                      type="datetime-local"
+                      value={scheduleValue}
+                      min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
+                      onChange={e => setScheduleValue(e.target.value)}
+                      className="w-full bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/60 [color-scheme:dark]"
+                    />
+                    {scheduleValue && (
+                      <p className="text-xs text-primary/80 flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        {new Date(scheduleValue).toLocaleString("tr", { dateStyle: "long", timeStyle: "short" })} tarihinde yayınlanacak
+                      </p>
+                    )}
+                    {!scheduleValue && (
+                      <p className="text-xs text-[#555]">Tarih ve saat seçilmezse video hemen yayınlanır.</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#555]">Aktif edilirse video seçilen tarihte otomatik yayınlanır.</p>
+                )}
+              </div>
+
+              {/* Yayın Seçenekleri — creator ve admin */}
+              {isCreator && (
+                <div className="pt-4 border-t border-border space-y-2">
+                  <p className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-1">Yayın Seçenekleri</p>
+
+                  {/* Kendi Oynatıcı toggle */}
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#161616] border border-[#252525]">
+                    <div className="flex items-center gap-2.5">
+                      <Monitor className="h-4 w-4 text-primary shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium leading-tight">Kendi Oynatıcı</p>
+                        <p className="text-[11px] text-[#555] mt-0.5">
+                          {ownPlayerEnabled ? "Video URL sitede doğrudan oynatılır" : "Video URL saklanmaz, sadece CDN'ler kullanılır"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setOwnPlayerEnabled(v => !v)}
+                      className={cn(
+                        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
+                        ownPlayerEnabled ? "bg-primary" : "bg-[#333]"
+                      )}
+                    >
+                      <span className={cn(
+                        "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform",
+                        ownPlayerEnabled ? "translate-x-[18px]" : "translate-x-0.5"
+                      )} />
+                    </button>
+                  </div>
+
+                  {/* Crosspost toggle + sub-options */}
+                  <div className="rounded-xl bg-[#161616] border border-[#252525] overflow-hidden">
+                    <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <Share2 className="h-4 w-4 text-primary shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium leading-tight">Crosspost</p>
+                          <p className="text-[11px] text-[#555] mt-0.5">
+                            {crosspostEnabled
+                              ? crosspostMode === "all"
+                                ? `${configuredSites.filter(s => s.enabled).length} CDN sağlayıcısına gönder`
+                                : urlCrosspostSiteIds.length > 0
+                                  ? `${urlCrosspostSiteIds.length} seçili sağlayıcıya gönder`
+                                  : "Sağlayıcı seçin"
+                              : "CDN'lere gönderilmez"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCrosspostEnabled(v => !v)}
+                        className={cn(
+                          "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
+                          crosspostEnabled ? "bg-primary" : "bg-[#333]"
+                        )}
+                      >
+                        <span className={cn(
+                          "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform",
+                          crosspostEnabled ? "translate-x-[18px]" : "translate-x-0.5"
+                        )} />
+                      </button>
+                    </div>
+
+                    {/* Crosspost sub-options (açık ve henüz video oluşturulmadıysa) */}
+                    {crosspostEnabled && !crosspostVideoId && (
+                      <div className="px-3 pb-3 border-t border-[#1e1e1e] pt-2.5 space-y-2">
+                        <div className="flex gap-2">
+                          {(["all", "select"] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => setCrosspostMode(mode)}
+                              className={`flex-1 text-xs py-1.5 rounded-lg border transition-all font-medium ${
+                                crosspostMode === mode
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-[#aaa]"
+                              }`}
+                            >
+                              {mode === "all" ? "🔁 Tüme At" : "☑ Seçili Sitelere"}
+                            </button>
+                          ))}
+                        </div>
+                        {crosspostMode === "all" && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {configuredSites.filter(s => s.enabled).length === 0
+                              ? <p className="text-xs text-[#666]">Henüz aktif sağlayıcı yok.</p>
+                              : configuredSites.filter(s => s.enabled).map((site: any) => (
+                                <span key={site.id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium bg-[#1a1a1a] border border-[#2a2a2a] text-[#aaa]">
+                                  <span className="w-4 h-4 rounded flex items-center justify-center text-white text-[9px] font-bold shrink-0" style={{ backgroundColor: site.providerColor || '#555' }}>
+                                    {(site.providerLetter || site.name?.substring(0, 2) || '?').substring(0, 2)}
+                                  </span>
+                                  {site.name}
+                                </span>
+                              ))
+                            }
+                            {configuredSites.filter(s => !s.enabled).length > 0 && (
+                              <span className="text-[11px] text-[#444] self-center">+{configuredSites.filter(s => !s.enabled).length} devre dışı</span>
+                            )}
+                          </div>
+                        )}
+                        {crosspostMode === "select" && (
+                          <ProviderSelector
+                            isAdult={false}
+                            selectedIds={urlCrosspostSiteIds}
+                            onChange={setUrlCrosspostSiteIds}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Video oluşturulduktan sonra: durum paneli */}
+                  {crosspostVideoId ? (
+                    <div className="space-y-3">
+                      {/* ── Özet satırı ── */}
+                      {(() => {
+                        const total   = crosspostJobs.length;
+                        const success = crosspostJobs.filter(j => j.status === "success").length;
+                        const failed  = crosspostJobs.filter(j => j.status === "failed").length;
+                        const running = crosspostJobs.filter(j => j.status === "running" || j.status === "pending").length;
+                        const done    = !crosspostPolling && total > 0;
+                        return (
+                          <div className="space-y-2">
+                            {/* Başlık + Videoya Git */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                {crosspostPolling
+                                  ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+                                  : failed > 0 && success === 0
+                                    ? <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                                    : failed > 0
+                                      ? <AlertTriangle className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                                      : <CheckCircle className="h-3.5 w-3.5 text-green-400 shrink-0" />
+                                }
+                                <span className="text-xs font-medium text-[#ccc]">
+                                  {crosspostPolling
+                                    ? "Platformlara gönderiliyor…"
+                                    : failed > 0 && success === 0
+                                      ? "Tüm gönderimler başarısız"
+                                      : failed > 0
+                                        ? "Bazı gönderimler başarısız"
+                                        : "Tüm gönderimler tamamlandı"}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLocation(createdVideoPath)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors shrink-0"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Videoya Git
+                              </button>
+                            </div>
+
+                            {/* Progress bar */}
+                            {total > 0 && (
+                              <div className="w-full h-1.5 rounded-full bg-[#222] overflow-hidden">
+                                <div
+                                  className={cn(
+                                    "h-full rounded-full transition-all duration-500",
+                                    failed > 0 && success === 0 ? "bg-red-500" :
+                                    failed > 0 ? "bg-yellow-500" : "bg-green-500"
+                                  )}
+                                  style={{ width: `${Math.round(((success + failed) / total) * 100)}%` }}
+                                />
+                              </div>
+                            )}
+
+                            {/* Sayaçlar */}
+                            {total > 0 && (
+                              <div className="flex items-center gap-3 text-[11px]">
+                                {success > 0 && <span className="flex items-center gap-1 text-green-400"><CheckCircle className="h-3 w-3" />{success} başarılı</span>}
+                                {failed  > 0 && <span className="flex items-center gap-1 text-red-400"><XCircle className="h-3 w-3" />{failed} hata</span>}
+                                {running > 0 && <span className="flex items-center gap-1 text-[#666]"><Clock className="h-3 w-3" />{running} bekliyor</span>}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* ── Job'lar oluşturuluyor ── */}
+                      {crosspostJobs.length === 0 && crosspostPolling && (
+                        <div className="flex items-center gap-2 text-xs text-[#555] py-1">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Gönderim görevleri oluşturuluyor…
+                        </div>
+                      )}
+
+                      {/* ── Platform kartları ── */}
+                      <div className="space-y-2">
+                        {crosspostJobs.map((job: any) => {
+                          const isPending = job.status === "pending";
+                          const isRunning = job.status === "running";
+                          const isSuccess = job.status === "success";
+                          const isFailed  = job.status === "failed";
+                          const isSkipped = job.status === "skipped";
+                          const errMsg = job.responseText || job.error || "";
+                          return (
+                            <div key={job.id} className={cn(
+                              "rounded-xl border overflow-hidden text-xs transition-colors",
+                              isSuccess ? "border-green-800/40" :
+                              isFailed  ? "border-red-700/50" :
+                              isRunning ? "border-blue-800/40" :
+                              "border-[#2a2a2a]"
+                            )}>
+                              {/* Kart başlığı */}
+                              <div className={cn(
+                                "flex items-center gap-2.5 px-3 py-2.5",
+                                isSuccess ? "bg-green-900/10" :
+                                isFailed  ? "bg-red-900/15" :
+                                isRunning ? "bg-blue-900/10" :
+                                "bg-[#1a1a1a]"
+                              )}>
+                                {/* İkon */}
+                                <div className="shrink-0">
+                                  {isRunning ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> :
+                                   isSuccess  ? <CheckCircle className="h-4 w-4 text-green-400" /> :
+                                   isFailed   ? <XCircle className="h-4 w-4 text-red-400" /> :
+                                   isSkipped  ? <RefreshCw className="h-4 w-4 text-[#444]" /> :
+                                   <Clock className="h-4 w-4 text-[#555]" />}
+                                </div>
+                                {/* Platform adı */}
+                                <span className={cn(
+                                  "font-semibold flex-1",
+                                  isSuccess ? "text-green-300" :
+                                  isFailed  ? "text-red-300" :
+                                  isRunning ? "text-blue-300" :
+                                  "text-[#888]"
+                                )}>{job.siteName}</span>
+                                {/* Durum badge */}
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0",
+                                  isSuccess ? "bg-green-900/40 text-green-400" :
+                                  isFailed  ? "bg-red-900/40 text-red-400" :
+                                  isRunning ? "bg-blue-900/40 text-blue-400" :
+                                  isSkipped ? "bg-[#222] text-[#444]" :
+                                  "bg-[#222] text-[#555]"
+                                )}>
+                                  {isSuccess ? "✓ Gönderildi" :
+                                   isFailed  ? "✗ Başarısız" :
+                                   isRunning ? "⟳ Gönderiliyor" :
+                                   isSkipped ? "— Atlandı" :
+                                   "⏳ Bekliyor"}
+                                </span>
+                                {/* Link */}
+                                {isSuccess && job.remoteUrl && (
+                                  <a href={job.remoteUrl} target="_blank" rel="noreferrer"
+                                    className="flex items-center gap-1 text-primary/70 hover:text-primary transition-colors shrink-0 ml-1">
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                                {/* Deneme sayısı */}
+                                {job.attempts > 1 && (
+                                  <span className="text-[10px] text-[#444] shrink-0">{job.attempts}. deneme</span>
+                                )}
+                              </div>
+
+                              {/* ── Hata kutusu ── */}
+                              {isFailed && (
+                                <div className="border-t border-red-900/40 bg-red-950/20 px-3 py-2.5 space-y-2">
+                                  {errMsg ? (
+                                    <div className="flex items-start gap-2">
+                                      <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
+                                      <p className="text-[11px] text-red-300 leading-snug break-all">{errMsg}</p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-[11px] text-red-400/70">Bilinmeyen hata oluştu.</p>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        await fetch(`/api/cross-post/dispatch`, {
+                                          method: "POST",
+                                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                          body: JSON.stringify({ videoId: crosspostVideoId, siteIds: [job.siteId] }),
+                                        });
+                                        startCrosspostPolling(crosspostVideoId!);
+                                      } catch {}
+                                    }}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 hover:text-red-300 text-[11px] font-semibold transition-colors"
+                                  >
+                                    <RefreshCw className="h-3 w-3" /> Yeniden Dene
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-border flex justify-end">
+                <Button type="submit" disabled={createVideoMutation.isPending || limitReached || requiresAdminApproval || (scheduleEnabled && !scheduleValue)}>
+                  {createVideoMutation.isPending
+                    ? "Kaydediliyor..."
+                    : requiresAdminApproval
+                    ? "Admin Onayı Gerekli"
+                    : scheduleEnabled && scheduleValue
+                    ? "Zamanla"
+                    : isAdmin && crosspostEnabled && crosspostMode === "all"
+                    ? "Yayınla + Tüme Crosspost"
+                    : isAdmin && crosspostEnabled && crosspostMode === "select" && urlCrosspostSiteIds.length > 0
+                    ? `Yayınla + ${urlCrosspostSiteIds.length} Siteye Crosspost`
+                    : "Videoyu Yayınla"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
