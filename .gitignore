@@ -1,59 +1,86 @@
-# Python
+# ══════════════════════════════════════════════════════════════════════════════
+#  Hotpulse — .gitignore
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 .Python
 *.egg-info/
-dist/
 build/
 .eggs/
 
-# Virtual environments (NOT used on Replit — handled by .pythonlibs)
+# ── Sanal ortam ───────────────────────────────────────────────────────────────
 venv/
 env/
 .venv/
 
-# Environment variables
+# ── Ortam değişkenleri ────────────────────────────────────────────────────────
 .env
 .env.*
 !.env.example
 
-# Node / pnpm
+# ── Node / pnpm ───────────────────────────────────────────────────────────────
 node_modules/
 .pnpm-store/
-
-# Build outputs
 dist/
 *.tsbuildinfo
 
-# Derlenmiş frontend + collectstatic çıktısı
-# Sadece Django admin/RF ignore edilir; frontend asset'leri Windows VDS için git'te tutulur
+# ── Media dosyaları (kullanıcı yüklemeleri — asla git'e girmesin) ─────────────
+# VDS'de backend/media/ altında tutulur, git ile senkronize edilmez.
+media/
+backend/media/*
+!backend/media/.gitkeep
+!backend/media/images/.gitkeep
+!backend/media/thumbnails/.gitkeep
+!backend/media/uploads/.gitkeep
+!backend/media/_chunks/.gitkeep
+
+# ── Derlenmiş static dosyalar ─────────────────────────────────────────────────
+# Django admin ve RF static'leri collectstatic ile gelir, git'te tutulmaz.
 backend/static/admin/
 backend/static/rest_framework/
+# Frontend build output (backend/static/assets/) Windows VDS için git'te tutulur.
+# Bu satırı uncomment etme.
 
-# IDE
+# ── Build / deploy artifact dosyaları ────────────────────────────────────────
+backend/.migration_done
+backend/.static_done
+.migration_done
+.static_done
+.static_hash
+
+# ── Duplike klasörler (hatalı tarball çıkarma sonucu oluşur) ─────────────────
+# update.sh tarball'ı scripts/ veya repo kökü dışında çalıştırılırsa
+# bu klasörler oluşabilir — git'e asla girmesin.
+scripts/backend/
+scripts/scripts/
+
+# ── Backup arşivleri ──────────────────────────────────────────────────────────
+scripts/backups/*.tar.gz
+scripts/backups/*.json
+backups/
+
+# ── Log ve paste dosyaları ────────────────────────────────────────────────────
+attached_assets/
+*.log
+logs/
+
+# ── IDE ve OS ─────────────────────────────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-logs/
-
-# Media uploads — tüm kullanıcı dosyaları (VDS'de üretilir, git'e girmez)
-backend/media/*
-!backend/media/.gitkeep
-
-# Replit agent memory (internal, not for source control)
+# ── Replit iç dosyaları ───────────────────────────────────────────────────────
 .agents/memory/
+.local/
+.cache/
 
-# NOTE: backend/db.sqlite3 is intentionally NOT ignored.
-# The database file is kept alongside code so agents and team members
-# can use the same dev database without re-running seed_data.
-# Do NOT add db.sqlite3 to this file.
+# ── Veritabanı ────────────────────────────────────────────────────────────────
+# db.sqlite3 intentionally tracked — dev ortamı için ortak DB.
+# Üretimde PostgreSQL kullanılır (DATABASE_URL env var).

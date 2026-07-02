@@ -2,15 +2,20 @@
 chcp 65001 >nul
 echo Hotpulse sunucusu baslatiliyor...
 
-:: Scriptin bulunduğu klasörden backend'e geç
-cd /d "%~dp0backend"
+:: Repo kökünden backend'e geç
+cd /d "%~dp0..\..\backend"
+
+if not exist manage.py (
+    echo [HATA] backend klasoru bulunamadi. Scripti proje koku ile ayni surucude calistir.
+    pause
+    exit /b 1
+)
 
 :: ── CPU sayısına göre thread hesapla ──────────────────────────────────────
 :: Formül: CPU * 4  (I/O ağırlıklı Django için iyi denge)
 :: Min 8, max 64
 for /f "tokens=2 delims==" %%i in ('wmic cpu get NumberOfLogicalProcessors /value ^| find "="') do set CPU_COUNT=%%i
 set CPU_COUNT=%CPU_COUNT: =%
-
 set /a THREADS=%CPU_COUNT% * 4
 if %THREADS% LSS 8  set THREADS=8
 if %THREADS% GTR 64 set THREADS=64
@@ -19,13 +24,7 @@ echo CPU: %CPU_COUNT% core  ^|  Waitress thread sayisi: %THREADS%
 echo.
 
 :: ── Waitress başlat ────────────────────────────────────────────────────────
-:: --asyncore-use-poll : Windows'ta select() yerine poll() — daha verimli
-:: --connection-limit  : eş zamanlı bağlantı limiti
-:: --channel-timeout   : boşta kalan bağlantıyı kes (saniye)
-:: --cleanup-interval  : kapalı bağlantıları temizle (saniye)
-:: --backlog           : TCP bağlantı kuyruğu
-:: GÜVENLIK: Sadece localhost'tan dinle — nginx zaten arkada proxy yapıyor.
-:: 0.0.0.0 kullanılırsa port 8000 internete açık kalır ve bot saldırılarına maruz kalır.
+:: GÜVENLIK: 127.0.0.1 — sadece nginx ulaşsın, port 8000 dışarıya kapalı
 python -m waitress ^
     --host=127.0.0.1 ^
     --port=8000 ^
