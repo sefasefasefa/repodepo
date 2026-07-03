@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "python-3.11", "web", "bash"]
+modules = ["nodejs-20", "python-3.11", "web", "bash", "postgresql-16"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -35,9 +35,18 @@ waitForPort = 5000
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 22983
+externalPort = 3000
+
 [deployment]
 deploymentTarget = "autoscale"
 run = ["bash", "-c", "cd backend && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]
 build = ["bash", "-c", "cd backend && pip install -r requirements.txt && pnpm install && pnpm --filter @workspace/streamvid run build && cp -r artifacts/streamvid/dist/public/. static/ && python manage.py migrate --run-syncdb && python manage.py collectstatic --noinput"]
 
 [userenv]
+
+[userenv.shared]
+ALLOWED_HOSTS = "*"
+CSRF_TRUSTED_ORIGINS = "https://*.replit.dev,https://*.repl.co,https://*.replit.app,http://localhost:8000,http://localhost:5000"
+DEBUG = "True"
