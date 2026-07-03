@@ -105,6 +105,7 @@ PYEOF
     echo "Waitress sunucusu baslatiliyor (port 8000)..."
 
     exec python -m waitress \
+        --host=127.0.0.1 \
         --port=8000 \
         --threads="$THREADS" \
         --connection-limit="$CONNECTIONS" \
