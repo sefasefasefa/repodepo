@@ -1,4 +1,5 @@
 - [Dev Database & Credentials](dev-db-credentials.md) — db.sqlite3 is in backend/ alongside code; dev credentials listed here; run seed_data --env=dev --force to repopulate.
+- [Project Critical Rules](project-rules.md) — python3.11 required, role-based admin auth, media/ must stay in git, known past git disasters.
 - [Subscription Plans](subscription-plans.md) — 8 plans total: 3 standard + 5 adult-specific (🔞); stored in subscription_plans table; SubscriptionPlan model in apps/subscriptions/models.py.
 - [Stack Overview](stack-overview.md) — Django 4.2 backend :8000, React/Vite frontend :5000; admin auth uses role field not is_staff; token via useAuth() as any.
 - [Windows Git GC Fix](windows-git-gc-fix.md) — update.sh uses tarball download instead of git fetch on Windows to avoid Defender lock + CONIN$ prompt.
