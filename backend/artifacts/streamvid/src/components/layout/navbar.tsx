@@ -231,7 +231,7 @@ export function Navbar() {
               )}
 
               {/* Upload */}
-              {uploadState !== "disabled" && (
+              {uploadState !== "disabled" && user && (user.role === "admin" || user.role === "creator" || user.role === "moderator") && (
                 <Button
                   variant="ghost"
                   size="icon"
