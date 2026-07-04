@@ -98,7 +98,7 @@ export function ChunkedUploadZone({ onDone }: Props) {
 
   const [meta, setMeta] = useState<UploadMeta & { title: string; description: string; crosspostMode: "all" | "select" | "none" }>({
     title: "", description: "",
-    isPremium: false, isAdult: false, type: "video",
+    isPremium: false, isPPV: false, watermarkEnabled: false, isAdult: false, type: "video",
     categoryId: undefined, scheduledPublishAt: null,
     crosspostSiteIds: [], crosspostMode: "all",
   });
@@ -673,7 +673,7 @@ export function ChunkedUploadZone({ onDone }: Props) {
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -691,6 +691,15 @@ export function ChunkedUploadZone({ onDone }: Props) {
                   className="accent-primary h-4 w-4 rounded"
                 />
                 <span className="text-sm text-[#aaa]">18+</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={meta.watermarkEnabled}
+                  onChange={(e) => setMeta((m) => ({ ...m, watermarkEnabled: e.target.checked }))}
+                  className="accent-primary h-4 w-4 rounded"
+                />
+                <span className="text-sm text-[#aaa]">Filigran</span>
               </label>
             </div>
 

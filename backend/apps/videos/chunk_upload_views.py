@@ -177,6 +177,8 @@ def chunk_complete(request):
     title = raw_title.rsplit('.', 1)[0] if '.' in raw_title and not request.data.get('title') else raw_title
 
     is_premium = str(request.data.get('isPremium', 'false')).lower() in ('true', '1', 'yes')
+    is_ppv = str(request.data.get('isPPV', 'false')).lower() in ('true', '1', 'yes')
+    watermark_enabled = str(request.data.get('watermarkEnabled', 'false')).lower() in ('true', '1', 'yes')
     video_type = request.data.get('type', 'video')
     category_id = request.data.get('categoryId') or None
 
@@ -202,6 +204,8 @@ def chunk_complete(request):
         is_published=not bool(scheduled_dt),
         scheduled_publish_at=scheduled_dt,
         is_premium=is_premium,
+        is_ppv=is_ppv,
+        watermark_enabled=watermark_enabled,
         type=video_type,
     )
     User.objects.filter(id=request.user.id).update(video_count=F('video_count') + 1)
