@@ -137,16 +137,150 @@ if [ "$OS" = "windows" ]; then
     fi
 fi
 
+# ══════════════════════════════════════════════════════════════════════
+# [WIN-FIX] Windows: Bozuk ayarları otomatik tespit et ve düzelt
+# ══════════════════════════════════════════════════════════════════════
+if [ "$OS" = "windows" ]; then
+    echo ""
+    echo "=== [WIN-FIX] Sistem kontrolu ve otomatik duzeltme ==="
+
+    # ── FIX-1: Windows Firewall — 80, 443, 8000 portlarini ac ────────
+    echo "   [FIX-1] Firewall kurallari kontrol ediliyor..."
+    for PORT in 80 443 8000; do
+        RULE_EXISTS=$(netsh advfirewall firewall show rule name="hotpulse-${PORT}" 2>/dev/null | grep -c "Rule Name" || true)
+        if [ "$RULE_EXISTS" = "0" ]; then
+            netsh advfirewall firewall add rule \
+                name="hotpulse-${PORT}" \
+                dir=in action=allow protocol=TCP \
+                localport=${PORT} enable=yes profile=any 2>/dev/null \
+                && echo "      Port ${PORT} kurali eklendi." \
+                || echo "      [UYARI] Port ${PORT} kurali eklenemedi."
+        else
+            echo "      Port ${PORT} kurali zaten var. OK"
+        fi
+    done
+
+    # ── FIX-2: Zombie nginx process'leri temizle ──────────────────────
+    echo "   [FIX-2] Eski nginx process'leri temizleniyor..."
+    NGINX_COUNT=$(tasklist 2>/dev/null | grep -ci "nginx.exe" || true)
+    if [ "$NGINX_COUNT" -gt 4 ] 2>/dev/null; then
+        echo "      $NGINX_COUNT nginx process tespit edildi — hepsi durduruluyor..."
+        taskkill //F //IM nginx.exe 2>/dev/null || true
+        sleep 1
+        echo "      Nginx temizlendi."
+    else
+        echo "      Nginx process sayisi normal ($NGINX_COUNT). OK"
+    fi
+
+    # ── FIX-3: Nginx cache dizini ─────────────────────────────────────
+    echo "   [FIX-3] Nginx cache dizini kontrol ediliyor..."
+    if [ -n "$NGINX_DIR" ] && [ ! -d "${NGINX_DIR}/cache" ]; then
+        mkdir -p "${NGINX_DIR}/cache" 2>/dev/null \
+            && echo "      Cache dizini olusturuldu: ${NGINX_DIR}/cache" \
+            || echo "      [UYARI] Cache dizini olusturulamadi."
+    else
+        mkdir -p "C:/nginx/cache" 2>/dev/null || true
+        echo "      Cache dizini mevcut. OK"
+    fi
+
+    # ── FIX-4: SSL sertifika dosyalari var mi ────────────────────────
+    echo "   [FIX-4] SSL sertifika dosyalari kontrol ediliyor..."
+    CERT_FILE="${NGINX_DIR}/conf/cloudflare-cert.pem"
+    KEY_FILE="${NGINX_DIR}/conf/cloudflare-key.pem"
+    CERT_OK=true
+    if [ ! -f "$CERT_FILE" ] || [ ! -s "$CERT_FILE" ]; then
+        echo "      [UYARI] SSL sertifika dosyasi eksik: $CERT_FILE"
+        echo "      Cloudflare Dashboard > SSL/TLS > Origin Server > Create Certificate"
+        CERT_OK=false
+    else
+        echo "      SSL sertifika mevcut. OK"
+    fi
+    if [ ! -f "$KEY_FILE" ] || [ ! -s "$KEY_FILE" ]; then
+        echo "      [UYARI] SSL anahtar dosyasi eksik: $KEY_FILE"
+        CERT_OK=false
+    else
+        echo "      SSL anahtar mevcut. OK"
+    fi
+
+    # ── FIX-5: Nginx config syntax kontrolu ──────────────────────────
+    echo "   [FIX-5] Nginx config syntax kontrol ediliyor..."
+    if [ -n "$NGINX_WIN" ]; then
+        if (cd "$NGINX_DIR" && "$NGINX_WIN" -t 2>/dev/null); then
+            echo "      Nginx config gecerli. OK"
+        else
+            echo "      [UYARI] Nginx config hatali — repo'dan kopyalaniyor..."
+            REPO_NGINX_CONF="$(cd "$(dirname "$0")" && pwd)/../infra/nginx/nginx-windows.conf"
+            if [ -f "$REPO_NGINX_CONF" ]; then
+                cp "$REPO_NGINX_CONF" "${NGINX_DIR}/conf/nginx.conf" 2>/dev/null \
+                    && echo "      Nginx config yenilendi." \
+                    || echo "      [HATA] Config kopyalanamadi!"
+            fi
+        fi
+    fi
+
+    # ── FIX-6: Port catisma kontrolu ──────────────────────────────────
+    echo "   [FIX-6] Port 443 ve 80 kontrolu..."
+    PORT443=$(netstat -ano 2>/dev/null | grep -c "0.0.0.0:443" || true)
+    PORT80=$(netstat -ano 2>/dev/null | grep -c "0.0.0.0:80" || true)
+    if [ "$PORT443" = "0" ] && [ "$PORT80" = "0" ]; then
+        echo "      [UYARI] Nginx hicbir portu dinlemiyor — baslatilacak."
+    else
+        echo "      Port 80: ${PORT80} listener, Port 443: ${PORT443} listener. OK"
+    fi
+
+    # ── FIX-7: backend/.env ALLOWED_HOSTS kontrolu ───────────────────
+    echo "   [FIX-7] ALLOWED_HOSTS kontrolu..."
+    ENV_FILE="backend/.env"
+    if [ -f "$ENV_FILE" ]; then
+        AH_LINE=$(grep "^ALLOWED_HOSTS=" "$ENV_FILE" 2>/dev/null || true)
+        if [ -n "$AH_LINE" ]; then
+            AH_VAL=$(echo "$AH_LINE" | cut -d= -f2)
+            # waitress.invalid ve 127.0.0.1 yoksa ekle
+            CHANGED=false
+            if ! echo "$AH_VAL" | grep -q "waitress.invalid"; then
+                AH_VAL="${AH_VAL},waitress.invalid"
+                CHANGED=true
+            fi
+            if ! echo "$AH_VAL" | grep -q "127.0.0.1" && ! echo "$AH_VAL" | grep -q "\*"; then
+                AH_VAL="${AH_VAL},127.0.0.1"
+                CHANGED=true
+            fi
+            if [ "$CHANGED" = "true" ]; then
+                # Satiri guncelle (Windows-uyumlu sed)
+                python - <<PYEOF 2>/dev/null
+import re
+with open("$ENV_FILE", encoding="utf-8") as f:
+    content = f.read()
+new_content = re.sub(r'^ALLOWED_HOSTS=.*', 'ALLOWED_HOSTS=$AH_VAL', content, flags=re.MULTILINE)
+with open("$ENV_FILE", "w", encoding="utf-8") as f:
+    f.write(new_content)
+print("      ALLOWED_HOSTS guncellendi.")
+PYEOF
+            else
+                echo "      ALLOWED_HOSTS zaten dogru. OK"
+            fi
+        else
+            echo "      ALLOWED_HOSTS satiri bulunamadi — varsayilan kullanilacak (*)."
+        fi
+    else
+        echo "      .env dosyasi yok — ayarlar ortam degiskenlerinden okunacak."
+    fi
+
+    echo "=== [WIN-FIX] Kontrol tamamlandi ==="
+    echo ""
+fi
+# ══════════════════════════════════════════════════════════════════════
+
 # ── 1. Sunucuyu durdur ──────────────────────────────────────────────
 echo "[1/6] Sunucu durduruluyor..."
 if [ "$OS" = "windows" ]; then
     taskkill //F //IM python.exe 2>/dev/null || true
     taskkill //F //IM waitress-serve.exe 2>/dev/null || true
-    # Nginx'i de durdur (graceful)
+    # Nginx'i de durdur (tum instance'lari temizle)
+    taskkill //F //IM nginx.exe 2>/dev/null || true
+    sleep 1
     if [ -n "$NGINX_WIN" ]; then
-        echo "   Nginx durduruluyor..."
-        "$NGINX_WIN" -p "$NGINX_DIR" -s quit 2>/dev/null || \
-        taskkill //F //IM nginx.exe 2>/dev/null || true
+        echo "   Tum nginx process'leri durduruldu."
     fi
 else
     # Systemd servisi varsa onu durdur, yoksa direkt pkill
@@ -488,21 +622,30 @@ else
         # Proxy cache dizini yoksa oluştur
         mkdir -p "C:/nginx/cache" 2>/dev/null || true
 
-        # Çalışıyor mu? Reload, değilse başlat
-        if tasklist 2>/dev/null | grep -qi "nginx.exe"; then
-            echo "   Nginx yeniden yukleniyor (reload)..."
-            "$NGINX_WIN" -p "$NGINX_DIR" -s reload 2>/dev/null && \
-                echo "   Nginx yeniden yuklendi." || \
-                echo "   [UYARI] Nginx reload basarisiz, manuel baslatmaniz gerekebilir."
-        else
-            echo "   Nginx baslatiliyor: $NGINX_WIN"
-            (cd "$NGINX_DIR" && "$NGINX_WIN" -p "$NGINX_DIR") &
+        # Her seferinde temiz baslatma: once durdur, sonra basla
+        taskkill //F //IM nginx.exe 2>/dev/null || true
+        sleep 1
+        echo "   Nginx baslatiliyor: $NGINX_WIN"
+        (cd "$NGINX_DIR" && "$NGINX_WIN") &
+        sleep 2
+        NGINX_RUNNING=$(tasklist 2>/dev/null | grep -ci "nginx.exe" || true)
+        if [ "$NGINX_RUNNING" -gt 0 ] 2>/dev/null; then
+            echo "   Nginx calisiyor ($NGINX_RUNNING process). OK"
+            # Port 443 dinleniyor mu?
             sleep 1
-            if tasklist 2>/dev/null | grep -qi "nginx.exe"; then
-                echo "   Nginx calisiyor."
-            else
-                echo "   [UYARI] Nginx baslatılamadı — manuel olarak baslatın."
+            P443=$(netstat -ano 2>/dev/null | grep -c ":443 " || true)
+            P80=$(netstat -ano 2>/dev/null | grep -c ":80 " || true)
+            echo "   Port 80:  ${P80} listener"
+            echo "   Port 443: ${P443} listener"
+            if [ "$P443" = "0" ]; then
+                echo "   [UYARI] Port 443 dinlenmiyor! SSL sertifika dosyalarini kontrol edin:"
+                echo "          ${NGINX_DIR}/conf/cloudflare-cert.pem"
+                echo "          ${NGINX_DIR}/conf/cloudflare-key.pem"
+                echo "   Nginx error log: ${NGINX_DIR}/logs/error.log"
             fi
+        else
+            echo "   [HATA] Nginx baslatılamadı!"
+            echo "   Hata icin bak: ${NGINX_DIR}/logs/error.log"
         fi
     else
         echo "   [BILGI] Nginx bulunamadı (C:\\nginx\\nginx.exe yok)."
