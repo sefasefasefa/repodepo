@@ -163,7 +163,7 @@ def enrich_video(v, user=None):
 
 
 def slim_video_for_card(v):
-    """Ana sayfa kartı için minimum alan seti — description/videoUrl/hlsUrl gönderilmez."""
+    """Ana sayfa kartı için minimum alan seti."""
     cat = v.category
     creator = v.creator
     return {
@@ -171,6 +171,8 @@ def slim_video_for_card(v):
         'slug': v.slug or None,
         'title': v.title,
         'thumbnailUrl': v.thumbnail_url,
+        'videoUrl': v.video_url,
+        'hlsUrl': v.hls_url,
         'duration': v.duration,
         'viewCount': v.view_count,
         'likeCount': v.like_count,
