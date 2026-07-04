@@ -74,8 +74,8 @@ export function TokenBuyModal({ onClose, onPurchased }: Props) {
   const selectedPkg = packages.find(p => p.id === selected);
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#242424]">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-yellow-500/15 rounded-lg">
@@ -89,7 +89,7 @@ export function TokenBuyModal({ onClose, onPurchased }: Props) {
         </div>
 
         {success ? (
-          <div className="px-5 py-12 text-center space-y-3">
+          <div className="px-5 py-12 text-center space-y-3 overflow-y-auto">
             <div className="w-16 h-16 bg-yellow-500/15 border-2 border-yellow-500/30 rounded-full flex items-center justify-center mx-auto">
               <Check className="h-7 w-7 text-yellow-400" />
             </div>
@@ -99,7 +99,7 @@ export function TokenBuyModal({ onClose, onPurchased }: Props) {
             </p>
           </div>
         ) : (
-          <div className="px-5 py-5 space-y-4">
+          <div className="px-5 py-5 space-y-4 overflow-y-auto overscroll-contain">
             <p className="text-xs text-[#666] text-center">
               1 Token = $0.01 • Creator'lar %80 alır, %20 platform komisyonu
             </p>
