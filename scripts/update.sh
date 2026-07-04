@@ -329,7 +329,32 @@ fi
 
 # ── 3. Python bağımlılıkları ────────────────────────────────────────────
 echo "[3/6] Python paketleri guncelleniyor..."
-python -m pip install -r backend/requirements.txt -q || pip install -r backend/requirements.txt -q
+
+# pip saglik kontrolu — bozuksa otomatik onar
+echo "   pip saglik kontrolu..."
+if ! python -m pip --version >/dev/null 2>&1; then
+    echo "   [UYARI] pip bozuk veya erisemiyor — onariliyor..."
+    # ensurepip ile yeniden yukle
+    python -m ensurepip --upgrade 2>/dev/null || true
+    # Hala calismiyor mu? pip'i sifirdan yukle
+    if ! python -m pip --version >/dev/null 2>&1; then
+        echo "   pip sifirdan yukleniyor..."
+        curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py 2>/dev/null && \
+            python /tmp/get-pip.py --quiet 2>/dev/null || true
+        rm -f /tmp/get-pip.py
+    fi
+    echo "   pip onarildi."
+else
+    echo "   pip calisior. OK"
+fi
+
+# Gereksinimleri yukle — hata olursa 2. kez dene
+if ! python -m pip install -r backend/requirements.txt -q 2>/dev/null; then
+    echo "   [UYARI] 1. deneme basarisiz, 3 sn sonra tekrar deneniyor..."
+    sleep 3
+    python -m pip install -r backend/requirements.txt --no-cache-dir -q || \
+        echo "   [HATA] Paket yuklemesi basarisiz! Internet baglantisini kontrol edin."
+fi
 
 # ── 4. Frontend build (React → statik dosyalar) ─────────────────────────
 # NOT: Built dosyalar git'te takip edilir (backend/static/).
