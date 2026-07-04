@@ -2,9 +2,9 @@ import { useRef, useState, useEffect, useCallback, forwardRef, useImperativeHand
 import type Hls from "hls.js";
 import { cn } from "@/lib/utils";
 import {
-  Play, Pause, SkipBack, SkipForward,
+  Play, Pause,
   Volume2, VolumeX, Maximize2, Minimize2,
-  Captions, Loader2, AlertCircle, RotateCcw, WifiOff, Settings,
+  Captions, Loader2, AlertCircle, RotateCcw, RotateCw, WifiOff, Settings,
 } from "lucide-react";
 
 interface HlsLevel { height: number; bitrate: number; }
@@ -76,6 +76,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
     const [showVolume, setShowVolume]     = useState(false);
     const [seeking, setSeeking]           = useState(false);
     const [centerFlash, setCenterFlash]   = useState<"play" | "pause" | null>(null);
+    const [skipFlash, setSkipFlash]       = useState<"back" | "forward" | null>(null);
     const [bandwidth, setBandwidth]       = useState(0);          // bps
     const [slowConn, setSlowConn]         = useState(false);
     const [bufferPct, setBufferPct]       = useState(0);
@@ -509,8 +510,8 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
         const vid = videoRef.current;
         if (!vid) return;
         if (e.code === "Space")       { e.preventDefault(); togglePlay(); }
-        if (e.code === "ArrowRight")  { e.preventDefault(); vid.currentTime = Math.min(vid.currentTime + 10, vid.duration); resetHideTimer(); }
-        if (e.code === "ArrowLeft")   { e.preventDefault(); vid.currentTime = Math.max(vid.currentTime - 10, 0); resetHideTimer(); }
+        if (e.code === "ArrowRight")  { e.preventDefault(); skipForward(); }
+        if (e.code === "ArrowLeft")   { e.preventDefault(); skipBack(); }
         if (e.code === "ArrowUp")     { e.preventDefault(); const v = Math.min(vid.volume + 0.1, 1); vid.volume = v; setVolume(v); }
         if (e.code === "ArrowDown")   { e.preventDefault(); const v = Math.max(vid.volume - 0.1, 0); vid.volume = v; setVolume(v); }
         if (e.code === "KeyF")        { e.preventDefault(); toggleFullscreen(); }
@@ -518,6 +519,25 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       };
       document.addEventListener("keydown", onKey);
       return () => document.removeEventListener("keydown", onKey);
+    }, [resetHideTimer]);
+
+    /* ── 10s ileri / geri ──────────────────────────────────────── */
+    const skipBack = useCallback(() => {
+      const vid = videoRef.current;
+      if (!vid) return;
+      vid.currentTime = Math.max(0, vid.currentTime - 10);
+      setSkipFlash("back");
+      setTimeout(() => setSkipFlash(null), 600);
+      resetHideTimer();
+    }, [resetHideTimer]);
+
+    const skipForward = useCallback(() => {
+      const vid = videoRef.current;
+      if (!vid) return;
+      vid.currentTime = Math.min(vid.duration, vid.currentTime + 10);
+      setSkipFlash("forward");
+      setTimeout(() => setSkipFlash(null), 600);
+      resetHideTimer();
     }, [resetHideTimer]);
 
     /* ── Oynat/Duraklat ─────────────────────────────────────────── */
@@ -682,6 +702,22 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           </div>
         )}
 
+        {/* Skip flash — sol/sağ tarafta ±10s animasyon */}
+        {skipFlash && (
+          <div className={`absolute inset-y-0 flex items-center pointer-events-none ${skipFlash === "back" ? "left-0 pl-8" : "right-0 pr-8"}`}>
+            <div className="flex flex-col items-center gap-1 animate-in fade-in zoom-in-90 duration-150">
+              <div className="bg-white/15 backdrop-blur-sm rounded-full p-4 border border-white/20">
+                {skipFlash === "back"
+                  ? <RotateCcw className="h-7 w-7 text-white" />
+                  : <RotateCw className="h-7 w-7 text-white" />}
+              </div>
+              <span className="text-white text-xs font-bold drop-shadow">
+                {skipFlash === "back" ? "−10s" : "+10s"}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Büyük play butonu */}
         {!playing && !loading && !error && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -766,13 +802,23 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
               </button>
 
               {/* 10s geri */}
-              <button onClick={() => { const v = videoRef.current; if (v) v.currentTime = Math.max(0, v.currentTime - 10); }} className="text-white hover:text-white/80 transition-colors p-1 shrink-0" title="10s geri">
-                <SkipBack style={{ width: 18, height: 18 }} />
+              <button
+                onClick={skipBack}
+                className="relative flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors shrink-0 group/skip"
+                title="10 saniye geri (←)"
+              >
+                <RotateCcw className="h-[18px] w-[18px] text-white group-hover/skip:text-white/90" />
+                <span className="absolute text-[8px] font-bold text-white leading-none" style={{ bottom: 6 }}>10</span>
               </button>
 
               {/* 10s ileri */}
-              <button onClick={() => { const v = videoRef.current; if (v) v.currentTime = Math.min(v.duration, v.currentTime + 10); }} className="text-white hover:text-white/80 transition-colors p-1 shrink-0" title="10s ileri">
-                <SkipForward style={{ width: 18, height: 18 }} />
+              <button
+                onClick={skipForward}
+                className="relative flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors shrink-0 group/skip"
+                title="10 saniye ileri (→)"
+              >
+                <RotateCw className="h-[18px] w-[18px] text-white group-hover/skip:text-white/90" />
+                <span className="absolute text-[8px] font-bold text-white leading-none" style={{ bottom: 6 }}>10</span>
               </button>
 
               {/* Ses */}
