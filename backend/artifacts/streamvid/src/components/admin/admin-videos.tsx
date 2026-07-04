@@ -1041,7 +1041,7 @@ export function AdminVideos() {
   const [bulkFetching, setBulkFetching] = useState(false);
   const [bulkFetchResult, setBulkFetchResult] = useState<string | null>(null);
   const [thumbGenerating, setThumbGenerating] = useState(false);
-  const [thumbResult, setThumbResult] = useState<string | null>(null);
+  const [thumbResult, setThumbResult] = useState<{ message: string; queued: number; skipped: number; reasons: string[] } | null>(null);
   const [jobSummary, setJobSummary] = useState<Record<string, any[]>>({});
   const [dlStatuses, setDlStatuses] = useState<Record<number, { status: string | null; percent: number; isLocal: boolean; title: string; errorMessage?: string | null }>>({});
   const [showDlPanel, setShowDlPanel] = useState(true);
@@ -1237,10 +1237,15 @@ export function AdminVideos() {
                   headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
                 });
                 const d = await res.json().catch(() => ({}));
-                setThumbResult(d.message || "Thumbnail üretimi başlatıldı");
-                setTimeout(() => setThumbResult(null), 8000);
+                setThumbResult({
+                  message: d.message || "Thumbnail üretimi başlatıldı",
+                  queued: d.queued ?? 0,
+                  skipped: d.skipped ?? 0,
+                  reasons: d.skipped_reasons ?? [],
+                });
+                setTimeout(() => setThumbResult(null), 15000);
               } catch {
-                setThumbResult("Hata oluştu");
+                setThumbResult({ message: "Sunucu hatası oluştu", queued: 0, skipped: 0, reasons: [] });
               } finally {
                 setThumbGenerating(false);
               }
@@ -1263,8 +1268,19 @@ export function AdminVideos() {
         </div>
       )}
       {thumbResult && (
-        <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg px-4 py-2.5 text-emerald-300 text-xs font-medium">
-          ✓ {thumbResult}
+        <div className={`rounded-lg px-4 py-3 text-xs font-medium space-y-1 ${
+          thumbResult.queued > 0
+            ? "bg-emerald-900/20 border border-emerald-500/30 text-emerald-300"
+            : thumbResult.skipped > 0
+            ? "bg-amber-900/20 border border-amber-500/30 text-amber-300"
+            : "bg-emerald-900/20 border border-emerald-500/30 text-emerald-300"
+        }`}>
+          <div>{thumbResult.queued > 0 ? "✓" : "⚠"} {thumbResult.message}</div>
+          {thumbResult.reasons.length > 0 && (
+            <ul className="mt-1 space-y-0.5 text-[11px] opacity-80 list-disc list-inside">
+              {thumbResult.reasons.map((r, i) => <li key={i}>{r}</li>)}
+            </ul>
+          )}
         </div>
       )}
 

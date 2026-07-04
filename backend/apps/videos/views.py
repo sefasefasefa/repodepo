@@ -2304,17 +2304,46 @@ def bulk_generate_thumbnails(request):
         Video.objects.filter(thumbnail_url='')
     ).distinct()
 
+    total = videos.count()
+
+    if total == 0:
+        return Response({
+            'message': 'Tüm videoların zaten thumbnail\'ı var.',
+            'queued': 0,
+            'skipped': 0,
+            'skipped_reasons': [],
+        })
+
     queued = 0
-    skipped = 0
+    skipped_reasons = []
     for video in videos:
-        if _find_source_url(video) is None:
-            skipped += 1
+        source = _find_source_url(video)
+        if source is None:
+            video_url = video.video_url or video.hls_url or ''
+            if not video_url:
+                reason = f'"{video.title[:40]}" — video_url boş'
+            else:
+                reason = f'"{video.title[:40]}" — dosya diskte bulunamadı ({video_url})'
+            skipped_reasons.append(reason)
             continue
         auto_generate_thumbnail_async(video)
         queued += 1
 
+    skipped = len(skipped_reasons)
+
+    if queued == 0 and skipped > 0:
+        message = (
+            f'{skipped} video atlandı — video dosyaları sunucuda bulunamadı. '
+            f'Dosyaları backend/media/uploads/ klasörüne kopyalayın, ardından tekrar deneyin.'
+        )
+    elif skipped == 0:
+        message = f'{queued} video için thumbnail üretimi arka planda başlatıldı. Birkaç saniye içinde görünecek.'
+    else:
+        message = f'{queued} video kuyruğa alındı, {skipped} video atlandı (dosya bulunamadı).'
+
     return Response({
-        'message': f'{queued} video için thumbnail üretimi başlatıldı, {skipped} video atlandı (kaynak URL yok)',
+        'message': message,
         'queued': queued,
         'skipped': skipped,
+        'skipped_reasons': skipped_reasons,
     })
