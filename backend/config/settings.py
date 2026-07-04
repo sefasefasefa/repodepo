@@ -130,8 +130,8 @@ CACHES = {
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    # Argon2PasswordHasher requires argon2-cffi; not available in this environment
 ]
 
 STATIC_URL = '/static/'
