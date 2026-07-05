@@ -224,6 +224,17 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
     if (localVideoUrl && active !== 0) setActive(0);
   }, [localVideoUrl]);
 
+  // Players asenkron yüklenince active'i varsayılana sıfırla
+  // (mount'ta allSources boştu, şimdi doldu — active hâlâ eski değerde)
+  useEffect(() => {
+    if (allSources.length === 0) return;
+    const currentlyActive = allSources.find(p => p.id === active);
+    if (!currentlyActive) {
+      const def = allSources.find(p => p.isDefault) || allSources[0];
+      if (def) setActive(def.id);
+    }
+  }, [allSources.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const saved = loadWatchProgress(video.id);
     if (saved && saved.currentTime > 8 && saved.duration > 0 && saved.currentTime < saved.duration - 10) {
@@ -747,7 +758,7 @@ export default function VideoWatch() {
           ) : isLocked ? (
             <PremiumPaywall video={video} isPPV={!!video.isPPV} isLoggedIn={!!user} onLoginClick={() => setLocation("/login")} />
           ) : (
-            <VideoPlayer video={video} players={players} onRefreshPlayers={fetchPlayers} />
+            <VideoPlayer key={video.id} video={video} players={players} onRefreshPlayers={fetchPlayers} />
           )}
           <div className="flex items-start gap-2">
             <h1 className="text-xl md:text-2xl font-bold flex-1">{video.title}</h1>
