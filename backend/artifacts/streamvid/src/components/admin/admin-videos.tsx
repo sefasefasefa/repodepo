@@ -1489,7 +1489,14 @@ export function AdminVideos() {
                     <span>#{video.id}</span>
                     {video.category && <span className="text-[#666]">{video.category.name}</span>}
                     <span>{video.viewCount?.toLocaleString() || 0} izlenme</span>
-                    <span>{video.likeCount || 0} beğeni</span>
+                    <span title="Üye beğenisi">
+                      👤 {(video.likeCount || 0).toLocaleString()} beğeni
+                    </span>
+                    {(video as any).guestLikeCount > 0 && (
+                      <span title="Misafir beğenisi" className="text-[#444]">
+                        👁️ {((video as any).guestLikeCount).toLocaleString()} misafir
+                      </span>
+                    )}
                     {video.players?.length > 0 && (
                       <span className="text-primary/70 flex items-center gap-0.5">
                         <Share2 className="h-2.5 w-2.5" />{video.players.length} kaynak
