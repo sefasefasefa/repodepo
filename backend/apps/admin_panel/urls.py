@@ -97,6 +97,8 @@ urlpatterns = [
     # Admin: security stats
     path('admin/security/stats', dev.admin_security_stats),
     path('admin/security/access-logs', dev.admin_security_access_logs),
+    path('admin/security/blocked-ips', dev.admin_security_blocked_ips),
+    path('admin/security/blocked-ips/<str:ip>', dev.admin_security_unblock_ip),
     # A/B testing
     path('ab-tests/<str:test_name>/assign', abt.assign),
     path('ab-tests/<str:test_name>/convert', abt.convert),

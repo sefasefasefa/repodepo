@@ -62,6 +62,7 @@ type AccessLogEntry = {
   userAgent: string; createdAt: string;
 };
 type TopIp = { ip: string; count: number; lastSeen: string };
+type BlockedIpEntry = { id: number; ip: string; reason: string; blockedBy: string | null; createdAt: string };
 
 export function AdminSecurity() {
   const { toast } = useToast();
@@ -70,6 +71,8 @@ export function AdminSecurity() {
   const [accessLogs, setAccessLogs]           = useState<AccessLogEntry[]>([]);
   const [topIps, setTopIps]                   = useState<TopIp[]>([]);
   const [logsLoading, setLogsLoading]         = useState(false);
+  const [blockedIps, setBlockedIps]           = useState<BlockedIpEntry[]>([]);
+  const [blockingIp, setBlockingIp]           = useState<string | null>(null);
   const [screenProtection, setScreenState]    = useState(isScreenProtectionEnabled);
   const [features, setFeatures]               = useState<SecurityFeature[]>(DEFAULT_FEATURES);
   const [rules, setRules]                     = useState<LoginRule[]>(DEFAULT_RULES);
@@ -113,9 +116,47 @@ export function AdminSecurity() {
     setLogsLoading(false);
   };
 
-  const refreshAll = () => { loadStats(); loadAccessLogs(); };
+  const loadBlockedIps = async () => {
+    try {
+      const d = await apiFetch("/admin/security/blocked-ips");
+      setBlockedIps(d.blockedIps ?? []);
+    } catch {
+      setBlockedIps([]);
+    }
+  };
 
-  useEffect(() => { loadStats(); loadAccessLogs(); }, []);
+  const refreshAll = () => { loadStats(); loadAccessLogs(); loadBlockedIps(); };
+
+  useEffect(() => { loadStats(); loadAccessLogs(); loadBlockedIps(); }, []);
+
+  const isIpBlocked = (ip: string) => blockedIps.some(b => b.ip === ip);
+
+  const blockIp = async (ip: string, reason = "") => {
+    setBlockingIp(ip);
+    try {
+      await apiFetch("/admin/security/blocked-ips", {
+        method: "POST",
+        body: JSON.stringify({ ip, reason }),
+      });
+      toast({ title: `${ip} engellendi ✓`, description: "Bu IP'den gelen istekler artık reddedilecek." });
+      await loadBlockedIps();
+    } catch (e: any) {
+      toast({ title: "Engelleme başarısız", description: e?.message ?? "Bir hata oluştu", variant: "destructive" });
+    }
+    setBlockingIp(null);
+  };
+
+  const unblockIp = async (ip: string) => {
+    setBlockingIp(ip);
+    try {
+      await apiFetch(`/admin/security/blocked-ips/${encodeURIComponent(ip)}`, { method: "DELETE" });
+      toast({ title: `${ip} engeli kaldırıldı ✓` });
+      await loadBlockedIps();
+    } catch (e: any) {
+      toast({ title: "İşlem başarısız", description: e?.message ?? "Bir hata oluştu", variant: "destructive" });
+    }
+    setBlockingIp(null);
+  };
 
   const toggleFeature = (id: string) => {
     setFeatures(prev => prev.map(f =>
@@ -358,14 +399,27 @@ export function AdminSecurity() {
             ) : (
               <div className="grid sm:grid-cols-2 gap-2">
                 {topIps.map((t) => (
-                  <div key={t.ip} className="flex items-center justify-between bg-[#111] border border-[#222] rounded-lg px-3 py-2">
-                    <div>
-                      <p className="text-xs font-mono text-white">{t.ip}</p>
+                  <div key={t.ip} className="flex items-center justify-between bg-[#111] border border-[#222] rounded-lg px-3 py-2 gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-mono text-white truncate">{t.ip}</p>
                       <p className="text-[10px] text-[#555]">Son görülme: {new Date(t.lastSeen).toLocaleString("tr-TR")}</p>
                     </div>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-900/20 text-red-400 shrink-0">
-                      {t.count} istek
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-900/20 text-red-400">
+                        {t.count} istek
+                      </span>
+                      {isIpBlocked(t.ip) ? (
+                        <button onClick={() => unblockIp(t.ip)} disabled={blockingIp === t.ip}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-900/20 text-green-400 hover:bg-green-900/30 disabled:opacity-50">
+                          Engeli Kaldır
+                        </button>
+                      ) : (
+                        <button onClick={() => blockIp(t.ip, "Şüpheli istek trafiği")} disabled={blockingIp === t.ip}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#222] text-[#ccc] hover:bg-red-900/30 hover:text-red-400 disabled:opacity-50">
+                          Engelle
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -389,6 +443,7 @@ export function AdminSecurity() {
                       <th className="px-3 py-2 font-medium">Yol</th>
                       <th className="px-3 py-2 font-medium">Durum</th>
                       <th className="px-3 py-2 font-medium">Zaman</th>
+                      <th className="px-3 py-2 font-medium">İşlem</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#1e1e1e]">
@@ -404,10 +459,49 @@ export function AdminSecurity() {
                           </span>
                         </td>
                         <td className="px-3 py-2 text-[#666] whitespace-nowrap">{new Date(l.createdAt).toLocaleString("tr-TR")}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {isIpBlocked(l.ip) ? (
+                            <button onClick={() => unblockIp(l.ip)} disabled={blockingIp === l.ip}
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-900/20 text-green-400 hover:bg-green-900/30 disabled:opacity-50">
+                              Kaldır
+                            </button>
+                          ) : (
+                            <button onClick={() => blockIp(l.ip, `${l.path} adresine tekrarlı istek`)} disabled={blockingIp === l.ip}
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#222] text-[#ccc] hover:bg-red-900/30 hover:text-red-400 disabled:opacity-50">
+                              Engelle
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+
+          {/* Engellenmiş IP'ler */}
+          <div className="border-t border-[#222] pt-4">
+            <p className="text-xs font-semibold text-[#aaa] mb-2">Engellenmiş IP'ler ({blockedIps.length})</p>
+            {blockedIps.length === 0 ? (
+              <p className="text-[11px] text-[#555]">Henüz engellenmiş bir IP yok.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {blockedIps.map((b) => (
+                  <div key={b.id} className="flex items-center justify-between bg-red-900/10 border border-red-800/30 rounded-lg px-3 py-2 gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-mono text-white">{b.ip}</p>
+                      <p className="text-[10px] text-[#888] truncate">
+                        {b.reason || "Sebep belirtilmedi"} • {new Date(b.createdAt).toLocaleString("tr-TR")}
+                        {b.blockedBy ? ` • ${b.blockedBy}` : ""}
+                      </p>
+                    </div>
+                    <button onClick={() => unblockIp(b.ip)} disabled={blockingIp === b.ip}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-900/20 text-green-400 hover:bg-green-900/30 disabled:opacity-50 shrink-0">
+                      Engeli Kaldır
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

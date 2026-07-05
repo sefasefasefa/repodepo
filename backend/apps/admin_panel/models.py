@@ -26,6 +26,27 @@ class SecurityAccessLog(models.Model):
         return f'{self.ip_address} {self.method} {self.path} [{self.status_code}]'
 
 
+class BlockedIP(models.Model):
+    """Admin panelinden manuel olarak engellenen IP adresleri.
+
+    Bu tabloya eklenen IP'lerden gelen tüm istekler middleware tarafından
+    doğrudan 403 ile reddedilir.
+    """
+    ip_address = models.GenericIPAddressField(unique=True, db_index=True)
+    reason = models.CharField(max_length=300, blank=True, default='')
+    blocked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'blocked_ips'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.ip_address
+
+
 class SiteSettings(models.Model):
     site_name = models.CharField(max_length=200, default='Soci')
     site_description = models.TextField(default='')

@@ -639,3 +639,57 @@ def admin_security_access_logs(request):
             for r in top_ips
         ],
     })
+
+
+# ─── IP engelleme (blocklist) ─────────────────────────────────────────────
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def admin_security_blocked_ips(request):
+    if not _admin_required(request.user):
+        return Response({'error': 'Forbidden'}, status=403)
+    from .models import BlockedIP
+    from apps.core.security_log_middleware import invalidate_blocked_ips_cache
+
+    if request.method == 'POST':
+        ip = (request.data.get('ip') or '').strip()
+        reason = (request.data.get('reason') or '').strip()
+        if not ip:
+            return Response({'error': 'IP adresi gerekli.'}, status=400)
+        obj, created = BlockedIP.objects.update_or_create(
+            ip_address=ip,
+            defaults={'reason': reason, 'blocked_by': request.user},
+        )
+        invalidate_blocked_ips_cache()
+        return Response({
+            'id': obj.id, 'ip': obj.ip_address, 'reason': obj.reason,
+            'createdAt': obj.created_at.isoformat(), 'created': created,
+        }, status=201 if created else 200)
+
+    blocked = BlockedIP.objects.select_related('blocked_by').all()
+    return Response({
+        'blockedIps': [
+            {
+                'id': b.id,
+                'ip': b.ip_address,
+                'reason': b.reason,
+                'blockedBy': b.blocked_by.username if b.blocked_by else None,
+                'createdAt': b.created_at.isoformat(),
+            }
+            for b in blocked
+        ],
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_security_unblock_ip(request, ip):
+    if not _admin_required(request.user):
+        return Response({'error': 'Forbidden'}, status=403)
+    from .models import BlockedIP
+    from apps.core.security_log_middleware import invalidate_blocked_ips_cache
+
+    deleted, _ = BlockedIP.objects.filter(ip_address=ip).delete()
+    invalidate_blocked_ips_cache()
+    if not deleted:
+        return Response({'error': 'IP bulunamadı.'}, status=404)
+    return Response({'ok': True})
