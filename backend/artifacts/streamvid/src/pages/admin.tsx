@@ -29,39 +29,90 @@ const AdminFeatureFlags        = lazy(() => import("@/components/admin/admin-fea
 const AdminCrosspostMonitor    = lazy(() => import("@/components/admin/admin-crosspost-monitor"));
 const AdminModeration          = lazy(() => import("@/components/admin/admin-moderation"));
 const AdminWithdrawals         = lazy(() => import("@/components/admin/admin-withdrawals"));
-import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower, SlidersHorizontal, ShieldCheck, Wallet } from "lucide-react";
+import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower, SlidersHorizontal, ShieldCheck, Wallet, Search, ChevronDown, Film, UsersRound, Megaphone as MegaphoneIcon, Wallet as WalletIcon, ShieldAlert, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const TABS = [
-  { id: "dashboard",    label: "Genel Bakış",    icon: LayoutDashboard },
-  { id: "videos",       label: "Videolar",        icon: Video },
-  { id: "users",        label: "Kullanıcılar",    icon: Users },
-  { id: "creators",     label: "Yükleyici Limitleri", icon: Crown },
-  { id: "applications", label: "Creator Başvuruları", icon: Crown },
-  { id: "moderation",   label: "Video Moderasyon", icon: ShieldCheck },
-  { id: "ads",          label: "Reklamlar",       icon: Megaphone },
-  { id: "reports",      label: "Raporlar",        icon: AlertTriangle },
-  { id: "subscriptions",label: "Üyelikler",       icon: CreditCard },
-  { id: "withdrawals",  label: "Para Çekme Talepleri", icon: Wallet },
-  { id: "cdn",          label: "CDN & Depolama",  icon: HardDrive },
-  { id: "integrations", label: "Entegrasyonlar",  icon: Link2 },
-  { id: "payments",     label: "Ödemeler",        icon: DollarSign },
-  { id: "security",     label: "Güvenlik",        icon: Shield },
-  { id: "site",         label: "Site Ayarları",   icon: Settings2 },
-  { id: "api-endpoints",label: "API Endpoint'ler", icon: Code2 },
-  { id: "affiliate",    label: "Affiliate",        icon: Share2 },
-  { id: "badges",       label: "Rozetler",         icon: Award },
-  { id: "pages",        label: "Özel Sayfalar",    icon: LayoutTemplate },
-  { id: "visitors",     label: "Ziyaretçi Haritası", icon: Globe },
-  { id: "ab-tests",     label: "A/B Testleri",       icon: FlaskConical },
-  { id: "revenue",      label: "Gelir Projeksiyonu", icon: TrendingUp },
-  { id: "health",       label: "Sağlık Monitörü",    icon: HeartPulse },
-  { id: "email",        label: "E-posta Kampanya",   icon: Mail },
-  { id: "gifts",        label: "Hediye Abonelik",    icon: Gift },
-  { id: "features",     label: "Özellikler",          icon: ToggleLeft },
-  { id: "crosspost-monitor", label: "Crosspost İzleme", icon: RadioTower },
-  { id: "home-filters",      label: "Anasayfa Filtreleri", icon: SlidersHorizontal },
+const GROUPS = [
+  {
+    id: "overview",
+    label: "Genel Bakış",
+    icon: LayoutDashboard,
+    tabs: [
+      { id: "dashboard", label: "Genel Bakış", icon: LayoutDashboard },
+      { id: "health",    label: "Sağlık Monitörü", icon: HeartPulse },
+    ],
+  },
+  {
+    id: "content",
+    label: "İçerik Yönetimi",
+    icon: Film,
+    tabs: [
+      { id: "videos",       label: "Videolar", icon: Video },
+      { id: "moderation",   label: "Video Moderasyon", icon: ShieldCheck },
+      { id: "home-filters", label: "Anasayfa Filtreleri", icon: SlidersHorizontal },
+      { id: "pages",        label: "Özel Sayfalar", icon: LayoutTemplate },
+    ],
+  },
+  {
+    id: "community",
+    label: "Kullanıcılar & Topluluk",
+    icon: UsersRound,
+    tabs: [
+      { id: "users",        label: "Kullanıcılar", icon: Users },
+      { id: "creators",     label: "Yükleyici Limitleri", icon: Crown },
+      { id: "applications", label: "Creator Başvuruları", icon: Crown },
+      { id: "badges",       label: "Rozetler", icon: Award },
+      { id: "reports",      label: "Raporlar", icon: AlertTriangle },
+    ],
+  },
+  {
+    id: "marketing",
+    label: "Reklam & Pazarlama",
+    icon: MegaphoneIcon,
+    tabs: [
+      { id: "ads",      label: "Reklamlar", icon: Megaphone },
+      { id: "email",    label: "E-posta Kampanya", icon: Mail },
+      { id: "ab-tests", label: "A/B Testleri", icon: FlaskConical },
+      { id: "affiliate", label: "Affiliate", icon: Share2 },
+      { id: "crosspost-monitor", label: "Crosspost İzleme", icon: RadioTower },
+      { id: "visitors", label: "Ziyaretçi Haritası", icon: Globe },
+    ],
+  },
+  {
+    id: "revenue",
+    label: "Gelir & Ödemeler",
+    icon: WalletIcon,
+    tabs: [
+      { id: "subscriptions", label: "Üyelikler", icon: CreditCard },
+      { id: "gifts",         label: "Hediye Abonelik", icon: Gift },
+      { id: "payments",      label: "Ödemeler", icon: DollarSign },
+      { id: "withdrawals",   label: "Para Çekme Talepleri", icon: Wallet },
+      { id: "revenue-proj",  label: "Gelir Projeksiyonu", icon: TrendingUp },
+    ],
+  },
+  {
+    id: "security",
+    label: "Güvenlik",
+    icon: ShieldAlert,
+    tabs: [
+      { id: "security", label: "Güvenlik", icon: Shield },
+    ],
+  },
+  {
+    id: "system",
+    label: "Sistem & Entegrasyon",
+    icon: Wrench,
+    tabs: [
+      { id: "site",          label: "Site Ayarları", icon: Settings2 },
+      { id: "cdn",           label: "CDN & Depolama", icon: HardDrive },
+      { id: "integrations",  label: "Entegrasyonlar", icon: Link2 },
+      { id: "api-endpoints", label: "API Endpoint'ler", icon: Code2 },
+      { id: "features",      label: "Özellikler", icon: ToggleLeft },
+    ],
+  },
 ];
+
+const TABS = GROUPS.flatMap(g => g.tabs);
 
 function StatCard({ label, value, sub, icon: Icon, color }: { label: string; value: any; sub?: string; icon: any; color?: string }) {
   return (
@@ -83,7 +134,11 @@ function StatCard({ label, value, sub, icon: Icon, color }: { label: string; val
 export default function Admin() {
   const { user } = useAuth();
   const [tab, setTab] = useState("dashboard");
+  const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const { data: dashboard } = useGetAdminDashboard();
+
+  const activeGroupId = GROUPS.find(g => g.tabs.some(t => t.id === tab))?.id;
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -93,6 +148,18 @@ export default function Admin() {
     window.addEventListener("admin:goto", handler);
     return () => window.removeEventListener("admin:goto", handler);
   }, []);
+
+  const q = search.trim().toLocaleLowerCase("tr");
+  const filteredGroups = GROUPS.map(g => ({
+    ...g,
+    tabs: q ? g.tabs.filter(t => t.label.toLocaleLowerCase("tr").includes(q)) : g.tabs,
+  })).filter(g => g.tabs.length > 0);
+
+  const isGroupOpen = (groupId: string) => {
+    if (q) return true;
+    if (collapsed[groupId] === undefined) return groupId === activeGroupId || groupId === "overview";
+    return !collapsed[groupId];
+  };
 
   if (!user || (user.role !== "admin" && user.role !== "moderator")) {
     return (
@@ -117,17 +184,48 @@ export default function Admin() {
           ))}
         </div>
         <div className="flex flex-1">
-          <aside className="w-56 min-h-screen bg-[#161616] border-r border-[#222] pt-6 shrink-0 hidden md:block">
-            <div className="px-4 mb-6">
+          <aside className="w-64 min-h-screen bg-[#161616] border-r border-[#222] pt-6 shrink-0 hidden md:flex md:flex-col">
+            <div className="px-4 mb-4">
               <div className="text-[11px] font-bold text-[#555] uppercase tracking-widest mb-1">Admin Panel</div>
               <div className="text-sm text-[#888]">@{user.username}</div>
             </div>
-            <nav className="space-y-0.5 px-2">
-              {TABS.map((t) => (
-                <button key={t.id} onClick={() => setTab(t.id)} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left", tab === t.id ? "bg-primary/15 text-primary font-semibold" : "text-[#aaa] hover:bg-[#222] hover:text-white")}>
-                  <t.icon className="h-4 w-4 shrink-0" />{t.label}
-                </button>
-              ))}
+            <div className="px-3 mb-3 relative">
+              <Search className="absolute left-5.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#555] pointer-events-none" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Sekme ara…"
+                className="w-full bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg pl-8 pr-3 py-2 text-xs text-white placeholder:text-[#555] focus:outline-none focus:border-primary/50"
+              />
+            </div>
+            <nav className="space-y-1 px-2 overflow-y-auto flex-1 pb-6">
+              {filteredGroups.length === 0 && (
+                <p className="text-xs text-[#555] px-3 py-4 text-center">Sonuç bulunamadı</p>
+              )}
+              {filteredGroups.map((g) => {
+                const open = isGroupOpen(g.id);
+                return (
+                  <div key={g.id} className="mb-1">
+                    <button
+                      onClick={() => setCollapsed(c => ({ ...c, [g.id]: !open }))}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-[#666] hover:text-[#999] transition-colors"
+                    >
+                      <g.icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex-1 text-left">{g.label}</span>
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open ? "rotate-0" : "-rotate-90")} />
+                    </button>
+                    {open && (
+                      <div className="space-y-0.5 mt-0.5">
+                        {g.tabs.map((t) => (
+                          <button key={t.id} onClick={() => setTab(t.id)} className={cn("w-full flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg text-sm transition-colors text-left", tab === t.id ? "bg-primary/15 text-primary font-semibold" : "text-[#aaa] hover:bg-[#222] hover:text-white")}>
+                            <t.icon className="h-4 w-4 shrink-0" />{t.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </nav>
           </aside>
           <main className="flex-1 p-4 md:p-6">
@@ -193,7 +291,7 @@ export default function Admin() {
             {tab === "pages" && <AdminCustomPages />}
             {tab === "visitors" && <AdminVisitorMap />}
             {tab === "ab-tests" && <AdminABTests />}
-            {tab === "revenue" && <AdminRevenueProjection />}
+            {tab === "revenue-proj" && <AdminRevenueProjection />}
             {tab === "email" && <AdminEmailCampaigns />}
             {tab === "gifts" && <AdminGiftSubscriptions />}
             {tab === "features" && <AdminFeatureFlags />}
@@ -206,14 +304,37 @@ export default function Admin() {
                 <h1 className="text-2xl font-bold">Sağlık Monitörü</h1>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <StatCard label="API Durumu" value="OK" sub="Son kontrol: şimdi" icon={HeartPulse} color="text-green-400" />
-                  <StatCard label="Aktif Kullanıcı" value={dashboard?.totalUsers ?? 0} sub="Toplam kullanıcı" icon={Users} />
-                  <StatCard label="Toplam Video" value={dashboard?.totalVideos ?? 0} sub="İçerik sayısı" icon={Video} />
-                  <StatCard label="Açık Uyarı" value={dashboard?.pendingReports ?? 0} sub="Bekleyen raporlar" icon={AlertTriangle} color="text-red-400" />
+                  <StatCard label="Yeni Kullanıcı" value={dashboard?.newUsersThisWeek ?? 0} sub="Son 7 gün" icon={Users} />
+                  <StatCard label="Yeni Video" value={dashboard?.newVideosThisWeek ?? 0} sub="Son 7 gün" icon={Video} />
+                  <StatCard label="Açık Uyarı" value={dashboard?.pendingReports ?? 0} sub="Bekleyen raporlar" icon={AlertTriangle} color={dashboard?.pendingReports ? "text-red-400" : "text-green-400"} />
                 </div>
-                <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
-                  <p className="text-sm text-[#888]">
-                    Sistem şu anda sağlıklı görünüyor. Bu alan ileride uptime, CPU, bellek ve hata oranlarını gösterecek şekilde genişletilebilir.
-                  </p>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 space-y-3">
+                    <h2 className="font-bold flex items-center gap-2"><HeartPulse className="h-4 w-4 text-green-400" /> Genel Durum</h2>
+                    <div className="flex items-center justify-between text-sm py-1.5 border-b border-[#252525]">
+                      <span className="text-[#888]">Toplam kullanıcı</span><span className="font-medium">{dashboard?.totalUsers ?? "—"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm py-1.5 border-b border-[#252525]">
+                      <span className="text-[#888]">Toplam video</span><span className="font-medium">{dashboard?.totalVideos ?? "—"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm py-1.5 border-b border-[#252525]">
+                      <span className="text-[#888]">Toplam gelir</span><span className="font-medium text-primary">${Number(dashboard?.totalRevenue ?? 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm py-1.5">
+                      <span className="text-[#888]">Bekleyen rapor</span>
+                      <span className={cn("font-medium", dashboard?.pendingReports ? "text-red-400" : "text-green-400")}>{dashboard?.pendingReports ?? 0}</span>
+                    </div>
+                  </div>
+                  <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+                    <h2 className="font-bold mb-3 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-400" /> Dikkat Gerektirenler</h2>
+                    {(dashboard?.pendingReports ?? 0) > 0 ? (
+                      <button onClick={() => setTab("reports")} className="w-full text-left text-sm bg-red-900/20 border border-red-900/30 rounded-lg p-3 hover:bg-red-900/30 transition-colors">
+                        {dashboard?.pendingReports} bekleyen rapor var — incelemek için tıkla
+                      </button>
+                    ) : (
+                      <p className="text-sm text-[#555] py-4 text-center">Bekleyen bir sorun yok, sistem sağlıklı.</p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

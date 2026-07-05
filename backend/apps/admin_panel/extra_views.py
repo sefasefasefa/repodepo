@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Sum, Q
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -36,6 +38,9 @@ def admin_dashboard(request):
     total_videos = Video.objects.count()
     pending = VideoReport.objects.filter(status='pending').count()
     revenue = float(Payment.objects.aggregate(s=Sum('amount'))['s'] or 0)
+    week_ago = timezone.now() - timedelta(days=7)
+    new_users_week = User.objects.filter(created_at__gte=week_ago).count()
+    new_videos_week = Video.objects.filter(created_at__gte=week_ago).count()
     recent = VideoReport.objects.select_related('reporter').order_by('-created_at')[:5]
     top_creators = User.objects.filter(role='creator').order_by('-follower_count')[:5]
     return Response({
@@ -43,8 +48,8 @@ def admin_dashboard(request):
         'totalVideos': total_videos,
         'pendingReports': pending,
         'totalRevenue': revenue,
-        'newUsersThisWeek': 0,
-        'newVideosThisWeek': 0,
+        'newUsersThisWeek': new_users_week,
+        'newVideosThisWeek': new_videos_week,
         'recentReports': [{
             'id': r.id, 'reason': r.reason, 'description': r.description,
             'status': r.status, 'videoId': r.video_id, 'video': None,
