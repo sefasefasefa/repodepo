@@ -25,6 +25,91 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+
+function EditProfileDialog({ user, open, onOpenChange }: { user: any; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [displayName, setDisplayName] = useState(user.displayName || "");
+  const [bio, setBio] = useState(user.bio || "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setDisplayName(user.displayName || "");
+      setBio(user.bio || "");
+    }
+  }, [open, user.displayName, user.bio]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch("/api/auth/update-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ displayName, bio }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Güncelleme başarısız");
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      toast({ title: "Profil güncellendi" });
+      onOpenChange(false);
+    } catch (err: any) {
+      toast({ title: "Hata", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Profili Düzenle</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="displayName">Görünen Ad</Label>
+            <Input
+              id="displayName"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Görünen adınız"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bio">Biyografi</Label>
+            <Textarea
+              id="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Kendinden bahset..."
+              rows={4}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            İptal
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Kaydediliyor..." : "Kaydet"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function PhoneLinkSection() {
   const { toast } = useToast();
@@ -192,6 +277,8 @@ export default function Profile() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("videos");
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -352,14 +439,26 @@ export default function Profile() {
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" className="flex-1 sm:flex-none rounded-full text-sm">
+            <Button
+              variant="outline"
+              className="flex-1 sm:flex-none rounded-full text-sm"
+              onClick={() => setEditProfileOpen(true)}
+            >
               <Edit3 className="mr-2 h-4 w-4" /> Profili Düzenle
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full bg-secondary shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full bg-secondary shrink-0"
+              onClick={() => setActiveTab("settings")}
+              title="Ayarlar"
+            >
               <Settings className="h-5 w-5" />
             </Button>
           </div>
         </div>
+
+        <EditProfileDialog user={user} open={editProfileOpen} onOpenChange={setEditProfileOpen} />
 
         {user.bio && (
           <div className="mb-6 max-w-3xl">
@@ -368,7 +467,7 @@ export default function Profile() {
         )}
 
         {/* Tabs — scrollable on mobile */}
-        <Tabs defaultValue="videos" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-transparent border-b border-border w-full justify-start rounded-none h-11 p-0 overflow-x-auto scrollbar-hide gap-4 sm:gap-6">
             <TabsTrigger
               value="videos"
