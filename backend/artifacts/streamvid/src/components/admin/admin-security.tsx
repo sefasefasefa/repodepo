@@ -57,10 +57,19 @@ const AUTH_METHODS = [
   { id: "security-key", label: "Güvenlik Anahtarı",           icon: ShieldCheck,  desc: "Fiziksel anahtar ile giriş onayı" },
 ];
 
+type AccessLogEntry = {
+  id: number; ip: string; path: string; method: string; status: number;
+  userAgent: string; createdAt: string;
+};
+type TopIp = { ip: string; count: number; lastSeen: string };
+
 export function AdminSecurity() {
   const { toast } = useToast();
   const [stats, setStats]                     = useState<any>(null);
   const [loading, setLoading]                 = useState(false);
+  const [accessLogs, setAccessLogs]           = useState<AccessLogEntry[]>([]);
+  const [topIps, setTopIps]                   = useState<TopIp[]>([]);
+  const [logsLoading, setLogsLoading]         = useState(false);
   const [screenProtection, setScreenState]    = useState(isScreenProtectionEnabled);
   const [features, setFeatures]               = useState<SecurityFeature[]>(DEFAULT_FEATURES);
   const [rules, setRules]                     = useState<LoginRule[]>(DEFAULT_RULES);
@@ -91,7 +100,22 @@ export function AdminSecurity() {
     setLoading(false);
   };
 
-  useEffect(() => { loadStats(); }, []);
+  const loadAccessLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const d = await apiFetch("/admin/security/access-logs?limit=50");
+      setAccessLogs(d.logs ?? []);
+      setTopIps(d.topIps ?? []);
+    } catch {
+      setAccessLogs([]);
+      setTopIps([]);
+    }
+    setLogsLoading(false);
+  };
+
+  const refreshAll = () => { loadStats(); loadAccessLogs(); };
+
+  useEffect(() => { loadStats(); loadAccessLogs(); }, []);
 
   const toggleFeature = (id: string) => {
     setFeatures(prev => prev.map(f =>
@@ -144,9 +168,9 @@ export function AdminSecurity() {
           </div>
         ))}
       </div>
-      <button onClick={loadStats} disabled={loading}
+      <button onClick={refreshAll} disabled={loading || logsLoading}
         className="flex items-center gap-2 text-sm text-[#888] hover:text-white px-3 py-1.5 rounded-lg bg-[#1e1e1e] border border-[#2a2a2a] transition-colors">
-        <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} /> Yenile
+        <RefreshCw className={cn("h-3.5 w-3.5", (loading || logsLoading) && "animate-spin")} /> Yenile
       </button>
 
       {/* ─── Ekran Kaydı Koruması ─── */}
@@ -323,6 +347,70 @@ export function AdminSecurity() {
             <Save className="h-3.5 w-3.5" />
             {accessLogSaved ? "Kaydedildi ✓" : "Ayarları Kaydet"}
           </button>
+
+          {/* En çok şüpheli istek atan IP'ler */}
+          <div className="border-t border-[#222] pt-4">
+            <p className="text-xs font-semibold text-[#aaa] mb-2">En Çok Şüpheli İstek Atan IP'ler</p>
+            {topIps.length === 0 ? (
+              <p className="text-[11px] text-[#555]">
+                {logsLoading ? "Yükleniyor…" : "Henüz reddedilen (403/404) bir istek kaydedilmedi."}
+              </p>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-2">
+                {topIps.map((t) => (
+                  <div key={t.ip} className="flex items-center justify-between bg-[#111] border border-[#222] rounded-lg px-3 py-2">
+                    <div>
+                      <p className="text-xs font-mono text-white">{t.ip}</p>
+                      <p className="text-[10px] text-[#555]">Son görülme: {new Date(t.lastSeen).toLocaleString("tr-TR")}</p>
+                    </div>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-900/20 text-red-400 shrink-0">
+                      {t.count} istek
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Son şüpheli istekler tablosu */}
+          <div className="border-t border-[#222] pt-4">
+            <p className="text-xs font-semibold text-[#aaa] mb-2">Son Reddedilen İstekler (403 / 404)</p>
+            {accessLogs.length === 0 ? (
+              <p className="text-[11px] text-[#555]">
+                {logsLoading ? "Yükleniyor…" : "Kayıt bulunamadı."}
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-[#222]">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#111] text-[#666] text-left">
+                      <th className="px-3 py-2 font-medium">IP</th>
+                      <th className="px-3 py-2 font-medium">Yöntem</th>
+                      <th className="px-3 py-2 font-medium">Yol</th>
+                      <th className="px-3 py-2 font-medium">Durum</th>
+                      <th className="px-3 py-2 font-medium">Zaman</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#1e1e1e]">
+                    {accessLogs.map((l) => (
+                      <tr key={l.id} className="hover:bg-[#151515]">
+                        <td className="px-3 py-2 font-mono text-[#ccc] whitespace-nowrap">{l.ip}</td>
+                        <td className="px-3 py-2 text-[#888] whitespace-nowrap">{l.method}</td>
+                        <td className="px-3 py-2 text-[#aaa] truncate max-w-[220px]" title={l.path}>{l.path}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
+                            l.status === 403 ? "bg-red-900/20 text-red-400" : "bg-yellow-900/20 text-yellow-400")}>
+                            {l.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-[#666] whitespace-nowrap">{new Date(l.createdAt).toLocaleString("tr-TR")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

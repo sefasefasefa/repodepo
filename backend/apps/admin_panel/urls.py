@@ -96,6 +96,7 @@ urlpatterns = [
     path('admin/revenue/projection', dev.admin_revenue_projection),
     # Admin: security stats
     path('admin/security/stats', dev.admin_security_stats),
+    path('admin/security/access-logs', dev.admin_security_access_logs),
     # A/B testing
     path('ab-tests/<str:test_name>/assign', abt.assign),
     path('ab-tests/<str:test_name>/convert', abt.convert),

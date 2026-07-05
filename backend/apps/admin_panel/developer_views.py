@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 from django.utils import timezone
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Max
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -564,7 +564,7 @@ def admin_revenue_projection(request):
     })
 
 
-# ─── Security stats (minimal stub: counts of failed logins last 24h) ─────────
+# ─── Security stats (403/404 erişim günlüğüne dayalı gerçek istatistikler) ───
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def admin_security_stats(request):
@@ -573,14 +573,69 @@ def admin_security_stats(request):
     from django.utils import timezone as _tz
     from datetime import timedelta as _td
     from django.contrib.auth import get_user_model
+    from .models import SecurityAccessLog
     User = get_user_model()
     now = _tz.now()
     last_24h = now - _td(hours=24)
+    last_1h = now - _td(hours=1)
+
+    logs_24h = SecurityAccessLog.objects.filter(created_at__gte=last_24h)
+    logs_1h = SecurityAccessLog.objects.filter(created_at__gte=last_1h)
+
+    top_ips = list(
+        logs_24h.values('ip_address')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:5]
+    )
+
     return Response({
         'totalUsers': User.objects.count(),
         'recentSignups24h': User.objects.filter(created_at__gte=last_24h).count(),
-        'blockedRequests': 0,
-        'suspiciousIPs': [],
+        'blockedRequests': logs_24h.filter(status_code=403).count(),
+        'lockedIPs': logs_1h.filter(status_code=403).values('ip_address').distinct().count(),
+        'recentLoginAttempts': logs_1h.count(),
+        'trackedIPs': logs_24h.values('ip_address').distinct().count(),
+        'suspiciousIPs': [{'ip': r['ip_address'], 'count': r['count']} for r in top_ips],
         'rateLimitedRecently': 0,
         'generatedAt': now.isoformat(),
+    })
+
+
+# ─── Security access log listesi (IP, path, sıklık) ──────────────────────────
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_security_access_logs(request):
+    if not _admin_required(request.user):
+        return Response({'error': 'Forbidden'}, status=403)
+    from .models import SecurityAccessLog
+
+    try:
+        limit = min(max(int(request.GET.get('limit', 50)), 1), 200)
+    except (TypeError, ValueError):
+        limit = 50
+
+    logs = SecurityAccessLog.objects.all()[:limit]
+    top_ips = (
+        SecurityAccessLog.objects.values('ip_address')
+        .annotate(count=Count('id'), last_seen=Max('created_at'))
+        .order_by('-count')[:20]
+    )
+
+    return Response({
+        'logs': [
+            {
+                'id': l.id,
+                'ip': l.ip_address,
+                'path': l.path,
+                'method': l.method,
+                'status': l.status_code,
+                'userAgent': l.user_agent,
+                'createdAt': l.created_at.isoformat(),
+            }
+            for l in logs
+        ],
+        'topIps': [
+            {'ip': r['ip_address'], 'count': r['count'], 'lastSeen': r['last_seen'].isoformat()}
+            for r in top_ips
+        ],
     })

@@ -2,6 +2,30 @@ from django.db import models
 from django.conf import settings
 
 
+class SecurityAccessLog(models.Model):
+    """Şüpheli/reddedilen istekleri kaydeder (403 Forbidden, 404 Not Found).
+
+    Bot/tarayıcı trafiğini (GraphQL playground taramaları, exploit kit'leri vb.)
+    admin panelindeki Güvenlik sekmesinde görünür kılmak için kullanılır.
+    """
+    ip_address = models.GenericIPAddressField(db_index=True)
+    path = models.CharField(max_length=500)
+    method = models.CharField(max_length=10, default='GET')
+    status_code = models.PositiveSmallIntegerField()
+    user_agent = models.CharField(max_length=500, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'security_access_logs'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['ip_address', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.ip_address} {self.method} {self.path} [{self.status_code}]'
+
+
 class SiteSettings(models.Model):
     site_name = models.CharField(max_length=200, default='Soci')
     site_description = models.TextField(default='')

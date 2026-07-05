@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.core.markdown_middleware.MarkdownNegotiationMiddleware',  # Accept: text/markdown desteği (RFC 7231)
+    'apps.core.security_log_middleware.SuspiciousAccessLogMiddleware',  # 403/404 erişim günlüğü (admin panel > Güvenlik)
 ]
 
 ROOT_URLCONF = 'config.urls'
