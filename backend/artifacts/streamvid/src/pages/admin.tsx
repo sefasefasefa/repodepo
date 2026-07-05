@@ -12,7 +12,6 @@ const AdminCDN                 = lazy(() => import("@/components/admin/admin-cdn
 const AdminIntegrations        = lazy(() => import("@/components/admin/admin-integrations").then(m => ({ default: m.AdminIntegrations })));
 const AdminPayments            = lazy(() => import("@/components/admin/admin-payments").then(m => ({ default: m.AdminPayments })));
 const AdminSecurity            = lazy(() => import("@/components/admin/admin-security").then(m => ({ default: m.AdminSecurity })));
-const AdminMining              = lazy(() => import("@/components/admin/admin-mining"));
 const AdminSiteSettings        = lazy(() => import("@/components/admin/admin-site-settings"));
 const AdminCreators            = lazy(() => import("@/components/admin/admin-creators").then(m => ({ default: m.AdminCreators })));
 const AdminCreatorApplications = lazy(() => import("@/components/admin/admin-creator-applications").then(m => ({ default: m.AdminCreatorApplications })));
@@ -25,30 +24,31 @@ const AdminABTests             = lazy(() => import("@/components/admin/admin-ab-
 const AdminRevenueProjection   = lazy(() => import("@/components/admin/admin-revenue-projection"));
 const AdminEmailCampaigns      = lazy(() => import("@/components/admin/admin-email-campaigns"));
 const AdminGiftSubscriptions   = lazy(() => import("@/components/admin/admin-gift-subscriptions"));
-const AdminLinkModeration      = lazy(() => import("@/components/admin/admin-link-moderation"));
 const AdminHomeFilters         = lazy(() => import("@/components/admin/admin-home-filters"));
 const AdminFeatureFlags        = lazy(() => import("@/components/admin/admin-feature-flags").then(m => ({ default: m.AdminFeatureFlags })));
 const AdminCrosspostMonitor    = lazy(() => import("@/components/admin/admin-crosspost-monitor"));
-import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Bitcoin, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower, SlidersHorizontal } from "lucide-react";
+const AdminModeration          = lazy(() => import("@/components/admin/admin-moderation"));
+const AdminWithdrawals         = lazy(() => import("@/components/admin/admin-withdrawals"));
+import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower, SlidersHorizontal, ShieldCheck, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { id: "dashboard",    label: "Genel Bakış",    icon: LayoutDashboard },
   { id: "videos",       label: "Videolar",        icon: Video },
   { id: "users",        label: "Kullanıcılar",    icon: Users },
-  { id: "creators",     label: "Yükleyiciler",    icon: Crown },
+  { id: "creators",     label: "Yükleyici Limitleri", icon: Crown },
   { id: "applications", label: "Creator Başvuruları", icon: Crown },
+  { id: "moderation",   label: "Video Moderasyon", icon: ShieldCheck },
   { id: "ads",          label: "Reklamlar",       icon: Megaphone },
   { id: "reports",      label: "Raporlar",        icon: AlertTriangle },
   { id: "subscriptions",label: "Üyelikler",       icon: CreditCard },
+  { id: "withdrawals",  label: "Para Çekme Talepleri", icon: Wallet },
   { id: "cdn",          label: "CDN & Depolama",  icon: HardDrive },
   { id: "integrations", label: "Entegrasyonlar",  icon: Link2 },
   { id: "payments",     label: "Ödemeler",        icon: DollarSign },
   { id: "security",     label: "Güvenlik",        icon: Shield },
-  { id: "mining",       label: "Madencilik",      icon: Bitcoin },
   { id: "site",         label: "Site Ayarları",   icon: Settings2 },
   { id: "api-endpoints",label: "API Endpoint'ler", icon: Code2 },
-  { id: "developer",    label: "Developer",         icon: Code2 },
   { id: "affiliate",    label: "Affiliate",        icon: Share2 },
   { id: "badges",       label: "Rozetler",         icon: Award },
   { id: "pages",        label: "Özel Sayfalar",    icon: LayoutTemplate },
@@ -58,7 +58,6 @@ const TABS = [
   { id: "health",       label: "Sağlık Monitörü",    icon: HeartPulse },
   { id: "email",        label: "E-posta Kampanya",   icon: Mail },
   { id: "gifts",        label: "Hediye Abonelik",    icon: Gift },
-  { id: "link-mod",     label: "Link Moderasyon",    icon: AlertTriangle },
   { id: "features",     label: "Özellikler",          icon: ToggleLeft },
   { id: "crosspost-monitor", label: "Crosspost İzleme", icon: RadioTower },
   { id: "home-filters",      label: "Anasayfa Filtreleri", icon: SlidersHorizontal },
@@ -187,10 +186,8 @@ export default function Admin() {
             {tab === "integrations" && <AdminIntegrations />}
             {tab === "payments" && <AdminPayments />}
             {tab === "security" && <AdminSecurity />}
-            {tab === "mining" && <AdminMining />}
             {tab === "site" && <AdminSiteSettings />}
             {tab === "api-endpoints" && <AdminApiEndpoints />}
-            {tab === "developer" && <AdminApiEndpoints />}
             {tab === "affiliate" && <AdminAffiliate />}
             {tab === "badges" && <AdminBadges />}
             {tab === "pages" && <AdminCustomPages />}
@@ -199,10 +196,11 @@ export default function Admin() {
             {tab === "revenue" && <AdminRevenueProjection />}
             {tab === "email" && <AdminEmailCampaigns />}
             {tab === "gifts" && <AdminGiftSubscriptions />}
-            {tab === "link-mod" && <AdminLinkModeration />}
             {tab === "features" && <AdminFeatureFlags />}
             {tab === "crosspost-monitor" && <AdminCrosspostMonitor />}
             {tab === "home-filters" && <AdminHomeFilters />}
+            {tab === "moderation" && <AdminModeration />}
+            {tab === "withdrawals" && <AdminWithdrawals />}
             {tab === "health" && (
               <div className="space-y-6 max-w-5xl">
                 <h1 className="text-2xl font-bold">Sağlık Monitörü</h1>

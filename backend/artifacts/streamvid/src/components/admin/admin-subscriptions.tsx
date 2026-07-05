@@ -488,29 +488,6 @@ export function AdminSubscriptions() {
         </div>
       </div>
 
-      {/* Ödeme Entegrasyonları */}
-      <div className="bg-[#0d0d0d] border border-[#1e1e1e] rounded-xl p-5">
-        <h2 className="font-bold mb-3 text-[#ddd]">Ödeme Entegrasyonları</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { name: "Stripe",  status: "Hazır",  note: "Kart ödemeleri",   icon: "💳" },
-            { name: "PayPal",  status: "Yakında", note: "PayPal ödemeleri", icon: "🅿️" },
-            { name: "Kripto",  status: "Aktif",  note: "15 coin destekli", icon: "₿" },
-            { name: "Papara",  status: "Yakında", note: "Türk lirası",      icon: "🇹🇷" },
-          ].map(p => (
-            <div key={p.name} className="bg-[#151515] rounded-xl p-4 border border-[#222]">
-              <div className="text-2xl mb-2">{p.icon}</div>
-              <p className="font-medium text-sm text-[#ddd]">{p.name}</p>
-              <p className="text-xs text-[#555] mt-0.5">{p.note}</p>
-              <span className={cn("text-xs mt-2 inline-block px-2 py-0.5 rounded-full border",
-                p.status === "Hazır" || p.status === "Aktif"
-                  ? "bg-green-900/30 text-green-400 border-green-800/40"
-                  : "bg-[#222] text-[#555] border-[#2a2a2a]"
-              )}>{p.status}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

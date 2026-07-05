@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useListVideos, useDeleteVideo, useUpdateVideo, useListCategories } from "@workspace/api-client-react";
+import { useDeleteVideo, useUpdateVideo, useListCategories } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Video, Trash2, Edit2, Eye, EyeOff, Search, ChevronLeft, ChevronRight, ChevronDown,
@@ -1047,7 +1047,24 @@ export function AdminVideos() {
   const [showDlPanel, setShowDlPanel] = useState(true);
   const [retrying, setRetrying] = useState<Record<number, boolean>>({});
 
-  const { data, isLoading } = useListVideos({ page, limit: 20 } as any);
+  // Admin sees ALL videos (published/unpublished/restricted) via /api/admin/videos,
+  // not the public-facing filtered /api/videos endpoint.
+  const [data, setData] = useState<{ videos: any[]; total: number } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [videosReloadKey, setVideosReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    const params = new URLSearchParams({ page: String(page), limit: "20" });
+    if (search) params.set("q", search);
+    apiFetch(`/admin/videos?${params.toString()}`)
+      .then(d => { if (!cancelled) setData(d); })
+      .catch(() => { if (!cancelled) setData({ videos: [], total: 0 }); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [page, search, videosReloadKey]);
+
   const { data: catsData } = useListCategories();
   const deleteMutation = useDeleteVideo();
   const updateMutation = useUpdateVideo();
@@ -1118,7 +1135,7 @@ export function AdminVideos() {
   const totalPages = Math.ceil(total / 20);
   const categories = Array.isArray(catsData) ? catsData : (catsData as any)?.categories ?? [];
 
-  const refetchAll = () => queryClient.invalidateQueries();
+  const refetchAll = () => { queryClient.invalidateQueries(); setVideosReloadKey(k => k + 1); };
 
   const handleDelete = (id: number) => {
     if (deleteMutation.isPending) return;
@@ -1161,7 +1178,7 @@ export function AdminVideos() {
     return <VideoPlayerManager videoId={playersVideoId} onBack={() => setPlayersVideoId(null)} />;
   }
 
-  const filtered = videos.filter(v => !search || v.title.toLowerCase().includes(search.toLowerCase()));
+  const filtered = videos;
 
   return (
     <div className="space-y-4 max-w-5xl">
