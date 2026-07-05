@@ -875,7 +875,7 @@ export default function VideoWatch() {
                   <div className="flex items-center gap-2">
                     <span className="text-[#666] text-xs shrink-0">Kategori</span>
                     <button
-                      onClick={() => setLocation(`/categories/${video.category.slug || video.category.id}`)}
+                      onClick={() => setLocation(`/categories/${video.category.id}`)}
                       className="inline-flex items-center gap-1 bg-primary/15 text-primary text-xs font-semibold px-2.5 py-1 rounded-full border border-primary/25 hover:bg-primary/25 transition-colors"
                     >
                       {video.category.name}
@@ -886,7 +886,7 @@ export default function VideoWatch() {
                   <div className="flex items-center gap-2">
                     <span className="text-[#666] text-xs shrink-0">Otomatik</span>
                     <button
-                      onClick={() => setLocation(`/categories/${autoCategory.slug || autoCategory.categoryId}`)}
+                      onClick={() => setLocation(`/categories/${autoCategory.categoryId}`)}
                       className="inline-flex items-center gap-1 bg-[#2a2a2a] text-[#aaa] text-xs font-semibold px-2.5 py-1 rounded-full border border-[#333] hover:border-primary/40 hover:text-primary transition-colors"
                     >
                       {autoCategory.name}
