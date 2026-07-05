@@ -1377,8 +1377,10 @@ def get_bookmarks(request):
     total = bookmarks.count()
     items = list(bookmarks[offset:offset + limit])
     return Response({
-        'bookmarks': [enrich_video(b.video, request.user) for b in items],
+        'videos': [enrich_video(b.video, request.user) for b in items],
         'total': total,
+        'page': page,
+        'limit': limit,
     })
 
 
