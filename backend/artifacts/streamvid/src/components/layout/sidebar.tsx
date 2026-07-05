@@ -15,7 +15,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useListCategories } from "@workspace/api-client-react";
-import { Switch } from "@/components/ui/switch";
 import { useCrosspostBadge } from "@/hooks/use-crosspost-badge";
 import { useFeatureState } from "@/lib/feature-flags";
 import { toast } from "sonner";
@@ -112,7 +111,6 @@ export function Sidebar() {
   const [modelsExpanded, setModelsExpanded] = useState(false);
   const [topCatsExpanded, setTopCatsExpanded] = useState(false);
   const [communityExpanded, setCommunityExpanded] = useState(false);
-  const [personalRecs, setPersonalRecs] = useState(true);
 
   const { data: categoriesData } = useListCategories();
   const categories: any[] = Array.isArray(categoriesData) ? categoriesData : (categoriesData as any)?.categories ?? [];
@@ -322,14 +320,6 @@ export function Sidebar() {
             </>
           )}
 
-
-          {/* Kişiselleştirilmiş toggle */}
-          {nav("personalized").enabled && (
-            <div className="flex items-center justify-between px-4 py-4 border-t border-[#2c2c2c] mt-1">
-              <span className="text-[14px] text-[#ccc]">{nav("personalized").label}</span>
-              <Switch checked={personalRecs} onCheckedChange={setPersonalRecs} className="data-[state=checked]:bg-[#f90]" />
-            </div>
-          )}
 
           {/* Login CTA */}
           {!user && (
