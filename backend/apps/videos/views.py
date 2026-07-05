@@ -43,6 +43,8 @@ def _categories_with_stats():
             'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url,
             'videoCount': c.real_video_count,
             'coverImage': cover_by_cat.get(c.id),
+            'showOnHome': c.show_on_home,
+            'homeOrder': c.home_order,
         }
         for c in cats
     ]

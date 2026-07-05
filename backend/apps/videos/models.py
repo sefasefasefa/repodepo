@@ -8,10 +8,13 @@ class Category(models.Model):
     slug = models.SlugField(unique=True)
     icon_url = models.TextField(null=True, blank=True)
     video_count = models.IntegerField(default=0)
+    show_on_home = models.BooleanField(default=True)
+    home_order = models.IntegerField(default=0)
 
     class Meta:
         db_table = 'categories'
         verbose_name_plural = 'categories'
+        ordering = ['home_order', 'name']
 
     def __str__(self):
         return self.name

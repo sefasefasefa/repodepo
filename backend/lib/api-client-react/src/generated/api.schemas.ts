@@ -159,6 +159,8 @@ export interface Category {
   /** @nullable */
   iconUrl?: string | null;
   videoCount: number;
+  showOnHome?: boolean;
+  homeOrder?: number;
 }
 
 export interface Video {

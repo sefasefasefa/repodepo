@@ -111,11 +111,16 @@ def create_category(request):
     slug = d.get('slug') or name.lower().replace(' ', '-')
     if not name:
         return Response({'error': 'name gerekli'}, status=400)
-    cat = Category.objects.create(name=name, slug=slug, icon_url=d.get('iconUrl'))
+    cat = Category.objects.create(
+        name=name, slug=slug, icon_url=d.get('iconUrl'),
+        show_on_home=d.get('showOnHome', True),
+        home_order=d.get('homeOrder', 0),
+    )
     cache.delete('categories:all_v3')
     return Response({
         'id': cat.id, 'name': cat.name, 'slug': cat.slug,
         'iconUrl': cat.icon_url, 'videoCount': cat.video_count,
+        'showOnHome': cat.show_on_home, 'homeOrder': cat.home_order,
     }, status=201)
 
 
@@ -137,11 +142,19 @@ def update_category(request, cat_id):
         cat.slug = d['slug'].strip().lower().replace(' ', '-')
     if 'iconUrl' in d:
         cat.icon_url = d['iconUrl'] or None
+    if 'showOnHome' in d:
+        cat.show_on_home = bool(d['showOnHome'])
+    if 'homeOrder' in d:
+        try:
+            cat.home_order = int(d['homeOrder'])
+        except (ValueError, TypeError):
+            pass
     cat.save()
     cache.delete('categories:all_v3')
     return Response({
         'id': cat.id, 'name': cat.name, 'slug': cat.slug,
         'iconUrl': cat.icon_url, 'videoCount': cat.video_count,
+        'showOnHome': cat.show_on_home, 'homeOrder': cat.home_order,
     })
 
 

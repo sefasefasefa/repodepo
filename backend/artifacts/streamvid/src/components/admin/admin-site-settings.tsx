@@ -1009,7 +1009,23 @@ function CategoryManagerTab() {
           <div className="divide-y divide-[#1a1a1a]">
             {categories.map(cat => {
               const isEditing = editing[cat.id] !== undefined;
-              const vals = editing[cat.id] ?? { name: cat.name, slug: cat.slug, iconUrl: cat.icon_url || "" };
+              const vals = editing[cat.id] ?? {
+                name: cat.name, slug: cat.slug, iconUrl: cat.icon_url || "",
+                showOnHome: cat.showOnHome !== false, homeOrder: cat.homeOrder ?? 0,
+              };
+              const toggleShowOnHome = async () => {
+                setSaving(s => ({ ...s, [cat.id]: true }));
+                try {
+                  await fetch(`${API_BASE}/categories/${cat.id}/update`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ name: cat.name, showOnHome: !(cat.showOnHome !== false) }),
+                  });
+                  await invalidateAndRefetch();
+                } finally {
+                  setSaving(s => ({ ...s, [cat.id]: false }));
+                }
+              };
               return (
                 <div key={cat.id} className="px-4 py-3 space-y-2">
                   <div className="flex items-center gap-3">
@@ -1021,9 +1037,26 @@ function CategoryManagerTab() {
                       <span className="flex-1 text-sm text-white">{cat.name}</span>
                     )}
                     <span className="text-[11px] text-[#444] shrink-0">{cat.videoCount ?? 0} video</span>
+                    <button
+                      onClick={toggleShowOnHome}
+                      disabled={saving[cat.id]}
+                      title="Anasayfa filtrelerinde göster/gizle"
+                      className={cn(
+                        "flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border transition-colors shrink-0 disabled:opacity-50",
+                        cat.showOnHome !== false
+                          ? "bg-primary/15 border-primary/30 text-primary"
+                          : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555]"
+                      )}
+                    >
+                      {cat.showOnHome !== false ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                      {cat.showOnHome !== false ? "Anasayfada" : "Gizli"}
+                    </button>
                     {!isEditing ? (
                       <>
-                        <button onClick={() => setEditing(p => ({ ...p, [cat.id]: { name: cat.name, slug: cat.slug, iconUrl: cat.icon_url || "" } }))}
+                        <button onClick={() => setEditing(p => ({ ...p, [cat.id]: {
+                          name: cat.name, slug: cat.slug, iconUrl: cat.icon_url || "",
+                          showOnHome: cat.showOnHome !== false, homeOrder: cat.homeOrder ?? 0,
+                        } }))}
                           className="text-[#444] hover:text-primary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
                         {confirmDelete === cat.id ? (
                           <div className="flex items-center gap-1">
@@ -1056,6 +1089,19 @@ function CategoryManagerTab() {
                         <label className="text-[10px] text-[#555] block mb-1">İkon URL</label>
                         <input value={vals.iconUrl} onChange={e => setEditing(p => ({ ...p, [cat.id]: { ...vals, iconUrl: e.target.value } }))}
                           placeholder="https://..." className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-[#555] block mb-1">Anasayfa Sırası (küçük = önce)</label>
+                        <input type="number" value={vals.homeOrder} onChange={e => setEditing(p => ({ ...p, [cat.id]: { ...vals, homeOrder: +e.target.value } }))}
+                          className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none" />
+                      </div>
+                      <div className="flex items-end">
+                        <button onClick={() => setEditing(p => ({ ...p, [cat.id]: { ...vals, showOnHome: !vals.showOnHome } }))}
+                          className={cn("flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors",
+                            vals.showOnHome ? "bg-primary/15 border-primary/30 text-primary" : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555]")}>
+                          {vals.showOnHome ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                          Anasayfa filtresinde göster
+                        </button>
                       </div>
                     </div>
                   )}

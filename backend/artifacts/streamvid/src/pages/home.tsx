@@ -458,13 +458,19 @@ export default function Home() {
   const shortData      = homeData ? { videos: homeData.shorts }      : undefined;
   const premiumData    = homeData ? { videos: homeData.premium }     : undefined;
   const categories: Category[] = homeData?.categories ?? [];
-  const visibleCategories = categories.filter((c: Category) => (c.videoCount ?? 0) > 0);
+  // Admin panelinden "anasayfada göster" olarak işaretlenmiş kategoriler, belirlenen sıraya göre
+  const visibleCategories = categories
+    .filter((c: Category) => (c as any).showOnHome !== false)
+    .sort((a: any, b: any) => (a.homeOrder ?? 0) - (b.homeOrder ?? 0));
   const creators: any[] = homeData?.creators ?? [];
 
   const trendingLoading   = homeLoading;
   const newestLoading     = homeLoading;
   const mostViewedLoading = homeLoading;
   const mostLikedLoading  = homeLoading;
+
+  // Bir kategori veya özel filtre seçili mi?
+  const hasActiveSelection = !!activeFilter || !!activeCategory;
 
   // Kategoriye tıklandığında veya özel filtre seçildiğinde dinamik sorgu
   const filterParams = (() => {
@@ -480,8 +486,10 @@ export default function Home() {
   const filteredSort = activeFilter?.sortBy ?? "most_viewed";
 
   const { data: filteredData, isLoading: filteredLoading } = useListVideos(
-    activeFilter ? { sort: filteredSort, limit: 24, ...filterParams } : { sort: "newest", limit: 1 }
+    hasActiveSelection ? { sort: filteredSort, limit: 24, ...filterParams } : { sort: "newest", limit: 1 }
   );
+
+  const activeCategoryObj = activeCategory ? categories.find((c: Category) => c.id === activeCategory) : null;
 
   return (
     <AppLayout>
@@ -550,17 +558,21 @@ export default function Home() {
           </div>
         )}
 
-        {/* Aktif filtre sonuçları */}
-        {activeFilter && ffVideos !== "disabled" && (
+        {/* Aktif filtre / kategori sonuçları */}
+        {hasActiveSelection && ffVideos !== "disabled" && (
           <section>
             <SectionHeader
               icon={SlidersHorizontal}
-              title={`${activeFilter.icon} ${activeFilter.label}`}
-              subtitle={[
-                activeFilter.rules?.min_views ? `Min. ${activeFilter.rules.min_views.toLocaleString()} izlenme` : null,
-                activeFilter.rules?.min_likes ? `Min. ${activeFilter.rules.min_likes} beğeni` : null,
-                activeFilter.rules?.is_premium ? "Sadece Premium" : null,
-              ].filter(Boolean).join(" · ") || "Filtrelenmiş sonuçlar"}
+              title={activeFilter ? `${activeFilter.icon} ${activeFilter.label}` : (activeCategoryObj?.name ?? "Kategori")}
+              subtitle={
+                activeFilter
+                  ? ([
+                      activeFilter.rules?.min_views ? `Min. ${activeFilter.rules.min_views.toLocaleString()} izlenme` : null,
+                      activeFilter.rules?.min_likes ? `Min. ${activeFilter.rules.min_likes} beğeni` : null,
+                      activeFilter.rules?.is_premium ? "Sadece Premium" : null,
+                    ].filter(Boolean).join(" · ") || "Filtrelenmiş sonuçlar")
+                  : "Kategoriye göre videolar"
+              }
               iconColor="text-primary"
             />
             {filteredLoading ? (

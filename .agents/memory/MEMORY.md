@@ -5,3 +5,4 @@
 - [Windows Git GC Fix](windows-git-gc-fix.md) — update.sh uses tarball download instead of git fetch on Windows to avoid Defender lock + CONIN$ prompt.
 - [Python Version Mismatch](python-version-mismatch.md) — pyproject.toml requires-python must be >=3.11 (not 3.12) or uv installs packages for the wrong interpreter, breaking Django imports.
 - [Admin panel fake/duplicate menus](admin-panel-audit.md) — localStorage-only admin tabs can't show real user data; check fetch calls + HTTP verbs against urls.py before trusting a tab.
+- [Frontend deploy leaves stale index.html](frontend-deploy-static.md) — streamvid's `pnpm run deploy` only copies hashed assets, not index.html; copy it manually or the site serves a broken/old bundle.
