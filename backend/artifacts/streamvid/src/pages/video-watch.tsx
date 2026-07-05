@@ -413,6 +413,8 @@ export default function VideoWatch() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [autoCategory, setAutoCategory] = useState<{ categoryId: number; name: string; slug: string } | null>(null);
+  const [guestLiked, setGuestLiked] = useState(false);
+  const [guestLikeCount, setGuestLikeCount] = useState(0);
 
   const token = typeof window !== "undefined" ? (localStorage.getItem("token") ?? "") : "";
 
@@ -519,7 +521,12 @@ export default function VideoWatch() {
   const commentMutation = useCreateComment();
 
   useEffect(() => {
-    if (video) setIsBookmarked(!!(video as any).isBookmarked);
+    if (video) {
+      setIsBookmarked(!!(video as any).isBookmarked);
+      setGuestLikeCount((video as any).guestLikeCount ?? 0);
+      const likedIds: number[] = JSON.parse(localStorage.getItem("guest_liked_videos") ?? "[]");
+      setGuestLiked(likedIds.includes(video.id as number));
+    }
   }, [video]);
 
   const handleBookmark = async () => {
@@ -644,8 +651,23 @@ export default function VideoWatch() {
       .catch(() => setHasAccess(false));
   }, [video]);
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!video) return;
+    if (!user) {
+      if (guestLiked) return;
+      try {
+        const res = await fetch(`/api/videos/${videoId}/guest-like`, { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          setGuestLiked(true);
+          setGuestLikeCount(data.guestLikeCount ?? guestLikeCount + 1);
+          const likedIds: number[] = JSON.parse(localStorage.getItem("guest_liked_videos") ?? "[]");
+          likedIds.push(video.id as number);
+          localStorage.setItem("guest_liked_videos", JSON.stringify(likedIds));
+        }
+      } catch { /* sessizce yoksay */ }
+      return;
+    }
     likeMutation.mutate({ id: videoId }, {
       onSuccess: () => {
         queryClient.setQueryData(getGetVideoQueryKey(videoId), (old: any) => old ? { ...old, isLiked: !old.isLiked, likeCount: old.isLiked ? old.likeCount - 1 : old.likeCount + 1 } : old);
@@ -771,14 +793,37 @@ export default function VideoWatch() {
             </div>
             {/* Action buttons — icon-only on mobile, icon+label on sm+ */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <Button
-                variant="secondary" size="sm"
-                className="rounded-full px-2.5 sm:px-3 touch-manipulation"
-                onClick={handleLike}
-              >
-                <Heart className={cn("h-4 w-4 sm:mr-1.5", video.isLiked ? "fill-red-500 text-red-500" : "")} />
-                <span className="text-xs">{video.likeCount?.toLocaleString()}</span>
-              </Button>
+              <div className="flex items-center gap-0.5">
+                <Button
+                  variant="secondary" size="sm"
+                  className={cn(
+                    "rounded-full px-2.5 sm:px-3 touch-manipulation",
+                    (!user && guestLiked) ? "opacity-60 cursor-default" : ""
+                  )}
+                  onClick={handleLike}
+                  disabled={!user && guestLiked}
+                >
+                  <Heart className={cn("h-4 w-4 sm:mr-1.5", (user ? video.isLiked : guestLiked) ? "fill-red-500 text-red-500" : "")} />
+                  <span className="text-xs hidden sm:inline">
+                    {user ? (video.likeCount ?? 0).toLocaleString() : (guestLiked ? "Beğenildi" : "Beğen")}
+                  </span>
+                  <span className="text-xs sm:hidden">{user ? (video.likeCount ?? 0).toLocaleString() : (guestLiked ? "✓" : "")}</span>
+                </Button>
+                {((video.likeCount ?? 0) > 0 || guestLikeCount > 0) && (
+                  <div className="flex items-center gap-1 ml-1 text-[10px] text-[#555]">
+                    {(video.likeCount ?? 0) > 0 && (
+                      <span title="Üye beğenisi" className="flex items-center gap-0.5">
+                        <span>👤</span>{(video.likeCount ?? 0).toLocaleString()}
+                      </span>
+                    )}
+                    {guestLikeCount > 0 && (
+                      <span title="Misafir beğenisi" className="flex items-center gap-0.5">
+                        <span>👁️</span>{guestLikeCount.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
               <Button
                 variant="secondary" size="sm"
                 className={cn(

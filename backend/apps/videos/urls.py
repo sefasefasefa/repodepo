@@ -22,6 +22,7 @@ urlpatterns = [
     path('videos/<str:video_id>/delete', views.delete_video),
     path('videos/<str:video_id>/distribute', views.distribute_video),
     path('videos/<str:video_id>/like', views.like_video),
+    path('videos/<str:video_id>/guest-like', views.guest_like_video),
     path('videos/<str:video_id>/unlike', views.unlike_video),
     path('videos/<str:video_id>/bookmark', views.bookmark_video),
     path('videos/<str:video_id>/unbookmark', views.unbookmark_video),

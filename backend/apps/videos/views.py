@@ -179,6 +179,7 @@ def enrich_video(v, user=None):
         'duration': v.duration,
         'viewCount': v.view_count,
         'likeCount': v.like_count,
+        'guestLikeCount': getattr(v, 'guest_like_count', 0),
         'commentCount': v.comment_count,
         'type': v.type,
         'isPremium': v.is_premium,
@@ -215,6 +216,7 @@ def slim_video_for_card(v):
         'duration': v.duration,
         'viewCount': v.view_count,
         'likeCount': v.like_count,
+        'guestLikeCount': getattr(v, 'guest_like_count', 0),
         'commentCount': v.comment_count,
         'type': v.type,
         'isPremium': v.is_premium,
@@ -267,6 +269,7 @@ def enrich_videos_bulk(videos, user=None):
             'duration': v.duration,
             'viewCount': v.view_count,
             'likeCount': v.like_count,
+            'guestLikeCount': getattr(v, 'guest_like_count', 0),
             'commentCount': v.comment_count,
             'type': v.type,
             'isPremium': v.is_premium,
@@ -1179,6 +1182,17 @@ def delete_video(request, video_id):
         return Response({'error': 'Forbidden'}, status=403)
     video.delete()
     return Response({'message': 'Video deleted'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def guest_like_video(request, video_id):
+    video = _resolve_video(video_id)
+    if not video:
+        return Response({'error': 'Video not found'}, status=404)
+    Video.objects.filter(id=video.id).update(guest_like_count=F('guest_like_count') + 1)
+    video.refresh_from_db(fields=['guest_like_count'])
+    return Response({'guestLikeCount': video.guest_like_count})
 
 
 @api_view(['POST'])

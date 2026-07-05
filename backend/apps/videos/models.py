@@ -45,6 +45,7 @@ class Video(models.Model):
     duration = models.IntegerField(null=True, blank=True)
     view_count = models.IntegerField(default=0)
     like_count = models.IntegerField(default=0)
+    guest_like_count = models.IntegerField(default=0)
     comment_count = models.IntegerField(default=0)
     type = models.CharField(max_length=20, choices=VIDEO_TYPES, default='video')
     is_premium = models.BooleanField(default=False)
