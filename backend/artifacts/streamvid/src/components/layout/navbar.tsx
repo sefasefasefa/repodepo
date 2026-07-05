@@ -21,7 +21,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import { FriendTag } from "@/components/friends/friend-badges";
 import { getPresence } from "@/lib/presence";
 import { toast } from "sonner";
 
@@ -194,10 +193,14 @@ export function Navbar() {
           {/* Right side — authenticated */}
           {user ? (
             <>
-              {/* Friend tag desktop */}
-              <div className="hidden md:flex items-center gap-2 mr-2">
-                <FriendTag label="Arkadaşlar" />
-              </div>
+              {/* People / creators button — visible on all screen sizes */}
+              <button
+                onClick={() => setLocation("/creators")}
+                className="flex items-center gap-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 text-blue-400 rounded-full px-2.5 py-1.5 transition-all"
+                title="Yaratıcıları Keşfet"
+              >
+                <Users className="h-3.5 w-3.5" />
+              </button>
 
               {/* Mining */}
               <MiningStatus />
