@@ -205,7 +205,7 @@ export function Navbar() {
               {/* Token balance */}
               <button
                 onClick={() => setShowTokenBuy(true)}
-                className="hidden sm:flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 hover:border-yellow-500/40 text-yellow-400 rounded-full px-3 py-1.5 text-xs font-bold transition-all"
+                className="flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 hover:border-yellow-500/40 text-yellow-400 rounded-full px-2.5 py-1.5 text-xs font-bold transition-all"
               >
                 <Coins className="h-3.5 w-3.5" />
                 {tokenBalance === null ? "…" : tokenBalance.toLocaleString("tr")}
