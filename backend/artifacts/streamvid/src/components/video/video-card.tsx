@@ -27,6 +27,7 @@ function isHlsUrl(url: string): boolean {
 
 export function VideoCard({ video }: VideoCardProps) {
   const [previewing, setPreviewing] = useState(false);
+  const [actuallyPlaying, setActuallyPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,6 +64,9 @@ export function VideoCard({ video }: VideoCardProps) {
       el.play().catch(() => {});
     };
 
+    const handlePlaying = () => { if (!destroyed) setActuallyPlaying(true); };
+    el.addEventListener("playing", handlePlaying);
+
     if (isHlsUrl(previewUrl)) {
       // hls.js yalnızca hover preview başladığında lazy yüklenir (510KB ilk yüklemeye katılmaz)
       import("hls.js").then(({ default: Hls }) => {
@@ -90,6 +94,7 @@ export function VideoCard({ video }: VideoCardProps) {
 
     return () => {
       destroyed = true;
+      el.removeEventListener("playing", handlePlaying);
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
@@ -107,6 +112,7 @@ export function VideoCard({ video }: VideoCardProps) {
 
   const stopPreview = useCallback(() => {
     setPreviewing(false);
+    setActuallyPlaying(false);
   }, []);
 
   // Desktop: hover
@@ -119,9 +125,13 @@ export function VideoCard({ video }: VideoCardProps) {
   }, [stopPreview]);
 
   // Mobil: tek dokunuşta önizlemeyi başlat, video sayfasına gitmeyi ikinci
-  // dokunuşa ertele (parmakla dokunulan cihazları "pointer: coarse" ile tespit et)
+  // dokunuşa ertele (parmakla dokunulan cihazları tespit et — pointer:coarse
+  // birincil, dokunma yeteneği ikincil yedek olarak kontrol edilir)
   const isTouchDevice = useCallback(() => {
-    return typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+    if (typeof window === "undefined") return false;
+    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches;
+    if (coarse) return true;
+    return "ontouchstart" in window || (navigator?.maxTouchPoints ?? 0) > 0;
   }, []);
 
   const handleCardClick = useCallback((e: React.MouseEvent) => {
@@ -129,6 +139,13 @@ export function VideoCard({ video }: VideoCardProps) {
       e.preventDefault();
       e.stopPropagation();
       startPreview();
+      // iOS/Safari: play() bir kullanıcı jestinin senkron çağrı yığınında
+      // tetiklenmelidir, aksi halde otomatik oynatma engellenir. Video
+      // elementini burada "kilidini açmak" için hemen çağırıyoruz; asıl
+      // kaynak (src/HLS) aşağıdaki effect'te asenkron olarak yüklenip
+      // tekrar play() çağrılacak — element bu ilk jestle zaten "izinli"
+      // duruma geçmiş oluyor.
+      videoRef.current?.play().catch(() => {});
     }
   }, [isTouchDevice, canPreview, previewing, startPreview]);
 
@@ -156,7 +173,7 @@ export function VideoCard({ video }: VideoCardProps) {
             <img
               src={video.thumbnailUrl}
               alt={video.title}
-              className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-105 ${previewing ? "opacity-0" : "opacity-100"}`}
+              className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-105 ${actuallyPlaying ? "opacity-0" : "opacity-100"}`}
               loading="lazy"
               onError={(e) => {
                 const target = e.currentTarget;
@@ -168,7 +185,7 @@ export function VideoCard({ video }: VideoCardProps) {
           ) : null}
           <div
             style={{ display: video.thumbnailUrl ? "none" : "flex" }}
-            className={`w-full h-full items-center justify-center bg-secondary/50 transition-colors ${previewing ? "opacity-0" : "opacity-100 group-hover:bg-secondary"}`}
+            className={`w-full h-full items-center justify-center bg-secondary/50 transition-colors ${actuallyPlaying ? "opacity-0" : "opacity-100 group-hover:bg-secondary"}`}
           >
             <Play className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground opacity-50" />
           </div>
@@ -182,7 +199,7 @@ export function VideoCard({ video }: VideoCardProps) {
               playsInline
               preload="none"
               poster={video.thumbnailUrl || undefined}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${previewing ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${actuallyPlaying ? "opacity-100" : "opacity-0 pointer-events-none"}`}
             />
           )}
 
