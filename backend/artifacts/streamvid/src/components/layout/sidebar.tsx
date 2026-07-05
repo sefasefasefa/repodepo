@@ -322,15 +322,6 @@ export function Sidebar() {
             </>
           )}
 
-          {/* DB Kategorileri */}
-          {categories.filter(c => (c.videoCount ?? 0) > 0).length > 0 && sec("section-categories").enabled && (
-            <>
-              <SectionDivider label={sec("section-categories").label} />
-              {categories.filter(c => (c.videoCount ?? 0) > 0).map(cat => (
-                <Row key={cat.id} icon={PlayCircle} label={`${cat.name}  (${cat.videoCount})`} href={`/categories/${cat.id}`} onClick={onClose} sub />
-              ))}
-            </>
-          )}
 
           {/* Kişiselleştirilmiş toggle */}
           {nav("personalized").enabled && (
