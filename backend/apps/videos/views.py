@@ -323,13 +323,15 @@ def list_videos(request):
     creator_id = request.query_params.get('creatorId')
     min_views = request.query_params.get('minViews')
     min_likes = request.query_params.get('minLikes')
+    duration_bucket = request.query_params.get('duration')  # short | mid | long
+    tag = request.query_params.get('tag')
 
     _maybe_auto_publish()
 
     # Anonim kullanıcılar için 90 saniye önbellek
     is_anon = not request.user.is_authenticated
     if is_anon and page == 1 and not creator_id:
-        ck = f'list_videos:{sort}:{category_id}:{video_type}:{is_premium}:{limit}:{min_views}:{min_likes}'
+        ck = f'list_videos:{sort}:{category_id}:{video_type}:{is_premium}:{limit}:{min_views}:{min_likes}:{duration_bucket}:{tag}'
         cached = cache.get(ck)
         if cached is not None:
             return Response(cached)
@@ -353,11 +355,34 @@ def list_videos(request):
             qs = qs.filter(like_count__gte=int(min_likes))
         except (ValueError, TypeError):
             pass
+    if duration_bucket == 'short':
+        qs = qs.filter(duration__lt=600)
+    elif duration_bucket == 'mid':
+        qs = qs.filter(duration__gte=600, duration__lt=1800)
+    elif duration_bucket == 'long':
+        qs = qs.filter(duration__gte=1800)
+    if tag:
+        try:
+            qs = qs.filter(tags__contains=[tag])
+        except Exception:
+            pass
 
     if sort == 'most_viewed':
         qs = qs.order_by('-view_count')
     elif sort == 'most_liked':
         qs = qs.order_by('-like_count')
+    elif sort == 'most_commented':
+        qs = qs.order_by('-comment_count')
+    elif sort == 'longest':
+        qs = qs.order_by('-duration')
+    elif sort == 'shortest':
+        qs = qs.order_by(F('duration').asc(nulls_last=True))
+    elif sort == 'trending':
+        popularity_expr = ExpressionWrapper(
+            F('view_count') + F('like_count') * 5 + F('comment_count') * 8,
+            output_field=IntegerField()
+        )
+        qs = qs.annotate(popularity=popularity_expr).order_by('-popularity', '-created_at')
     else:
         qs = qs.order_by('-created_at')
 
@@ -369,6 +394,30 @@ def list_videos(request):
     }
     if is_anon and page == 1 and not creator_id:
         cache.set(ck, result, 90)
+    return Response(result)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_category_tags(request, cat_id):
+    """Bir kategorideki videolarda kullanılan en yaygın etiketleri döndürür (etiket filtre çipleri için)."""
+    ck = f'category_tags:{cat_id}'
+    cached = cache.get(ck)
+    if cached is not None:
+        return Response(cached)
+    from collections import Counter
+    tag_lists = Video.objects.filter(
+        category_id=cat_id, is_published=True
+    ).exclude(tags=[]).values_list('tags', flat=True)[:500]
+    counter = Counter()
+    for tags in tag_lists:
+        if isinstance(tags, list):
+            for t in tags:
+                if t:
+                    counter[str(t)] += 1
+    top_tags = [{'tag': t, 'count': c} for t, c in counter.most_common(20)]
+    result = {'tags': top_tags}
+    cache.set(ck, result, 300)
     return Response(result)
 
 
