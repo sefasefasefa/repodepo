@@ -255,6 +255,22 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'INFO',
     },
+    'loggers': {
+        # django.request logs 4xx (403/404 vb.) olarak WARNING, 5xx olarak ERROR
+        # üretir. İnternet genelinde her açık sunucuya gelen bot/tarayıcı
+        # trafiğinin ürettiği 403/404 gürültüsünü konsoldan gizliyoruz;
+        # gerçek sunucu hataları (5xx) yine görünür kalır.
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security.csrf': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
 }
 
 # Public site URL for distribution and absolute URLs
