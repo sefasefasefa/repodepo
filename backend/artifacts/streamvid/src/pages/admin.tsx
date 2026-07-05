@@ -32,6 +32,51 @@ const AdminWithdrawals         = lazy(() => import("@/components/admin/admin-wit
 import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower, SlidersHorizontal, ShieldCheck, Wallet, Search, ChevronDown, Film, UsersRound, Megaphone as MegaphoneIcon, Wallet as WalletIcon, ShieldAlert, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+async function pulseFetch(path: string) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+function usePendingCounts() {
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const results = await Promise.allSettled([
+        pulseFetch("/admin/moderation/stats").then(d => ["moderation", d.pending ?? 0] as const),
+        pulseFetch("/admin/withdrawals").then(d => ["withdrawals", (d.requests ?? []).filter((r: any) => r.status === "pending").length] as const),
+        pulseFetch("/admin/creator-applications").then(d => ["applications", (d.applications ?? []).filter((a: any) => a.status === "pending").length] as const),
+      ]);
+      if (cancelled) return;
+      const next: Record<string, number> = {};
+      for (const r of results) {
+        if (r.status === "fulfilled") {
+          const [key, value] = r.value;
+          next[key] = value;
+        }
+      }
+      setCounts(next);
+    };
+    load();
+    const interval = setInterval(load, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  return counts;
+}
+
+function CountBadge({ count }: { count?: number }) {
+  if (!count) return null;
+  return (
+    <span className="ml-auto shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500/90 text-white text-[10px] font-bold flex items-center justify-center">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 const GROUPS = [
   {
     id: "overview",
@@ -137,6 +182,8 @@ export default function Admin() {
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const { data: dashboard } = useGetAdminDashboard();
+  const pendingCounts = usePendingCounts();
+  const counts: Record<string, number> = { ...pendingCounts, reports: dashboard?.pendingReports ?? 0 };
 
   const activeGroupId = GROUPS.find(g => g.tabs.some(t => t.id === tab))?.id;
 
@@ -180,6 +227,7 @@ export default function Admin() {
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className={cn("flex items-center gap-2 px-4 py-3 text-sm whitespace-nowrap transition-colors border-b-2", tab === t.id ? "border-primary text-primary font-semibold" : "border-transparent text-[#888] hover:text-white")}>
               <t.icon className="h-4 w-4" />{t.label}
+              {!!counts[t.id] && <span className="min-w-[16px] h-[16px] px-1 rounded-full bg-red-500/90 text-white text-[9px] font-bold flex items-center justify-center">{counts[t.id] > 99 ? "99+" : counts[t.id]}</span>}
             </button>
           ))}
         </div>
@@ -204,6 +252,7 @@ export default function Admin() {
               )}
               {filteredGroups.map((g) => {
                 const open = isGroupOpen(g.id);
+                const groupCount = g.tabs.reduce((sum, t) => sum + (counts[t.id] || 0), 0);
                 return (
                   <div key={g.id} className="mb-1">
                     <button
@@ -212,13 +261,16 @@ export default function Admin() {
                     >
                       <g.icon className="h-3.5 w-3.5 shrink-0" />
                       <span className="flex-1 text-left">{g.label}</span>
+                      <CountBadge count={groupCount} />
                       <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open ? "rotate-0" : "-rotate-90")} />
                     </button>
                     {open && (
                       <div className="space-y-0.5 mt-0.5">
                         {g.tabs.map((t) => (
                           <button key={t.id} onClick={() => setTab(t.id)} className={cn("w-full flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg text-sm transition-colors text-left", tab === t.id ? "bg-primary/15 text-primary font-semibold" : "text-[#aaa] hover:bg-[#222] hover:text-white")}>
-                            <t.icon className="h-4 w-4 shrink-0" />{t.label}
+                            <t.icon className="h-4 w-4 shrink-0" />
+                            <span className="flex-1">{t.label}</span>
+                            <CountBadge count={counts[t.id]} />
                           </button>
                         ))}
                       </div>
