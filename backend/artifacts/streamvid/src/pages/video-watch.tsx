@@ -285,7 +285,47 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
     );
   }
 
-  const isDirectVideo = !activeSource?.embedCode && !!activeSource?.directUrl;
+  // Doğrudan video oynatıcıda oynatılabilen formatlar
+  const NATIVE_EXTS = ['mp4', 'webm', 'm3u8', 'ogg', 'ogv', 'mov', 'mkv', 'avi', 'flv', 'ts', 'wmv', 'mpg', 'mpeg'];
+  function isNativePlayable(url: string): boolean {
+    const clean = url.split('?')[0].split('#')[0].toLowerCase();
+    const ext = clean.split('.').pop() ?? '';
+    if (NATIVE_EXTS.includes(ext)) return true;
+    // Stream endpoint de native
+    if (clean.includes('/stream')) return true;
+    return false;
+  }
+
+  function toIframeHtml(url: string): string {
+    return `<iframe src="${url}" width="100%" height="100%" frameborder="0" scrolling="no" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer-when-downgrade" style="width:100%;height:100%;border:0;"></iframe>`;
+  }
+
+  // activeSource'u normalize et: ham URL → iframe html
+  const effectiveDirectUrl = (() => {
+    if (!activeSource) return null;
+    if (activeSource.directUrl && isNativePlayable(activeSource.directUrl)) return activeSource.directUrl;
+    return null;
+  })();
+
+  const effectiveEmbedHtml = (() => {
+    if (!activeSource) return null;
+    // directUrl var ama native oynatılamıyor → iframe yap
+    if (activeSource.directUrl && !isNativePlayable(activeSource.directUrl)) {
+      return toIframeHtml(activeSource.directUrl);
+    }
+    // embedCode var
+    if (activeSource.embedCode) {
+      const code = activeSource.embedCode.trim();
+      // Ham URL ise iframe'e sar
+      if (code.startsWith('http://') || code.startsWith('https://')) {
+        return toIframeHtml(code);
+      }
+      return code;
+    }
+    return null;
+  })();
+
+  const isDirectVideo = !!effectiveDirectUrl;
 
   return (
     <div className="space-y-2">
@@ -352,11 +392,11 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
         <div className="w-full rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
           <ScreenProtectionOverlay className="w-full h-full">
             <div className="w-full h-full bg-black relative">
-              {activeSource?.directUrl ? (
+              {effectiveDirectUrl ? (
                 <CustomVideoPlayer
                   ref={videoRef}
-                  key={activeSource.directUrl}
-                  src={activeSource.directUrl}
+                  key={effectiveDirectUrl}
+                  src={effectiveDirectUrl}
                   poster={video.thumbnailUrl || undefined}
                   protected={screenProt}
                   onTimeUpdate={handleTimeUpdate}
@@ -366,11 +406,11 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
                   videoId={video.id}
                   token={token}
                 />
-              ) : activeSource?.embedCode ? (
+              ) : effectiveEmbedHtml ? (
                 <div
-                  key={activeSource.embedCode}
+                  key={effectiveEmbedHtml}
                   className="w-full h-full"
-                  dangerouslySetInnerHTML={{ __html: activeSource.embedCode }}
+                  dangerouslySetInnerHTML={{ __html: effectiveEmbedHtml }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
