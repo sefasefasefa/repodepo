@@ -57,12 +57,23 @@ export default function Categories() {
             {categories?.map((cat, i) => {
               const color = CATEGORY_COLORS[i % CATEGORY_COLORS.length];
               const emoji = CATEGORY_EMOJIS[cat.name] ?? "🎬";
+              const coverImage: string | undefined = (cat as any).coverImage;
               return (
                 <Link key={cat.id} href={`/categories/${cat.id}`}>
-                  <div className={`group relative overflow-hidden rounded-2xl border-2 ${color.border} bg-gradient-to-br ${color.from} ${color.to} h-36 flex flex-col items-start justify-end p-4 cursor-pointer transition-all duration-300 hover:scale-[1.04] hover:shadow-2xl hover:shadow-black/60`}>
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                    <div className="absolute top-3 right-3 text-4xl opacity-50 group-hover:opacity-90 group-hover:scale-125 group-hover:rotate-6 transition-all duration-300 drop-shadow-lg">
+                  <div
+                    className={`group relative overflow-hidden rounded-2xl border-2 ${color.border} ${coverImage ? "bg-black" : `bg-gradient-to-br ${color.from} ${color.to}`} h-36 flex flex-col items-start justify-end p-4 cursor-pointer transition-all duration-300 hover:scale-[1.04] hover:shadow-2xl hover:shadow-black/60`}
+                  >
+                    {coverImage && (
+                      <img
+                        src={coverImage}
+                        alt={cat.name}
+                        className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-90 group-hover:scale-110 transition-all duration-300"
+                        loading="lazy"
+                      />
+                    )}
+                    <div className={`absolute inset-0 ${coverImage ? "bg-black/50 group-hover:bg-black/35" : "bg-black/40 group-hover:bg-black/20"} transition-colors duration-300`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute top-3 right-3 text-4xl opacity-60 group-hover:opacity-90 group-hover:scale-125 group-hover:rotate-6 transition-all duration-300 drop-shadow-lg">
                       {emoji}
                     </div>
                     <div className="relative z-10">

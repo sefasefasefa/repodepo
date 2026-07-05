@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/layout/app-layout";
 import { useParams } from "wouter";
-import { useListVideos } from "@workspace/api-client-react";
+import { useListVideos, useListCategories } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VideoCard } from "@/components/video/video-card";
 import { Grid3x3, SlidersHorizontal, ChevronLeft, TrendingUp, Clock, Star, Flame } from "lucide-react";
@@ -46,6 +46,10 @@ export default function CategoryDetail() {
     page,
   } as any);
 
+  const { data: rawCategories } = useListCategories();
+  const allCategories: any[] = Array.isArray(rawCategories) ? rawCategories : (rawCategories as any)?.categories ?? [];
+  const category = allCategories.find((c: any) => c.id === categoryId);
+
   const videos = (data as any)?.results ?? (data as any)?.videos ?? [];
   const totalCount = (data as any)?.count ?? 0;
   const totalPages = Math.ceil(totalCount / 20);
@@ -61,21 +65,39 @@ export default function CategoryDetail() {
             </span>
           </Link>
           <span>/</span>
-          <span className="text-white font-medium">Kategori #{categoryId}</span>
+          <span className="text-white font-medium">{category?.name ?? `Kategori #${categoryId}`}</span>
         </div>
+
+        {/* Kapak Görseli */}
+        {category?.coverImage && (
+          <div className="relative h-40 md:h-56 w-full overflow-hidden rounded-2xl">
+            <img
+              src={category.coverImage}
+              alt={category.name}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
+            <div className="absolute bottom-4 left-4">
+              <h1 className="text-2xl font-bold text-white drop-shadow-lg">{category.name}</h1>
+              {!isLoading && <p className="text-sm text-white/80 mt-1">{totalCount} video</p>}
+            </div>
+          </div>
+        )}
 
         {/* Başlık + Filtre Butonu */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/15 p-2.5 rounded-xl">
-              <Grid3x3 className="h-5 w-5 text-primary" />
+          {!category?.coverImage && (
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/15 p-2.5 rounded-xl">
+                <Grid3x3 className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold">{category?.name ?? `Kategori #${categoryId}`}</h1>
+                {!isLoading && <p className="text-xs text-muted-foreground">{totalCount} video</p>}
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold">Kategori #{categoryId}</h1>
-              {!isLoading && <p className="text-xs text-muted-foreground">{totalCount} video</p>}
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => setShowFilters(v => !v)} className="gap-2">
+          )}
+          <Button variant="outline" size="sm" onClick={() => setShowFilters(v => !v)} className="gap-2 ml-auto">
             <SlidersHorizontal className="h-4 w-4" />
             Filtrele / Sırala
           </Button>

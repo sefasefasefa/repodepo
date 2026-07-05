@@ -1,7 +1,7 @@
 import os
 import re
 import uuid as _uuid_module
-from django.db.models import Q, F
+from django.db.models import Q, F, Count, ExpressionWrapper, IntegerField
 from django.utils import timezone
 from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes, parser_classes
@@ -9,6 +9,43 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
+
+
+def _categories_with_stats():
+    """Kategorileri gerçek video sayısı ve en popüler videonun kapak resmiyle döndürür.
+    Popülerlik: sadece izlenme değil, izlenme + beğeni + yorum ağırlıklı skor."""
+    cats = list(
+        Category.objects.annotate(
+            real_video_count=Count('videos', filter=Q(videos__is_published=True))
+        ).order_by('-real_video_count', 'name')
+    )
+    cat_ids = [c.id for c in cats]
+
+    cover_by_cat = {}
+    if cat_ids:
+        popularity_expr = ExpressionWrapper(
+            F('view_count') + F('like_count') * 5 + F('comment_count') * 8,
+            output_field=IntegerField()
+        )
+        top_videos = (
+            Video.objects.filter(category_id__in=cat_ids, is_published=True)
+            .annotate(popularity=popularity_expr)
+            .order_by('category_id', '-popularity', '-created_at')
+            .values('category_id', 'thumbnail_url')
+        )
+        for row in top_videos:
+            cid = row['category_id']
+            if cid not in cover_by_cat and row['thumbnail_url']:
+                cover_by_cat[cid] = row['thumbnail_url']
+
+    return [
+        {
+            'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url,
+            'videoCount': c.real_video_count,
+            'coverImage': cover_by_cat.get(c.id),
+        }
+        for c in cats
+    ]
 
 
 def _make_slug(title, exclude_id=None):
@@ -396,11 +433,7 @@ def _build_home_data_anon():
     shorts      = list(base_qs.filter(type='short').order_by('-view_count')[:8])
     premium     = list(base_qs.filter(is_premium=True).order_by('-view_count')[:6])
 
-    cats = list(Category.objects.all().order_by('-video_count', 'name'))
-    categories = [
-        {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
-        for c in cats
-    ]
+    categories = _categories_with_stats()
 
     from apps.accounts.models import User as _User
     creator_qs = _User.objects.filter(role='creator').order_by('-follower_count')[:8]
@@ -462,11 +495,7 @@ def home_page(request):
         shorts      = list(base_qs.filter(type='short').order_by('-view_count')[:8])
         premium     = list(base_qs.filter(is_premium=True).order_by('-view_count')[:6])
 
-        cats = list(Category.objects.all().order_by('-video_count', 'name'))
-        categories = [
-            {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
-            for c in cats
-        ]
+        categories = _categories_with_stats()
         from apps.accounts.models import User as _User
         creator_qs = _User.objects.filter(role='creator').order_by('-follower_count')[:8]
         creators = [
@@ -1291,17 +1320,13 @@ def get_bookmarks(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_categories(request):
-    cached = cache.get('categories:all_v2')
+    cached = cache.get('categories:all_v3')
     if cached is not None:
         resp = Response(cached)
         resp['Cache-Control'] = 'public, s-maxage=300, max-age=300, stale-while-revalidate=120'
         return resp
-    cats = Category.objects.all().order_by('-video_count', 'name')
-    result = [
-        {'id': c.id, 'name': c.name, 'slug': c.slug, 'iconUrl': c.icon_url, 'videoCount': c.video_count}
-        for c in cats
-    ]
-    cache.set('categories:all_v2', result, 300)
+    result = _categories_with_stats()
+    cache.set('categories:all_v3', result, 300)
     resp = Response(result)
     resp['Cache-Control'] = 'public, s-maxage=300, max-age=300, stale-while-revalidate=120'
     return resp
@@ -1320,8 +1345,25 @@ def get_category(request, slug):
     videos_qs = Video.objects.filter(category=cat, is_published=True).select_related('creator', 'category').order_by('-created_at')
     total = videos_qs.count()
     videos = list(videos_qs[offset:offset + limit])
+
+    popularity_expr = ExpressionWrapper(
+        F('view_count') + F('like_count') * 5 + F('comment_count') * 8,
+        output_field=IntegerField()
+    )
+    top_video = (
+        Video.objects.filter(category=cat, is_published=True)
+        .annotate(popularity=popularity_expr)
+        .order_by('-popularity', '-created_at')
+        .values('thumbnail_url')
+        .first()
+    )
+    cover_image = top_video['thumbnail_url'] if top_video else None
+
     return Response({
-        'category': {'id': cat.id, 'name': cat.name, 'slug': cat.slug, 'iconUrl': cat.icon_url, 'videoCount': cat.video_count},
+        'category': {
+            'id': cat.id, 'name': cat.name, 'slug': cat.slug, 'iconUrl': cat.icon_url,
+            'videoCount': total, 'coverImage': cover_image,
+        },
         'videos': enrich_videos_bulk(videos, request.user),
         'total': total,
     })
