@@ -31,8 +31,6 @@ export function VideoCard({ video }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const hlsRef = useRef<any>(null);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressActive = useRef(false);
 
   const formatDuration = (seconds?: number | null): string | null => {
     if (!seconds || seconds <= 0 || !Number.isFinite(seconds)) return null;
@@ -120,22 +118,19 @@ export function VideoCard({ video }: VideoCardProps) {
     stopPreview();
   }, [stopPreview]);
 
-  // Mobile: basılı tut (long-press)
-  const handleTouchStart = useCallback(() => {
-    longPressActive.current = false;
-    longPressTimer.current = setTimeout(() => {
-      longPressActive.current = true;
-      startPreview();
-    }, 500);
-  }, [startPreview]);
+  // Mobil: tek dokunuşta önizlemeyi başlat, video sayfasına gitmeyi ikinci
+  // dokunuşa ertele (parmakla dokunulan cihazları "pointer: coarse" ile tespit et)
+  const isTouchDevice = useCallback(() => {
+    return typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+  }, []);
 
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    if (longPressActive.current) {
-      stopPreview();
-      longPressActive.current = false;
+  const handleCardClick = useCallback((e: React.MouseEvent) => {
+    if (isTouchDevice() && canPreview && !previewing) {
+      e.preventDefault();
+      e.stopPropagation();
+      startPreview();
     }
-  }, [stopPreview]);
+  }, [isTouchDevice, canPreview, previewing, startPreview]);
 
   const toggleMute = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
@@ -154,9 +149,7 @@ export function VideoCard({ video }: VideoCardProps) {
           className="relative aspect-video rounded-xl overflow-hidden bg-muted cursor-pointer touch-manipulation select-none"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
+          onClick={handleCardClick}
         >
           {/* Thumbnail */}
           {video.thumbnailUrl ? (
