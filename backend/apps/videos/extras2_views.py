@@ -247,14 +247,27 @@ def recommendations_for_you(request):
     since30 = timezone.now() - timedelta(days=30)
     history = WatchHistory.objects.filter(
         user=me, created_at__gte=since30,
-    ).select_related('video').values('video__category_id', 'video__creator_id', 'video_id')
-    cat_affinity, creator_affinity = {}, {}
+    ).select_related('video').values(
+        'video__category_id', 'video__creator_id', 'video_id',
+        'video__tags', 'watch_time', 'completion_rate',
+    )
+    # Weighted affinity maps. Each watched video contributes a "strength"
+    # based on how much of it was actually watched (completion_rate), so a
+    # video someone finished says more about their taste than one they
+    # bounced off after 2 seconds. This same weighting scheme is what the
+    # future ML ranking model (see apps.ai) will be trained to reproduce —
+    # keeping it explicit here makes it easy to swap in a learned model
+    # later without changing the surrounding request/response contract.
+    cat_affinity, creator_affinity, tag_affinity = {}, {}, {}
     watched = set()
     for h in history:
         watched.add(h['video_id'])
+        strength = 0.4 + 0.6 * (min(100, h.get('completion_rate') or 0) / 100)
         if h['video__category_id']:
-            cat_affinity[h['video__category_id']] = cat_affinity.get(h['video__category_id'], 0) + 1
-        creator_affinity[h['video__creator_id']] = creator_affinity.get(h['video__creator_id'], 0) + 1
+            cat_affinity[h['video__category_id']] = cat_affinity.get(h['video__category_id'], 0) + strength
+        creator_affinity[h['video__creator_id']] = creator_affinity.get(h['video__creator_id'], 0) + strength
+        for tag in (h.get('video__tags') or []):
+            tag_affinity[tag] = tag_affinity.get(tag, 0) + strength
 
     followed = set(Follow.objects.filter(follower=me).values_list('following_id', flat=True))
 
@@ -265,24 +278,46 @@ def recommendations_for_you(request):
     not_watched = [v for v in candidates if v.id not in watched]
     max_cat = max(cat_affinity.values() or [1])
     max_cre = max(creator_affinity.values() or [1])
+    max_tag = max(tag_affinity.values() or [1])
     now_ts = timezone.now().timestamp()
 
     def score(v):
         cat_s = (cat_affinity.get(v.category_id, 0) / max_cat) if v.category_id else 0
         cre_s = creator_affinity.get(v.creator_id, 0) / max_cre
+        tags = getattr(v, 'tags', None) or []
+        tag_s = (sum(tag_affinity.get(t, 0) for t in tags) / (len(tags) * max_tag)) if tags else 0
         follow_bonus = 0.25 if v.creator_id in followed else 0
         import math
         trend = math.log1p(v.view_count) * 0.6 + math.log1p(v.like_count) * 0.4
         trend_n = min(trend / 12, 1)
         age_days = (now_ts - v.created_at.timestamp()) / 86400
         fresh = max(0, 1 - age_days / 30)
-        return cat_s * 0.35 + (cre_s + follow_bonus) * 0.25 + trend_n * 0.25 + fresh * 0.15
+        return cat_s * 0.30 + tag_s * 0.15 + (cre_s + follow_bonus) * 0.25 + trend_n * 0.20 + fresh * 0.10
 
     scored = sorted(not_watched, key=score, reverse=True)
     paged = scored[offset:offset + limit]
     liked_ids = set(VideoLike.objects.filter(
         user=me, video_id__in=[v.id for v in paged],
     ).values_list('video_id', flat=True))
+
+    # Log a lightweight training signal each time a personalized feed is
+    # served, so the future recommendation model has (user, shown videos,
+    # affinity snapshot) pairs to learn from — without this we'd only ever
+    # see raw watch events, never what the heuristic actually recommended.
+    try:
+        from apps.ai.views import record_event
+        record_event(
+            'engagement', user=me,
+            payload={
+                'kind': 'for_you_impression',
+                'videoIds': [v.id for v in paged],
+                'topCategoryIds': sorted(cat_affinity, key=cat_affinity.get, reverse=True)[:5],
+            },
+            status='auto',
+        )
+    except Exception:
+        pass
+
     return Response({
         'videos': [_fmt_video(v, liked_ids) for v in paged],
         'personalized': True, 'page': page, 'limit': limit, 'total': len(scored),
