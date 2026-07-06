@@ -79,7 +79,7 @@ from apps.accounts.views import format_user as fmt_user
 def _resolve_video(video_id, qs=None):
     """UUID string, slug veya eski integer pk ile Video döner, bulunamazsa None."""
     import uuid as _uuid_mod
-    base = (qs or Video.objects).select_related('creator', 'category')
+    base = (qs or Video.objects).select_related('creator', 'category').prefetch_related('categories')
     vid_str = str(video_id).strip()
     try:
         _uuid_mod.UUID(vid_str)
@@ -677,7 +677,27 @@ def get_video(request, video_id):
     v = _resolve_video(video_id)
     if not v:
         return Response({'error': 'Video not found'}, status=404)
-    return Response(enrich_video(v, request.user))
+
+    # Short-lived per-user cache so repeat views (page refresh, back-navigation) skip DB
+    uid = request.user.id if request.user.is_authenticated else 'anon'
+    ck = f'video_detail:{v.pk}:{uid}'
+    cached = cache.get(ck)
+    if cached:
+        return Response(cached)
+
+    data = enrich_video(v, request.user)
+
+    # Include follow status so frontend doesn't need a second round-trip
+    if request.user.is_authenticated and v.creator_id:
+        from apps.social.models import Follow
+        data['isFollowing'] = Follow.objects.filter(
+            follower=request.user, following_id=v.creator_id
+        ).exists()
+    else:
+        data['isFollowing'] = False
+
+    cache.set(ck, data, 30)   # 30 s — stale on like/bookmark is fine
+    return Response(data)
 
 
 @api_view(['GET'])
@@ -1233,6 +1253,7 @@ def like_video(request, video_id):
             record_event('engagement', video=video, user=request.user, payload={'kind': 'likes'})
         except Exception:
             pass
+    cache.delete(f'video_detail:{video.pk}:{request.user.id}')
     return Response({'isLiked': True, 'likeCount': video.like_count + (1 if created else 0)})
 
 
@@ -1245,6 +1266,7 @@ def unlike_video(request, video_id):
     deleted, _ = VideoLike.objects.filter(user=request.user, video=video).delete()
     if deleted:
         Video.objects.filter(id=video.id).update(like_count=F('like_count') - 1)
+    cache.delete(f'video_detail:{video.pk}:{request.user.id}')
     return Response({'isLiked': False})
 
 
@@ -1255,6 +1277,7 @@ def bookmark_video(request, video_id):
     if not video:
         return Response({'error': 'Video not found'}, status=404)
     VideoBookmark.objects.get_or_create(user=request.user, video=video)
+    cache.delete(f'video_detail:{video.pk}:{request.user.id}')
     return Response({'isBookmarked': True})
 
 
@@ -1264,6 +1287,7 @@ def unbookmark_video(request, video_id):
     video = _resolve_video(video_id)
     if video:
         VideoBookmark.objects.filter(user=request.user, video=video).delete()
+        cache.delete(f'video_detail:{video.pk}:{request.user.id}')
     return Response({'isBookmarked': False})
 
 

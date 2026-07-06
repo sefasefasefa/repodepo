@@ -1,6 +1,7 @@
 from django.utils import timezone
 from django.db.models import F, Q
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -32,6 +33,10 @@ def follow_user(request, user_id):
             actor=request.user,
             action_url=f'/profile/{request.user.username}',
         )
+    # Invalidate video detail cache entries for this user so isFollowing reflects correctly
+    from apps.videos.models import Video
+    for vid_pk in Video.objects.filter(creator=target).values_list('pk', flat=True)[:50]:
+        cache.delete(f'video_detail:{vid_pk}:{request.user.id}')
     return Response({'isFollowing': True})
 
 
@@ -42,6 +47,9 @@ def unfollow_user(request, user_id):
     if deleted:
         User.objects.filter(id=request.user.id).update(following_count=F('following_count') - 1)
         User.objects.filter(id=user_id).update(follower_count=F('follower_count') - 1)
+        from apps.videos.models import Video
+        for vid_pk in Video.objects.filter(creator_id=user_id).values_list('pk', flat=True)[:50]:
+            cache.delete(f'video_detail:{vid_pk}:{request.user.id}')
     return Response({'isFollowing': False})
 
 

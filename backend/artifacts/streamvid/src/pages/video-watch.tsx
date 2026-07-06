@@ -469,6 +469,16 @@ export default function VideoWatch() {
 
   const token = typeof window !== "undefined" ? (localStorage.getItem("token") ?? "") : "";
 
+  // Kick off access check in parallel with useGetVideo — re-runs when auth state changes
+  useEffect(() => {
+    const t = localStorage.getItem("token") ?? "";
+    const headers: Record<string, string> = t ? { Authorization: `Bearer ${t}` } : {};
+    fetch("/api/subscriptions/has-access", { headers })
+      .then(r => r.json())
+      .then(d => setHasAccess(d.hasAccess ?? false))
+      .catch(() => setHasAccess(false)); // fail-closed — don't unlock on network error
+  }, [(user as any)?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const isCreatorOrAdmin = user && video && ((user as any).role === "admin" || (video.creator && (user as any).id === video.creator.id));
 
   /* ── URL normalizasyonu: /videos/7 veya /videos/<uuid> → /videos/slug ──── */
@@ -626,18 +636,10 @@ export default function VideoWatch() {
     fetch(`/api/videos/${videoId}/view`, { method: "POST" }).catch(() => {});
   }, [videoId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // isFollowing is now provided by the video detail API — no separate round-trip needed
   useEffect(() => {
-    if (!user || !video?.creator?.id) return;
-    const t = localStorage.getItem("token");
-    if (!t) return;
-    fetch(`/api/users/${video.creator.id}/followers?limit=1&offset=0`, { headers: { Authorization: `Bearer ${t}` } })
-      .then(r => r.json())
-      .then(d => {
-        const followers: any[] = d.users || [];
-        setIsFollowing(followers.some((f: any) => f.id === (user as any).id));
-      })
-      .catch(() => {});
-  }, [user, video?.creator?.id]);
+    if (video) setIsFollowing(!!(video as any).isFollowing);
+  }, [video?.id, (video as any)?.isFollowing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFollow = async () => {
     if (!user) { setLocation("/login"); return; }
@@ -689,18 +691,7 @@ export default function VideoWatch() {
     }
   };
 
-  useEffect(() => {
-    if (!video) return;
-    const needsCheck = video.isPremium || video.isPPV;
-    if (!needsCheck) {
-      setHasAccess(true);
-      return;
-    }
-    fetch("/api/subscriptions/has-access")
-      .then(r => r.json())
-      .then(d => setHasAccess(d.hasAccess))
-      .catch(() => setHasAccess(false));
-  }, [video]);
+  // Access check now fires in parallel on mount (see earlier useEffect) — removed old sequential version
 
   const handleLike = async () => {
     if (!video) return;
