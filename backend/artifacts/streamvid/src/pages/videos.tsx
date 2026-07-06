@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Flame, Eye, Clock, ThumbsUp, Crown, SlidersHorizontal,
-  Video, Filter, ChevronDown, Sparkles, Grid2x2, LayoutList,
+  Video, Filter, ChevronDown, Sparkles, Grid2x2, LayoutList, Tag, X,
 } from "lucide-react";
 import type { Category } from "@workspace/api-client-react";
 
@@ -23,6 +23,27 @@ const TYPE_OPTIONS = [
   { value: "",      label: "Tümü" },
   { value: "video", label: "Video" },
   { value: "short", label: "Kısa" },
+];
+
+const DURATION_OPTIONS = [
+  { value: "",     label: "Tüm Süreler" },
+  { value: "short", label: "< 10 dk" },
+  { value: "mid",   label: "10–30 dk" },
+  { value: "long",  label: "30 dk+" },
+];
+
+const MIN_VIEWS_OPTIONS = [
+  { value: 0,    label: "Fark etmez" },
+  { value: 100,  label: "100+" },
+  { value: 1000, label: "1.000+" },
+  { value: 5000, label: "5.000+" },
+];
+
+const MIN_LIKES_OPTIONS = [
+  { value: 0,   label: "Fark etmez" },
+  { value: 10,  label: "10+" },
+  { value: 50,  label: "50+" },
+  { value: 200, label: "200+" },
 ];
 
 function SortButton({ active, onClick, icon: Icon, label }: {
@@ -74,7 +95,12 @@ export default function Videos() {
     searchParams.get("categoryId") ? Number(searchParams.get("categoryId")) : null
   );
   const [premium, setPremium] = useState<boolean | undefined>(undefined);
+  const [duration, setDuration] = useState("");
+  const [minViews, setMinViews] = useState(0);
+  const [minLikes, setMinLikes] = useState(0);
+  const [tag, setTag] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
 
   useEffect(() => {
@@ -89,12 +115,31 @@ export default function Videos() {
     ...(type ? { type } : {}),
     ...(categoryId ? { categoryId } : {}),
     ...(premium !== undefined ? { isPremium: premium } : {}),
+    ...(duration ? { duration } : {}),
+    ...(minViews ? { minViews } : {}),
+    ...(minLikes ? { minLikes } : {}),
+    ...(tag ? { tag } : {}),
     limit: 40,
-  });
+  } as any);
 
   const { data: catsData } = useListCategories();
   const categories: Category[] = (catsData as any)?.categories ?? [];
   const visibleCats = categories.filter((c: Category) => (c.videoCount ?? 0) > 0);
+
+  const [tags, setTags] = useState<{ tag: string; count: number }[]>([]);
+  useEffect(() => {
+    fetch("/api/videos/tags")
+      .then(r => r.json())
+      .then(d => setTags(d.tags ?? []))
+      .catch(() => {});
+  }, []);
+
+  const hasAdvancedFilters = !!duration || minViews > 0 || minLikes > 0 || !!tag;
+
+  const resetAll = () => {
+    setCategoryId(null); setType(""); setPremium(undefined); setSort("newest");
+    setDuration(""); setMinViews(0); setMinLikes(0); setTag("");
+  };
 
   const videos = data?.videos ?? [];
   const activeSort = SORT_OPTIONS.find(s => s.value === sort)!;
@@ -121,7 +166,7 @@ export default function Videos() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowFilters(v => !v)}
+              onClick={() => { setShowFilters(v => !v); setShowAdvanced(false); }}
               className={cn(
                 "gap-1 sm:gap-1.5 text-xs h-8 border px-2 sm:px-3",
                 showFilters
@@ -132,6 +177,22 @@ export default function Videos() {
               <Filter className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Filtrele</span>
               <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showFilters && "rotate-180")} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setShowAdvanced(v => !v); setShowFilters(false); }}
+              className={cn(
+                "gap-1 sm:gap-1.5 text-xs h-8 border px-2 sm:px-3",
+                showAdvanced || hasAdvancedFilters
+                  ? "bg-primary/10 text-primary border-primary/30"
+                  : "text-[#888] border-[#2a2a2a] hover:text-white"
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Ek Filtreler</span>
+              {hasAdvancedFilters && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showAdvanced && "rotate-180")} />
             </Button>
             <div className="flex bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-0.5">
               <button
@@ -222,8 +283,102 @@ export default function Videos() {
           </div>
         )}
 
+        {/* Advanced filters panel */}
+        {showAdvanced && (
+          <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-4 space-y-4 mx-0">
+            <div>
+              <p className="text-xs text-[#888] mb-2 font-medium">Süre</p>
+              <div className="flex flex-wrap gap-2">
+                {DURATION_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setDuration(opt.value)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium transition-all border touch-manipulation",
+                      duration === opt.value
+                        ? "bg-primary text-white border-primary"
+                        : "bg-[#1a1a1a] text-[#888] border-[#2a2a2a] hover:text-white"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-[#888] mb-2 font-medium">Minimum İzlenme</p>
+              <div className="flex flex-wrap gap-2">
+                {MIN_VIEWS_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setMinViews(opt.value)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium transition-all border touch-manipulation",
+                      minViews === opt.value
+                        ? "bg-primary text-white border-primary"
+                        : "bg-[#1a1a1a] text-[#888] border-[#2a2a2a] hover:text-white"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-[#888] mb-2 font-medium">Minimum Beğeni</p>
+              <div className="flex flex-wrap gap-2">
+                {MIN_LIKES_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setMinLikes(opt.value)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium transition-all border touch-manipulation",
+                      minLikes === opt.value
+                        ? "bg-primary text-white border-primary"
+                        : "bg-[#1a1a1a] text-[#888] border-[#2a2a2a] hover:text-white"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {tags.length > 0 && (
+              <div>
+                <p className="text-xs text-[#888] mb-2 font-medium flex items-center gap-1">
+                  <Tag className="h-3 w-3" /> Etiketler
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map(t => (
+                    <button
+                      key={t.tag}
+                      onClick={() => setTag(prev => prev === t.tag ? "" : t.tag)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-xs font-medium transition-all border touch-manipulation",
+                        tag === t.tag
+                          ? "bg-primary text-white border-primary"
+                          : "bg-[#1a1a1a] text-[#888] border-[#2a2a2a] hover:text-white"
+                      )}
+                    >
+                      #{t.tag} <span className="opacity-60">{t.count}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {hasAdvancedFilters && (
+              <button
+                onClick={() => { setDuration(""); setMinViews(0); setMinLikes(0); setTag(""); }}
+                className="flex items-center gap-1 text-xs text-[#666] hover:text-white transition-colors touch-manipulation"
+              >
+                <X className="h-3 w-3" /> Ek filtreleri temizle
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Active filter tags */}
-        {(categoryId || type || premium !== undefined) && (
+        {(categoryId || type || premium !== undefined || hasAdvancedFilters) && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-[#555]">Filtreler:</span>
             {categoryId && (
@@ -244,8 +399,32 @@ export default function Videos() {
                 <button onClick={() => setPremium(undefined)} className="hover:opacity-70 touch-manipulation">×</button>
               </span>
             )}
+            {duration && (
+              <span className="flex items-center gap-1 text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                {DURATION_OPTIONS.find(d => d.value === duration)?.label}
+                <button onClick={() => setDuration("")} className="hover:opacity-70 touch-manipulation">×</button>
+              </span>
+            )}
+            {minViews > 0 && (
+              <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-300 border border-green-500/20 px-2 py-0.5 rounded-full">
+                {MIN_VIEWS_OPTIONS.find(o => o.value === minViews)?.label} izlenme
+                <button onClick={() => setMinViews(0)} className="hover:opacity-70 touch-manipulation">×</button>
+              </span>
+            )}
+            {minLikes > 0 && (
+              <span className="flex items-center gap-1 text-xs bg-pink-500/10 text-pink-300 border border-pink-500/20 px-2 py-0.5 rounded-full">
+                {MIN_LIKES_OPTIONS.find(o => o.value === minLikes)?.label} beğeni
+                <button onClick={() => setMinLikes(0)} className="hover:opacity-70 touch-manipulation">×</button>
+              </span>
+            )}
+            {tag && (
+              <span className="flex items-center gap-1 text-xs bg-orange-500/10 text-orange-300 border border-orange-500/20 px-2 py-0.5 rounded-full">
+                #{tag}
+                <button onClick={() => setTag("")} className="hover:opacity-70 touch-manipulation">×</button>
+              </span>
+            )}
             <button
-              onClick={() => { setCategoryId(null); setType(""); setPremium(undefined); setSort("newest"); }}
+              onClick={resetAll}
               className="text-xs text-[#555] hover:text-white transition-colors touch-manipulation"
             >
               Sıfırla
@@ -267,7 +446,7 @@ export default function Videos() {
               variant="outline"
               size="sm"
               className="mt-4 border-[#333] text-[#888] hover:text-white"
-              onClick={() => { setCategoryId(null); setType(""); setPremium(undefined); setSort("newest"); }}
+              onClick={resetAll}
             >
               Filtreleri Sıfırla
             </Button>

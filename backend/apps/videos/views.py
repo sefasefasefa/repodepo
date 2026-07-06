@@ -368,7 +368,7 @@ def list_videos(request):
         qs = qs.filter(duration__gte=1800)
     if tag:
         try:
-            qs = qs.filter(tags__contains=[tag])
+            qs = qs.filter(tags__icontains=tag)
         except Exception:
             pass
 
@@ -421,6 +421,30 @@ def list_category_tags(request, cat_id):
                 if t:
                     counter[str(t)] += 1
     top_tags = [{'tag': t, 'count': c} for t, c in counter.most_common(20)]
+    result = {'tags': top_tags}
+    cache.set(ck, result, 300)
+    return Response(result)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_video_tags(request):
+    """Sitedeki tüm yayınlanmış videolarda kullanılan en yaygın etiketler (gelişmiş filtre çipleri için)."""
+    ck = 'video_tags:all'
+    cached = cache.get(ck)
+    if cached is not None:
+        return Response(cached)
+    from collections import Counter
+    tag_lists = Video.objects.filter(
+        is_published=True
+    ).exclude(tags=[]).values_list('tags', flat=True)[:1000]
+    counter = Counter()
+    for tags in tag_lists:
+        if isinstance(tags, list):
+            for t in tags:
+                if t:
+                    counter[str(t)] += 1
+    top_tags = [{'tag': t, 'count': c} for t, c in counter.most_common(30)]
     result = {'tags': top_tags}
     cache.set(ck, result, 300)
     return Response(result)

@@ -11,6 +11,7 @@ urlpatterns = [
     path('videos', views.list_videos),
     path('videos/feed', views.get_feed),
     path('videos/trending', views.get_trending),
+    path('videos/tags', views.list_video_tags),
     path('videos/shorts', views.get_shorts),
     path('videos/search', views.search_videos),
     path('videos/create', views.create_video),
