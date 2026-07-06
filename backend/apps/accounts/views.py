@@ -262,7 +262,11 @@ def list_users(request):
 
     qs = User.objects.all()
     if role:
-        qs = qs.filter(role=role)
+        # Admin kullanıcılar creators sayfasında her zaman görünsün
+        if role == 'creator':
+            qs = qs.filter(role__in=['creator', 'admin'])
+        else:
+            qs = qs.filter(role=role)
 
     total = qs.count()
     users = qs.order_by('-follower_count')[offset:offset + limit]
