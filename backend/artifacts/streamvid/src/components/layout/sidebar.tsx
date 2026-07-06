@@ -18,6 +18,7 @@ import { useListCategories } from "@workspace/api-client-react";
 import { useCrosspostBadge } from "@/hooks/use-crosspost-badge";
 import { useFeatureState } from "@/lib/feature-flags";
 import { toast } from "sonner";
+import { preloadRoute } from "@/lib/preload-routes";
 
 function Row({
   icon: Icon, label, href, onClick, active, flag, badge,
@@ -42,7 +43,7 @@ function Row({
       sub ? "pl-9 text-[14px]" : "",
       isMaint ? "opacity-50" : active ? "bg-[#303030] text-white font-medium" : "text-[#d0d0d0] hover:bg-[#252525] hover:text-white",
       expandable && "pr-4"
-    )} onClick={handleClick}>
+    )} onClick={handleClick} onMouseEnter={href && !isMaint ? () => preloadRoute(href) : undefined}>
       {Icon && <Icon className={cn("shrink-0", sub ? "h-4 w-4 text-[#666]" : "h-[18px] w-[18px] text-[#bbb]")} />}
       <span className="flex-1 leading-tight">{label}</span>
       {isMaint && <Wrench className="h-3.5 w-3.5 text-yellow-500/60 shrink-0" />}

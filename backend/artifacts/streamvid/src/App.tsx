@@ -1,6 +1,7 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { preloadCommonRoutes } from "@/lib/preload-routes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { SidebarProvider } from "@/lib/sidebar-context";
@@ -76,7 +77,17 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Delays the spinner by 150 ms so fast chunk loads (cached / fast network)
+ * never flash a loading indicator at all.
+ */
 function PageLoader() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 150);
+    return () => clearTimeout(t);
+  }, []);
+  if (!visible) return null;
   return (
     <div className="flex items-center justify-center min-h-[40vh]">
       <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -87,6 +98,10 @@ function PageLoader() {
 function RouterInner() {
   usePageTracking();
   useWebMCP();
+
+  // Warm JS chunks for common routes during browser idle time
+  useEffect(() => { preloadCommonRoutes(); }, []);
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
