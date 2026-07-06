@@ -722,6 +722,13 @@ def stream_video(request, video_id):
     - Yerel medya dosyaları (media/ klasörü): doğrudan range destekli servis
     - cloud.mail.ru URL'leri: CDN üzerinden proxy
     Range isteklerini destekler (video seeking için).
+
+    NOT: ETag / ConditionalGetMiddleware kasıtlı olarak devre dışı bırakıldı.
+    iOS Safari + Android Chrome range istekleri için şu akışı izler:
+      1. Range:bytes=0-1 probe → 206 beklenir
+      2. If-None-Match ile gerçek range isteği → 206 beklenir
+    ConditionalGetMiddleware araya girip 304 dönerse oynatma durur.
+    Bu yüzden tüm stream yanıtlarına Cache-Control:no-store ekliyoruz.
     """
     import requests as _rq
     from django.http import StreamingHttpResponse, FileResponse
@@ -812,16 +819,21 @@ def stream_video(request, video_id):
                 resp['Accept-Ranges'] = 'bytes'
                 resp['Access-Control-Allow-Origin'] = '*'
                 resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
+                # Önbellek + ETag müdahalesini tamamen engelle (iOS Safari / mobile range fix)
+                resp['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+                resp['Pragma'] = 'no-cache'
                 return resp
             except Exception:
                 pass  # Hatalı range → tam dosyayı sun
 
-        # Tam dosya
+        # Tam dosya — Accept-Ranges header ile mobil tarayıcıya range desteği bildir
         resp = FileResponse(open(local_file, 'rb'), content_type=mime_type)
         resp['Content-Length'] = str(file_size)
         resp['Accept-Ranges'] = 'bytes'
         resp['Access-Control-Allow-Origin'] = '*'
         resp['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
+        resp['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        resp['Pragma'] = 'no-cache'
         return resp
 
     # Proxy edilecek URL'yi belirle: önce cloud.mail.ru, sonra herhangi bir HTTP URL
