@@ -75,18 +75,20 @@ export function TokenBuyModal({ onClose, onPurchased }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4"
+      className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#242424] shrink-0">
+      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl w-full max-w-md shadow-2xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "min(90vh, 90dvh)" }}
+      >
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#242424] flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-yellow-500/15 rounded-lg">
               <Coins className="h-4 w-4 text-yellow-400" />
             </div>
             <span className="font-bold text-base">Token Satın Al</span>
           </div>
-          <button onClick={onClose} className="text-[#555] hover:text-white transition-colors p-1">
+          <button onClick={onClose} className="text-[#555] hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
             <X className="h-5 w-5" />
           </button>
         </div>
