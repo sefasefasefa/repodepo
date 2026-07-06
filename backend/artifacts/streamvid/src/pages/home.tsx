@@ -1,18 +1,15 @@
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/app-layout";
-import {
-  useListVideos,
-} from "@workspace/api-client-react";
+import { useListVideos } from "@workspace/api-client-react";
 import { VideoCard } from "@/components/video/video-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Flame, Eye, Clock, ThumbsUp, Crown, Star,
-  ChevronRight, Play, Users,
-  Sparkles, TrendingUp, BarChart2, SlidersHorizontal,
+  ChevronRight, Play, LayoutGrid, Sparkles,
+  BarChart2, SlidersHorizontal, Zap,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { StoriesLiveBar } from "@/components/live/stories-live-bar";
@@ -22,12 +19,18 @@ import { JsonLd } from "@/components/json-ld";
 import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 import { getHomeDataFromInit, getInitDataSync } from "@/lib/init-prefetch";
 
-function SectionSkeleton({ count = 4 }: { count?: number }) {
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+function SectionSkeleton({ count = 4, compact = false }: { count?: number; compact?: boolean }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+    <div className={cn(
+      "grid gap-3 md:gap-4",
+      compact
+        ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+        : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+    )}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col gap-2">
-          <Skeleton className="aspect-video w-full rounded-lg" />
+          <Skeleton className="aspect-video w-full rounded-xl" />
           <div className="flex gap-2">
             <Skeleton className="h-7 w-7 rounded-full shrink-0" />
             <div className="space-y-1.5 w-full">
@@ -41,43 +44,52 @@ function SectionSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
+// ── Section Header ─────────────────────────────────────────────────────────────
 function SectionHeader({
   icon: Icon,
   title,
   subtitle,
   href,
   iconColor = "text-primary",
+  badge,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   subtitle?: string;
   href?: string;
   iconColor?: string;
+  badge?: string;
 }) {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-2.5">
-        <Icon className={cn("h-5 w-5", iconColor)} />
+    <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center gap-3">
+        <div className={cn("p-1.5 rounded-lg bg-white/5", iconColor.replace("text-", "bg-").replace("-400", "-500/10").replace("-500", "-500/10"))}>
+          <Icon className={cn("h-4.5 w-4.5", iconColor)} style={{ width: "1.125rem", height: "1.125rem" }} />
+        </div>
         <div>
-          <h2 className="text-base md:text-lg font-bold text-white leading-tight">{title}</h2>
-          {subtitle && <p className="text-xs text-[#888] mt-0.5">{subtitle}</p>}
+          <div className="flex items-center gap-2">
+            <h2 className="text-base md:text-lg font-bold text-white leading-tight">{title}</h2>
+            {badge && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                {badge}
+              </span>
+            )}
+          </div>
+          {subtitle && <p className="text-xs text-[#666] mt-0.5">{subtitle}</p>}
         </div>
       </div>
       {href && (
         <Link href={href}>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-[#888] hover:text-white text-xs gap-1 px-2"
-          >
+          <button className="flex items-center gap-1 text-xs text-[#666] hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-white/5">
             Tümünü Gör <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
+          </button>
         </Link>
       )}
     </div>
   );
 }
 
+// ── Video Grid ─────────────────────────────────────────────────────────────────
 function VideoGrid({ videos, compact = false }: { videos: Video[]; compact?: boolean }) {
   return (
     <div className={cn(
@@ -93,49 +105,62 @@ function VideoGrid({ videos, compact = false }: { videos: Video[]; compact?: boo
   );
 }
 
-function CreatorCard({ creator }: { creator: any }) {
+// ── Creator Horizontal Scroll Row ──────────────────────────────────────────────
+function CreatorRow({ creators }: { creators: any[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const formatNumber = (n: number) => {
-    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-    if (n >= 1000) return `${(n / 1000).toFixed(0)}K`;
-    return n.toString();
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+    return String(n);
   };
 
   return (
-    <Link href={`/creators/${creator.id}`}>
-      <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[#1e1e1e] border border-[#2a2a2a] hover:border-primary/50 hover:bg-[#252525] transition-all cursor-pointer group">
-        <div className="relative">
-          <Avatar className="h-16 w-16 border-2 border-[#333] group-hover:border-primary/50 transition-colors">
-            <AvatarImage src={creator.avatarUrl || ""} alt={creator.username} />
-            <AvatarFallback className="bg-[#333] text-white text-lg font-bold">
-              {(creator.displayName || creator.username).substring(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          {creator.isVerified && (
-            <div className="absolute -bottom-1 -right-1 bg-primary rounded-full w-5 h-5 flex items-center justify-center border-2 border-[#1e1e1e]">
-              <span className="text-[9px] text-white font-bold">✓</span>
+    <div
+      ref={scrollRef}
+      className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-3 px-3"
+    >
+      {creators.map((creator) => (
+        <Link key={creator.id} href={`/creators/${creator.id}`}>
+          <div className="shrink-0 w-28 flex flex-col items-center gap-2 p-3 rounded-2xl bg-[#1a1a1a] border border-[#252525] hover:border-primary/40 hover:bg-[#1e1e1e] transition-all cursor-pointer group">
+            <div className="relative">
+              <Avatar className="h-14 w-14 border-2 border-[#2a2a2a] group-hover:border-primary/50 transition-colors">
+                <AvatarImage src={creator.avatarUrl || ""} alt={creator.username} />
+                <AvatarFallback className="bg-[#2a2a2a] text-white text-base font-bold">
+                  {(creator.displayName || creator.username).substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {creator.isVerified && (
+                <div className="absolute -bottom-0.5 -right-0.5 bg-primary rounded-full w-5 h-5 flex items-center justify-center border-2 border-[#1a1a1a]">
+                  <span className="text-[9px] text-white font-bold">✓</span>
+                </div>
+              )}
             </div>
-          )}
+            <div className="text-center w-full min-w-0">
+              <p className="text-xs font-semibold text-white truncate leading-tight">
+                {creator.displayName || creator.username}
+              </p>
+              <p className="text-[10px] text-[#666] mt-0.5">
+                {formatNumber(creator.followerCount ?? 0)} takipçi
+              </p>
+            </div>
+          </div>
+        </Link>
+      ))}
+      {/* Tümünü gör butonu */}
+      <Link href="/creators">
+        <div className="shrink-0 w-28 flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-[#1a1a1a] border border-dashed border-[#2a2a2a] hover:border-primary/30 transition-all cursor-pointer h-full min-h-[120px]">
+          <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center">
+            <ChevronRight className="h-5 w-5 text-[#555]" />
+          </div>
+          <p className="text-[10px] text-[#555] text-center leading-tight">Tümünü<br />Gör</p>
         </div>
-        <div className="text-center min-w-0 w-full">
-          <p className="text-xs font-semibold text-white truncate leading-tight">
-            {creator.displayName || creator.username}
-          </p>
-          <p className="text-[11px] text-[#888] mt-0.5">
-            {formatNumber(creator.followerCount)} takipçi
-          </p>
-        </div>
-        <Button
-          size="sm"
-          className="h-7 text-xs w-full bg-primary/20 hover:bg-primary text-primary hover:text-white border border-primary/40 transition-all"
-        >
-          Takip Et
-        </Button>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
 
-function CategoryCard({ category }: { category: Category }) {
+// ── Category Card ──────────────────────────────────────────────────────────────
+function CategoryCard({ category, index }: { category: Category; index: number }) {
   const colors = [
     "from-purple-600 to-pink-600",
     "from-blue-600 to-cyan-500",
@@ -150,7 +175,7 @@ function CategoryCard({ category }: { category: Category }) {
     "from-violet-600 to-purple-500",
     "from-amber-500 to-yellow-400",
   ];
-  const colorIdx = (category.id % colors.length);
+  const colorIdx = index % colors.length;
 
   return (
     <Link href={`/categories/${category.id}`}>
@@ -159,13 +184,15 @@ function CategoryCard({ category }: { category: Category }) {
         colors[colorIdx]
       )}>
         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-2 gap-1">
           <p className="font-bold text-white text-sm md:text-base text-center leading-tight drop-shadow">
             {category.name}
           </p>
-          <p className="text-white/80 text-xs mt-1">
-            {category.videoCount ?? 0} video
-          </p>
+          {(category.videoCount ?? 0) > 0 && (
+            <p className="text-white/70 text-[10px] font-medium">
+              {category.videoCount} video
+            </p>
+          )}
         </div>
         <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <Play className="h-4 w-4 text-white" fill="white" />
@@ -175,7 +202,7 @@ function CategoryCard({ category }: { category: Category }) {
   );
 }
 
-// ── Sana Özel bölümü ──────────────────────────────────────────────────────
+// ── For You Section (giriş yapanlar için) ─────────────────────────────────────
 function ForYouSection() {
   const { user, token } = useAuth() as any;
   const [videos, setVideos] = useState<Video[]>([]);
@@ -194,7 +221,7 @@ function ForYouSection() {
     ]).then(([recData, profileData]) => {
       setVideos(recData.videos ?? []);
       setProfile(profileData);
-    }).finally(() => setLoading(false));
+    }).catch(() => {}).finally(() => setLoading(false));
   }, [user, token]);
 
   if (!user) return null;
@@ -202,23 +229,26 @@ function ForYouSection() {
   const fmtTime = (sec: number) => {
     const h = Math.floor(sec / 3600);
     const m = Math.floor((sec % 3600) / 60);
-    return h > 0 ? `${h}s ${m}d` : `${m}d`;
+    return h > 0 ? `${h}s ${m}dk` : `${m}dk`;
   };
 
   return (
     <section>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          <Sparkles className="h-5 w-5 text-primary" />
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Sparkles className="h-[1.125rem] w-[1.125rem] text-primary" />
+          </div>
           <div>
             <h2 className="text-base md:text-lg font-bold text-white leading-tight">Sana Özel</h2>
-            <p className="text-xs text-[#888] mt-0.5">İzleme geçmişine göre kişiselleştirildi</p>
+            <p className="text-xs text-[#666] mt-0.5">İzleme geçmişine göre kişiselleştirildi</p>
           </div>
         </div>
         {profile && (
           <button
             onClick={() => setShowProfile(p => !p)}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#1e1e1e] hover:bg-[#252525] border border-[#2a2a2a] text-[#aaa] hover:text-white transition-all"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#1a1a1a] hover:bg-[#222] border border-[#252525] text-[#888] hover:text-white transition-all"
           >
             <BarChart2 className="h-3.5 w-3.5" />
             Zevk Profilim
@@ -228,30 +258,28 @@ function ForYouSection() {
 
       {/* Zevk profili paneli */}
       {showProfile && profile && (
-        <div className="mb-4 bg-[#111] border border-[#222] rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* İstatistikler */}
+        <div className="mb-5 bg-[#111] border border-[#1e1e1e] rounded-2xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="col-span-2 md:col-span-1 space-y-3">
-            <p className="text-[11px] font-bold text-[#555] uppercase tracking-widest">Son 30 Gün</p>
+            <p className="text-[10px] font-bold text-[#444] uppercase tracking-widest">Son 30 Gün</p>
             <div className="space-y-2">
               {[
-                { label: "İzlenen Video", value: profile.stats.videosWatched },
-                { label: "Toplam Süre",   value: fmtTime(profile.stats.totalWatchTime) },
-                { label: "Ort. Tamamlama", value: `%${profile.stats.avgCompletion}` },
-                { label: "Beğeni",        value: profile.stats.totalLikes },
+                { label: "İzlenen Video", value: profile.stats?.videosWatched ?? 0 },
+                { label: "Toplam Süre", value: fmtTime(profile.stats?.totalWatchTime ?? 0) },
+                { label: "Ort. Tamamlama", value: `%${profile.stats?.avgCompletion ?? 0}` },
+                { label: "Beğeni", value: profile.stats?.totalLikes ?? 0 },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between text-xs">
-                  <span className="text-[#666]">{label}</span>
+                  <span className="text-[#555]">{label}</span>
                   <span className="text-white font-medium">{value}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Top kategoriler */}
           <div className="space-y-3">
-            <p className="text-[11px] font-bold text-[#555] uppercase tracking-widest">Favori Kategoriler</p>
-            {profile.topCategories.length === 0 ? (
-              <p className="text-xs text-[#555]">Henüz veri yok</p>
+            <p className="text-[10px] font-bold text-[#444] uppercase tracking-widest">Favori Kategoriler</p>
+            {(profile.topCategories?.length ?? 0) === 0 ? (
+              <p className="text-xs text-[#444]">Henüz veri yok</p>
             ) : (
               <div className="space-y-1.5">
                 {profile.topCategories.slice(0, 4).map((cat: any, i: number) => {
@@ -260,14 +288,11 @@ function ForYouSection() {
                   return (
                     <div key={cat.id} className="space-y-0.5">
                       <div className="flex justify-between text-xs">
-                        <span className="text-[#ccc] truncate">{cat.name}</span>
-                        <span className="text-[#555] shrink-0 ml-2">{cat.count}×</span>
+                        <span className="text-[#aaa] truncate">{cat.name}</span>
+                        <span className="text-[#444] shrink-0 ml-2">{cat.count}×</span>
                       </div>
                       <div className="h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${pct}%`, opacity: 1 - i * 0.18 }}
-                        />
+                        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%`, opacity: 1 - i * 0.18 }} />
                       </div>
                     </div>
                   );
@@ -276,21 +301,20 @@ function ForYouSection() {
             )}
           </div>
 
-          {/* Top creator'lar */}
           <div className="space-y-3">
-            <p className="text-[11px] font-bold text-[#555] uppercase tracking-widest">Takip Edilenler</p>
-            {profile.topCreators.length === 0 ? (
-              <p className="text-xs text-[#555]">Henüz veri yok</p>
+            <p className="text-[10px] font-bold text-[#444] uppercase tracking-widest">Takip Edilenler</p>
+            {(profile.topCreators?.length ?? 0) === 0 ? (
+              <p className="text-xs text-[#444]">Henüz veri yok</p>
             ) : (
               <div className="space-y-2">
                 {profile.topCreators.slice(0, 4).map((cre: any) => (
                   <Link key={cre.id} href={`/creators/${cre.id}`}>
                     <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
-                      <div className="w-6 h-6 rounded-full bg-[#2a2a2a] overflow-hidden shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-[#222] overflow-hidden shrink-0">
                         {cre.avatarUrl
-                          ? <img src={cre.avatarUrl} className="w-full h-full object-cover" loading="lazy" />
-                          : <div className="w-full h-full flex items-center justify-center text-[9px] text-[#888]">
-                              {cre.name.substring(0, 2).toUpperCase()}
+                          ? <img src={cre.avatarUrl} className="w-full h-full object-cover" loading="lazy" alt="" />
+                          : <div className="w-full h-full flex items-center justify-center text-[9px] text-[#666]">
+                              {(cre.name || "?").substring(0, 2).toUpperCase()}
                             </div>
                         }
                       </div>
@@ -305,19 +329,18 @@ function ForYouSection() {
             )}
           </div>
 
-          {/* Öneri kalitesi */}
           <div className="space-y-3">
-            <p className="text-[11px] font-bold text-[#555] uppercase tracking-widest">Öneri Kalitesi</p>
+            <p className="text-[10px] font-bold text-[#444] uppercase tracking-widest">Öneri Kalitesi</p>
             <div className="space-y-2">
               {[
-                { label: "Kategori Eşleşmesi", pct: Math.min(100, (profile.topCategories.length / 5) * 100) },
-                { label: "Creator Çeşitliliği",  pct: Math.min(100, (profile.topCreators.length  / 5) * 100) },
-                { label: "İzleme Verisi",          pct: Math.min(100, (profile.stats.videosWatched / 10) * 100) },
+                { label: "Kategori Eşleşmesi", pct: Math.min(100, ((profile.topCategories?.length ?? 0) / 5) * 100) },
+                { label: "Creator Çeşitliliği", pct: Math.min(100, ((profile.topCreators?.length ?? 0) / 5) * 100) },
+                { label: "İzleme Verisi", pct: Math.min(100, ((profile.stats?.videosWatched ?? 0) / 10) * 100) },
               ].map(({ label, pct }) => (
                 <div key={label} className="space-y-0.5">
                   <div className="flex justify-between text-xs">
-                    <span className="text-[#888]">{label}</span>
-                    <span className="text-[#555]">{Math.round(pct)}%</span>
+                    <span className="text-[#666]">{label}</span>
+                    <span className="text-[#444]">{Math.round(pct)}%</span>
                   </div>
                   <div className="h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
                     <div className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500" style={{ width: `${pct}%` }} />
@@ -325,8 +348,8 @@ function ForYouSection() {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-[#444] mt-1">
-              {profile.stats.videosWatched < 5
+            <p className="text-[10px] text-[#444]">
+              {(profile.stats?.videosWatched ?? 0) < 5
                 ? "Daha fazla video izledikçe öneriler gelişir"
                 : "Kişiselleştirme aktif"}
             </p>
@@ -334,6 +357,7 @@ function ForYouSection() {
         </div>
       )}
 
+      {/* Video grid */}
       {loading ? (
         <SectionSkeleton count={4} />
       ) : videos.length > 0 ? (
@@ -341,14 +365,41 @@ function ForYouSection() {
           {videos.map(v => <VideoCard key={v.id} video={v} />)}
         </div>
       ) : (
-        <div className="text-center py-8 text-[#555] text-sm">
-          Henüz yeterli izleme verisi yok. Birkaç video izledikten sonra kişiselleştirilmiş öneriler görünecek.
+        <div className="flex flex-col items-center py-10 text-center gap-2">
+          <Sparkles className="h-8 w-8 text-[#333]" />
+          <p className="text-[#555] text-sm">Birkaç video izledikten sonra kişiselleştirilmiş öneriler görünecek.</p>
         </div>
       )}
     </section>
   );
 }
 
+// ── Per-category best section ──────────────────────────────────────────────────
+function CategorySection({ category }: { category: Category }) {
+  const { data, isLoading } = useListVideos({ categoryId: category.id, sort: "most_viewed", limit: 6 });
+  const videos = data?.videos ?? [];
+  if (!isLoading && videos.length === 0) return null;
+
+  return (
+    <section>
+      <SectionHeader
+        icon={Play}
+        title={`${category.name}`}
+        subtitle={`${category.name} kategorisinin en çok izlenen videoları`}
+        href={`/categories/${category.id}`}
+        iconColor="text-primary"
+      />
+      {isLoading ? <SectionSkeleton count={4} /> : <VideoGrid videos={videos} />}
+    </section>
+  );
+}
+
+// ── Divider ────────────────────────────────────────────────────────────────────
+function Divider() {
+  return <div className="border-t border-[#1e1e1e]" />;
+}
+
+// ── HomeFilter interface ───────────────────────────────────────────────────────
 interface HomeFilter {
   id: number;
   label: string;
@@ -361,6 +412,7 @@ interface HomeFilter {
   isActive: boolean;
 }
 
+// ── Main Home Page ─────────────────────────────────────────────────────────────
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState<HomeFilter | null>(null);
@@ -374,31 +426,20 @@ export default function Home() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: settings.siteName,
-        item: siteUrl + "/",
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Ana Sayfa",
-        item: siteUrl + "/",
-      },
+      { "@type": "ListItem", position: 1, name: settings.siteName, item: siteUrl + "/" },
+      { "@type": "ListItem", position: 2, name: "Ana Sayfa", item: siteUrl + "/" },
     ],
   };
 
-  const ffVideos = useFeatureState("videos");
-  const ffShorts = useFeatureState("shorts");
-  const ffCategories = useFeatureState("categories");
-  const ffCreators = useFeatureState("creators");
-  const ffStories = useFeatureState("stories");
-  const ffLive = useFeatureState("live_streams");
+  const ffVideos        = useFeatureState("videos");
+  const ffShorts        = useFeatureState("shorts");
+  const ffCategories    = useFeatureState("categories");
+  const ffCreators      = useFeatureState("creators");
+  const ffStories       = useFeatureState("stories");
+  const ffLive          = useFeatureState("live_streams");
   const ffSubscriptions = useFeatureState("subscriptions");
 
-  // ── Tek API isteğiyle tüm anasayfa verisi ───────────────────────────────
-  // Senkron başlangıç: __HP_INIT__ veya localStorage cache varsa ilk render'da skeleton yok
+  // ── Anasayfa verisi (tek istek) ─────────────────────────────────────────────
   const [homeData, setHomeData] = useState<any>(() => {
     const sync = getInitDataSync();
     if (sync?.homeData && (sync.homeData as any).trending?.length > 0) return sync.homeData;
@@ -409,7 +450,6 @@ export default function Home() {
     return !(sync?.homeData && (sync.homeData as any).trending?.length > 0);
   });
 
-  // Senkron veri varsa homeFilters de hemen yükle
   useEffect(() => {
     const sync = getInitDataSync();
     if (sync?.homeData && (sync.homeData as any).home_filters) {
@@ -423,56 +463,36 @@ export default function Home() {
       if (d.home_filters) setHomeFilters(d.home_filters);
       setHomeLoading(false);
     };
-
-    // Giriş yapmış kullanıcılar her zaman taze veri çeker
     if (user) {
       const headers: any = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      fetch("/api/home", { headers })
-        .then(r => r.json())
-        .then(applyData)
-        .catch(() => setHomeLoading(false));
+      fetch("/api/home", { headers }).then(r => r.json()).then(applyData).catch(() => setHomeLoading(false));
       return;
     }
-
-    // Senkron veri varsa ek fetch gerekmez
     if (!homeLoading) return;
-
-    // Anonim kullanıcılar için init cache dene, yoksa /api/home çek
     getHomeDataFromInit().then(cached => {
-      if (cached && (cached as any).trending?.length > 0) {
-        applyData(cached);
-        return;
-      }
-      fetch("/api/home")
-        .then(r => r.json())
-        .then(applyData)
-        .catch(() => setHomeLoading(false));
+      if (cached && (cached as any).trending?.length > 0) { applyData(cached); return; }
+      fetch("/api/home").then(r => r.json()).then(applyData).catch(() => setHomeLoading(false));
     });
   }, [user]);
 
-  const trendingData   = homeData ? { videos: homeData.trending }    : undefined;
-  const newestData     = homeData ? { videos: homeData.newest }      : undefined;
-  const mostViewedData = homeData ? { videos: homeData.most_viewed } : undefined;
-  const mostLikedData  = homeData ? { videos: homeData.most_liked }  : undefined;
-  const shortData      = homeData ? { videos: homeData.shorts }      : undefined;
-  const premiumData    = homeData ? { videos: homeData.premium }     : undefined;
+  // ── Veri dönüşümleri ────────────────────────────────────────────────────────
+  const trendingVideos   = homeData?.trending     ?? [];
+  const newestVideos     = homeData?.newest       ?? [];
+  const mostViewedVideos = homeData?.most_viewed  ?? [];
+  const mostLikedVideos  = homeData?.most_liked   ?? [];
+  const shortsVideos     = homeData?.shorts       ?? [];
+  const premiumVideos    = homeData?.premium      ?? [];
   const categories: Category[] = homeData?.categories ?? [];
-  // Admin panelinden "anasayfada göster" olarak işaretlenmiş kategoriler, belirlenen sıraya göre
-  const visibleCategories = categories
+  const creators: any[]  = homeData?.creators    ?? [];
+
+  const visibleCategories = [...categories]
     .filter((c: Category) => (c as any).showOnHome !== false)
     .sort((a: any, b: any) => (a.homeOrder ?? 0) - (b.homeOrder ?? 0));
-  const creators: any[] = homeData?.creators ?? [];
 
-  const trendingLoading   = homeLoading;
-  const newestLoading     = homeLoading;
-  const mostViewedLoading = homeLoading;
-  const mostLikedLoading  = homeLoading;
-
-  // Bir kategori veya özel filtre seçili mi?
+  // Filtre durumu
   const hasActiveSelection = !!activeFilter || !!activeCategory;
 
-  // Kategoriye tıklandığında veya özel filtre seçildiğinde dinamik sorgu
   const filterParams = (() => {
     if (!activeFilter) return { categoryId: activeCategory ?? undefined };
     const p: Record<string, any> = {};
@@ -489,86 +509,105 @@ export default function Home() {
     hasActiveSelection ? { sort: filteredSort, limit: 24, ...filterParams } : { sort: "newest", limit: 1 }
   );
 
-  const activeCategoryObj = activeCategory ? categories.find((c: Category) => c.id === activeCategory) : null;
+  const activeCategoryObj = activeCategory
+    ? categories.find((c: Category) => c.id === activeCategory)
+    : null;
+
+  // Trending ile örtüşen içerikleri diğer bölümlerden çıkar
+  const trendingIds    = new Set(trendingVideos.map((v: Video) => v.id));
+  const uniqueMostViewed = mostViewedVideos.filter((v: Video) => !trendingIds.has(v.id));
+  const uniqueMostLiked  = mostLikedVideos.filter((v: Video)  => !trendingIds.has(v.id));
+
+  // Most Viewed bölümünü yalnızca gerçekten farklı içerik varsa göster
+  const showMostViewed = uniqueMostViewed.length > 0;
 
   return (
     <AppLayout>
       <JsonLd id="schema-breadcrumb-home" schema={breadcrumbSchema} />
 
-      {/* Instagram-style Stories + Live bar */}
+      {/* ── Stories + Live Bar ── */}
       {(ffStories !== "disabled" || ffLive !== "disabled") && <StoriesLiveBar />}
 
-      <div className="max-w-[1600px] mx-auto px-3 md:px-6 py-4 space-y-10">
-
-        {/* Filtre bar — her zaman görünür, yatay kaydırmalı pill'ler */}
-        {ffVideos !== "disabled" && (homeFilters.length > 0 || visibleCategories.length > 0) && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-3 px-3">
-            {/* Tümü */}
-            <button
-              onClick={() => { setActiveFilter(null); setActiveCategory(null); }}
-              className={cn(
-                "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
-                !activeFilter && !activeCategory
-                  ? "bg-primary text-white border-primary"
-                  : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
-              )}
-            >
-              Tümü
-            </button>
-
-            {/* Admin panelinden eklenen özel filtreler */}
-            {homeFilters.map((f) => (
+      {/* ── Filtre Bar (sticky pill'ler) ── */}
+      {ffVideos !== "disabled" && (homeFilters.length > 0 || visibleCategories.length > 0) && (
+        <div className="sticky top-14 z-30 bg-[#111]/90 backdrop-blur-md border-b border-[#1a1a1a]">
+          <div className="max-w-[1600px] mx-auto px-3 md:px-6">
+            <div className="flex items-center gap-1.5 overflow-x-auto py-2.5 scrollbar-hide">
+              {/* Tümü */}
               <button
-                key={f.id}
-                onClick={() => {
-                  if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
-                  setActiveFilter(f);
-                  setActiveCategory(f.type === "category" && f.categoryId ? f.categoryId : null);
-                }}
+                onClick={() => { setActiveFilter(null); setActiveCategory(null); }}
                 className={cn(
-                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border flex items-center gap-1.5",
-                  activeFilter?.id === f.id
-                    ? "bg-primary text-white border-primary"
-                    : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
+                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border",
+                  !activeFilter && !activeCategory
+                    ? "bg-primary text-white border-primary shadow-sm shadow-primary/30"
+                    : "bg-[#1a1a1a] text-[#888] border-[#2a2a2a] hover:bg-[#222] hover:text-white"
                 )}
               >
-                <span>{f.icon}</span>
-                <span>{f.label}</span>
+                Tümü
               </button>
-            ))}
 
-            {/* Kategoriler */}
-            {visibleCategories.slice(0, 12).map((cat: Category) => (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setActiveFilter(null);
-                  setActiveCategory(activeCategory === cat.id ? null : cat.id);
-                }}
-                className={cn(
-                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all border",
-                  activeCategory === cat.id && !activeFilter
-                    ? "bg-primary text-white border-primary"
-                    : "bg-[#1e1e1e] text-[#ccc] border-[#333] hover:bg-[#2a2a2a] hover:text-white"
-                )}
-              >
-                {cat.name}
-              </button>
-            ))}
+              {/* Admin panelinden özel filtreler */}
+              {homeFilters.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => {
+                    if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
+                    setActiveFilter(f);
+                    setActiveCategory(f.type === "category" && f.categoryId ? f.categoryId : null);
+                  }}
+                  className={cn(
+                    "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border flex items-center gap-1.5",
+                    activeFilter?.id === f.id
+                      ? "bg-primary text-white border-primary shadow-sm shadow-primary/30"
+                      : "bg-[#1a1a1a] text-[#888] border-[#2a2a2a] hover:bg-[#222] hover:text-white"
+                  )}
+                >
+                  <span>{f.icon}</span>
+                  <span>{f.label}</span>
+                </button>
+              ))}
+
+              {/* Kategoriler */}
+              {visibleCategories.slice(0, 15).map((cat: Category) => (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setActiveFilter(null);
+                    setActiveCategory(activeCategory === cat.id ? null : cat.id);
+                  }}
+                  className={cn(
+                    "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border",
+                    activeCategory === cat.id && !activeFilter
+                      ? "bg-primary text-white border-primary shadow-sm shadow-primary/30"
+                      : "bg-[#1a1a1a] text-[#888] border-[#2a2a2a] hover:bg-[#222] hover:text-white"
+                  )}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* ── Ana İçerik ── */}
+      <div className="max-w-[1600px] mx-auto px-3 md:px-6 py-6 space-y-10">
 
         {/* Aktif filtre / kategori sonuçları */}
         {hasActiveSelection && ffVideos !== "disabled" && (
           <section>
             <SectionHeader
               icon={SlidersHorizontal}
-              title={activeFilter ? `${activeFilter.icon} ${activeFilter.label}` : (activeCategoryObj?.name ?? "Kategori")}
+              title={
+                activeFilter
+                  ? `${activeFilter.icon} ${activeFilter.label}`
+                  : (activeCategoryObj?.name ?? "Kategori")
+              }
               subtitle={
                 activeFilter
                   ? ([
                       activeFilter.rules?.min_views ? `Min. ${activeFilter.rules.min_views.toLocaleString()} izlenme` : null,
-                      activeFilter.rules?.min_likes ? `Min. ${activeFilter.rules.min_likes} beğeni` : null,
+                      activeFilter.rules?.min_likes  ? `Min. ${activeFilter.rules.min_likes} beğeni` : null,
                       activeFilter.rules?.is_premium ? "Sadece Premium" : null,
                     ].filter(Boolean).join(" · ") || "Filtrelenmiş sonuçlar")
                   : "Kategoriye göre videolar"
@@ -580,203 +619,196 @@ export default function Home() {
             ) : filteredData?.videos && filteredData.videos.length > 0 ? (
               <VideoGrid videos={filteredData.videos} />
             ) : (
-              <p className="text-[#666] text-sm py-8 text-center">Bu filtreye uygun içerik bulunamadı</p>
+              <div className="flex flex-col items-center py-12 text-center gap-2">
+                <SlidersHorizontal className="h-8 w-8 text-[#333]" />
+                <p className="text-[#555] text-sm">Bu filtreye uygun içerik bulunamadı.</p>
+              </div>
             )}
           </section>
         )}
 
-        {/* SANA ÖZEL */}
-        {ffVideos !== "disabled" && <ForYouSection />}
+        {/* Aktif filtre yokken tüm bölümleri göster */}
+        {!hasActiveSelection && (
+          <>
+            {/* 1. Sana Özel — sadece giriş yapmış kullanıcılar */}
+            {ffVideos !== "disabled" && <ForYouSection />}
 
-        {/* TRENDING */}
-        {ffVideos !== "disabled" && (
-          <section>
-            <SectionHeader
-              icon={Flame}
-              title="En Trend"
-              subtitle="Şu an en çok izlenenler"
-              href="/videos?sort=trending"
-              iconColor="text-orange-500"
-            />
-            {trendingLoading ? (
-              <SectionSkeleton count={4} />
-            ) : trendingData?.videos && trendingData.videos.length > 0 ? (
-              <VideoGrid videos={trendingData.videos.slice(0, 8)} />
-            ) : (
-              <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
+            {/* 2. En Trend ── */}
+            {ffVideos !== "disabled" && (
+              <>
+                {(user) && <Divider />}
+                <section>
+                  <SectionHeader
+                    icon={Flame}
+                    title="En Trend"
+                    subtitle="Şu an en çok izlenenler"
+                    href="/videos?sort=trending"
+                    iconColor="text-orange-400"
+                    badge="🔥"
+                  />
+                  {homeLoading ? (
+                    <SectionSkeleton count={4} />
+                  ) : trendingVideos.length > 0 ? (
+                    <VideoGrid videos={trendingVideos.slice(0, 8)} />
+                  ) : (
+                    <p className="text-[#555] text-sm py-8 text-center">İçerik bulunamadı</p>
+                  )}
+                </section>
+              </>
             )}
-          </section>
-        )}
 
-        {/* TOP MODELS */}
-        {ffCreators !== "disabled" && creators.length > 0 && (
-          <section>
-            <SectionHeader
-              icon={Star}
-              title="Öne Çıkan Modeller"
-              subtitle="En popüler içerik oluşturucular"
-              href="/creators"
-              iconColor="text-yellow-400"
-            />
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-              {creators.slice(0, 8).map((creator: any) => (
-                <CreatorCard key={creator.id} creator={creator} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* MOST VIEWED */}
-        {ffVideos !== "disabled" && (
-          <section>
-            <SectionHeader
-              icon={Eye}
-              title="En Çok İzlenenler"
-              subtitle="Tüm zamanların en popüler videoları"
-              href="/videos?sort=most_viewed"
-              iconColor="text-blue-400"
-            />
-            {mostViewedLoading ? (
-              <SectionSkeleton count={4} />
-            ) : mostViewedData?.videos && mostViewedData.videos.length > 0 ? (
-              <VideoGrid videos={mostViewedData.videos.slice(0, 8)} />
-            ) : (
-              <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
+            {/* 3. Öne Çıkan Creator'lar ── */}
+            {ffCreators !== "disabled" && creators.length > 0 && (
+              <>
+                <Divider />
+                <section>
+                  <SectionHeader
+                    icon={Star}
+                    title="Öne Çıkan İçerik Üreticileri"
+                    subtitle="En popüler creator'lar"
+                    href="/creators"
+                    iconColor="text-yellow-400"
+                  />
+                  <CreatorRow creators={creators} />
+                </section>
+              </>
             )}
-          </section>
-        )}
 
-        {/* CATEGORIES GRID */}
-        {ffCategories !== "disabled" && visibleCategories.length > 0 && (
-          <section>
-            <SectionHeader
-              icon={Users}
-              title="Kategoriler"
-              href="/categories"
-              iconColor="text-violet-400"
-            />
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
-              {visibleCategories.slice(0, 12).map((cat: Category) => (
-                <CategoryCard key={cat.id} category={cat} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* SHORTS / KISA VİDEOLAR */}
-        {ffShorts !== "disabled" && shortData?.videos && shortData.videos.length > 0 && (
-          <section>
-            <SectionHeader
-              icon={Play}
-              title="Kısa Videolar"
-              subtitle="Hızlı, eğlenceli, kaydırmaya devam et"
-              href="/shorts"
-              iconColor="text-pink-400"
-            />
-            <VideoGrid videos={shortData.videos.slice(0, 8)} compact />
-          </section>
-        )}
-
-        {/* MOST LIKED */}
-        {ffVideos !== "disabled" && (
-          <section>
-            <SectionHeader
-              icon={ThumbsUp}
-              title="En Çok Beğenilenler"
-              subtitle="Topluluktan en çok beğeni alan videolar"
-              href="/videos?sort=most_liked"
-              iconColor="text-green-400"
-            />
-            {mostLikedLoading ? (
-              <SectionSkeleton count={4} />
-            ) : mostLikedData?.videos && mostLikedData.videos.length > 0 ? (
-              <VideoGrid videos={mostLikedData.videos.slice(0, 8)} />
-            ) : (
-              <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
+            {/* 4. Kategoriler ── (LayoutGrid ikonu, Users değil) */}
+            {ffCategories !== "disabled" && visibleCategories.length > 0 && (
+              <>
+                <Divider />
+                <section>
+                  <SectionHeader
+                    icon={LayoutGrid}
+                    title="Kategoriler"
+                    subtitle="İlginizi çeken kategoriye göz atın"
+                    href="/categories"
+                    iconColor="text-violet-400"
+                  />
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
+                    {visibleCategories.slice(0, 12).map((cat: Category, i) => (
+                      <CategoryCard key={cat.id} category={cat} index={i} />
+                    ))}
+                  </div>
+                </section>
+              </>
             )}
-          </section>
-        )}
 
-        {/* PREMIUM */}
-        {ffSubscriptions !== "disabled" && premiumData?.videos && premiumData.videos.length > 0 && (
-          <section>
-            <SectionHeader
-              icon={Crown}
-              title="Premium İçerikler"
-              subtitle="Özel abonelik gerektiren videolar"
-              href="/pricing"
-              iconColor="text-yellow-500"
-            />
-            <VideoGrid videos={premiumData.videos.slice(0, 6)} />
-          </section>
-        )}
-
-        {/* NEWEST */}
-        {ffVideos !== "disabled" && (
-          <section>
-            <SectionHeader
-              icon={Clock}
-              title="En Yeni Yüklenenler"
-              subtitle="Az önce yüklendi"
-              href="/videos?sort=newest"
-              iconColor="text-cyan-400"
-            />
-            {newestLoading ? (
-              <SectionSkeleton count={4} />
-            ) : newestData?.videos && newestData.videos.length > 0 ? (
-              <VideoGrid videos={newestData.videos.slice(0, 8)} />
-            ) : (
-              <p className="text-[#666] text-sm py-8 text-center">İçerik bulunamadı</p>
+            {/* 5. En Çok İzlenenler (trending ile aynı değilse göster) ── */}
+            {ffVideos !== "disabled" && showMostViewed && (
+              <>
+                <Divider />
+                <section>
+                  <SectionHeader
+                    icon={Eye}
+                    title="En Çok İzlenenler"
+                    subtitle="Tüm zamanların en popüler videoları"
+                    href="/videos?sort=most_viewed"
+                    iconColor="text-blue-400"
+                  />
+                  {homeLoading ? (
+                    <SectionSkeleton count={4} />
+                  ) : (
+                    <VideoGrid videos={uniqueMostViewed.slice(0, 8)} />
+                  )}
+                </section>
+              </>
             )}
-          </section>
+
+            {/* 6. Premium İçerikler ── */}
+            {ffSubscriptions !== "disabled" && premiumVideos.length > 0 && (
+              <>
+                <Divider />
+                <section>
+                  <SectionHeader
+                    icon={Crown}
+                    title="Premium İçerikler"
+                    subtitle="Özel abonelik gerektiren videolar"
+                    href="/pricing"
+                    iconColor="text-yellow-500"
+                    badge="VIP"
+                  />
+                  <VideoGrid videos={premiumVideos.slice(0, 6)} />
+                </section>
+              </>
+            )}
+
+            {/* 7. Kısa Videolar ── */}
+            {ffShorts !== "disabled" && shortsVideos.length > 0 && (
+              <>
+                <Divider />
+                <section>
+                  <SectionHeader
+                    icon={Zap}
+                    title="Kısa Videolar"
+                    subtitle="Hızlı, eğlenceli — kaydırmaya devam et"
+                    href="/shorts"
+                    iconColor="text-pink-400"
+                    badge="NEW"
+                  />
+                  <VideoGrid videos={shortsVideos.slice(0, 8)} compact />
+                </section>
+              </>
+            )}
+
+            {/* 8. En Çok Beğenilenler ── */}
+            {ffVideos !== "disabled" && uniqueMostLiked.length > 0 && (
+              <>
+                <Divider />
+                <section>
+                  <SectionHeader
+                    icon={ThumbsUp}
+                    title="En Çok Beğenilenler"
+                    subtitle="Topluluktan en çok beğeni alan videolar"
+                    href="/videos?sort=most_liked"
+                    iconColor="text-green-400"
+                  />
+                  {homeLoading ? (
+                    <SectionSkeleton count={4} />
+                  ) : uniqueMostLiked.length > 0 ? (
+                    <VideoGrid videos={uniqueMostLiked.slice(0, 8)} />
+                  ) : (
+                    <p className="text-[#555] text-sm py-8 text-center">İçerik bulunamadı</p>
+                  )}
+                </section>
+              </>
+            )}
+
+            {/* 9. En Yeni Yüklenenler ── */}
+            {ffVideos !== "disabled" && newestVideos.length > 0 && (
+              <>
+                <Divider />
+                <section>
+                  <SectionHeader
+                    icon={Clock}
+                    title="En Yeni Yüklenenler"
+                    subtitle="Az önce yüklendi"
+                    href="/videos?sort=newest"
+                    iconColor="text-cyan-400"
+                    badge="YENİ"
+                  />
+                  {homeLoading ? (
+                    <SectionSkeleton count={4} />
+                  ) : newestVideos.length > 0 ? (
+                    <VideoGrid videos={newestVideos.slice(0, 8)} />
+                  ) : (
+                    <p className="text-[#555] text-sm py-8 text-center">İçerik bulunamadı</p>
+                  )}
+                </section>
+              </>
+            )}
+
+            {/* 10. Kategoriye göre en iyi videolar ── */}
+            {ffVideos !== "disabled" && ffCategories !== "disabled" && visibleCategories.slice(0, 4).map((cat: Category) => (
+              <div key={cat.id}>
+                <Divider />
+                <CategorySection category={cat} />
+              </div>
+            ))}
+          </>
         )}
-
-        {/* PER-CATEGORY BEST */}
-        {ffVideos !== "disabled" && ffCategories !== "disabled" && visibleCategories.slice(0, 5).map((cat: Category) => (
-          <CategorySection key={cat.id} category={cat} />
-        ))}
-
       </div>
     </AppLayout>
-  );
-}
-
-function CategorySection({ category }: { category: Category }) {
-  const { data, isLoading } = useListVideos({
-    categoryId: category.id,
-    sort: "most_viewed",
-    limit: 6,
-  });
-
-  const videos = data?.videos ?? [];
-  if (!isLoading && videos.length === 0) return null;
-
-  const icons: Record<string, React.ComponentType<{ className?: string }>> = {
-    gaming: Flame,
-    dance: Star,
-    comedy: ThumbsUp,
-    cooking: Crown,
-    travel: Eye,
-    music: Play,
-    fitness: Users,
-    technology: Star,
-  };
-  const Icon = icons[category.slug] ?? Play;
-
-  return (
-    <section>
-      <SectionHeader
-        icon={Icon}
-        title={`${category.name} — En İyiler`}
-        subtitle={`${category.name} kategorisinin en çok izlenen videoları`}
-        href={`/categories/${category.id}`}
-        iconColor="text-primary"
-      />
-      {isLoading ? (
-        <SectionSkeleton count={4} />
-      ) : (
-        <VideoGrid videos={videos} />
-      )}
-    </section>
   );
 }
