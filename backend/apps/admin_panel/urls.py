@@ -90,8 +90,9 @@ urlpatterns = [
     path('admin/cdn/<int:cdn_id>', dev.admin_cdn_delete),
     path('admin/cdn/<int:cdn_id>/default', dev.admin_cdn_set_default),
     path('admin/cdn/<int:cdn_id>/test', dev.admin_cdn_test),
-    # Admin: Integrations (Streamtape/Doodstream/Mixdrop)
+    # Admin: Integrations (Streamtape/Doodstream/Mixdrop) + billing
     path('admin/integrations', dev.admin_integrations),
+    path('admin/integrations/billing', dev.admin_integration_billing),
     path('admin/integrations/<int:integration_id>', dev.admin_integration_detail),
     path('admin/integrations/<int:integration_id>/test', dev.admin_integration_test),
     # Admin: Revenue projection

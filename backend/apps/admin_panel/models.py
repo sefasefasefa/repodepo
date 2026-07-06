@@ -111,6 +111,26 @@ class CdnConfig(models.Model):
         ordering = ['-created_at']
 
 
+class IntegrationBillingSettings(models.Model):
+    """Global bakiye çekme ayarları — singleton (tek satır kullanılır)."""
+    CHARGE_ON_CHOICES = [
+        ('upload', 'Her yükleme başına'),
+        ('success', 'Yalnızca başarılı yükleme'),
+    ]
+    enabled = models.BooleanField(default=False)
+    default_charge_amount = models.IntegerField(default=0)   # token cinsinden
+    charge_on = models.CharField(max_length=20, choices=CHARGE_ON_CHOICES, default='success')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'integration_billing_settings'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 class IntegrationConfig(models.Model):
     platform = models.CharField(max_length=50)
     name = models.CharField(max_length=200)
@@ -121,6 +141,9 @@ class IntegrationConfig(models.Model):
     auto_upload = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     upload_count = models.IntegerField(default=0)
+    # ── Bakiye çekme alanları ──────────────────────────────────────────────────
+    charge_enabled = models.BooleanField(default=False)   # bu entegrasyon için aktif mi?
+    charge_amount = models.IntegerField(default=0)         # token/kullanım (0 = global varsayılan)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

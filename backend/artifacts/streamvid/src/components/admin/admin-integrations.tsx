@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Plus, Trash2, RefreshCw, Link2, Upload,
   ToggleLeft, ToggleRight, Search, Pencil, Eye, EyeOff,
+  Coins, ShieldCheck, ShieldOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -642,8 +643,15 @@ async function apiFetch(path: string, opts: RequestInit = {}) {
   return res.json();
 }
 
+interface BillingSettings {
+  enabled: boolean;
+  defaultChargeAmount: number;
+  chargeOn: "upload" | "success";
+}
+
 const EMPTY_FORM = {
-  platform: "streamtape", name: "", login: "", key: "", apiKey: "", email: "", autoUpload: true,
+  platform: "streamtape", name: "", login: "", key: "", apiKey: "", email: "",
+  autoUpload: true, chargeEnabled: false, chargeAmount: 0,
 };
 
 type CatFilter = "all" | "adult";
@@ -659,6 +667,8 @@ function saveHidden(s: Set<string>) {
 export function AdminIntegrations() {
   const { toast } = useToast();
   const [integrations, setIntegrations] = useState<any[]>([]);
+  const [billing, setBilling]           = useState<BillingSettings>({ enabled: false, defaultChargeAmount: 0, chargeOn: "success" });
+  const [savingBilling, setSavingBilling] = useState(false);
   const [loading, setLoading]           = useState(false);
   const [showAdd, setShowAdd]           = useState(false);
   const [editId, setEditId]             = useState<string | null>(null);
@@ -694,10 +704,33 @@ export function AdminIntegrations() {
     try {
       const d = await apiFetch("/admin/integrations");
       setIntegrations(d.integrations || []);
+      if (d.billing) setBilling(d.billing);
     } catch (e: any) {
       toast({ title: "Yüklenemedi", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveBilling = async (patch: Partial<BillingSettings>) => {
+    setSavingBilling(true);
+    const next = { ...billing, ...patch };
+    setBilling(next);
+    try {
+      const d = await apiFetch("/admin/integrations/billing", {
+        method: "PATCH",
+        body: JSON.stringify({
+          enabled: next.enabled,
+          defaultChargeAmount: next.defaultChargeAmount,
+          chargeOn: next.chargeOn,
+        }),
+      });
+      if (d.billing) setBilling(d.billing);
+      toast({ title: "Bakiye sistemi güncellendi" });
+    } catch (e: any) {
+      toast({ title: "Hata", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingBilling(false);
     }
   };
 
@@ -724,6 +757,8 @@ export function AdminIntegrations() {
       apiKey: "",
       email: int.email ?? "",
       autoUpload: int.autoUpload ?? true,
+      chargeEnabled: int.chargeEnabled ?? false,
+      chargeAmount: int.chargeAmount ?? 0,
     });
     setShowKey(false);
     setShowApiKey(false);
@@ -751,13 +786,19 @@ export function AdminIntegrations() {
             apiKey: form.apiKey || undefined,
             email: form.email || undefined,
             autoUpload: form.autoUpload,
+            chargeEnabled: form.chargeEnabled,
+            chargeAmount: form.chargeAmount,
           }),
         });
         setIntegrations((p) => p.map((i) => (i.id === editId ? { ...i, ...d.integration } : i)));
         toast({ title: "Güncellendi", description: `${form.name} entegrasyonu güncellendi.` });
         apiFetch("/admin/integrations").then(r => setIntegrations(r.integrations || [])).catch(() => {});
       } else {
-        const d = await apiFetch("/admin/integrations", { method: "POST", body: JSON.stringify(form) });
+        const d = await apiFetch("/admin/integrations", { method: "POST", body: JSON.stringify({
+          ...form,
+          chargeEnabled: form.chargeEnabled,
+          chargeAmount: form.chargeAmount,
+        }) });
         setIntegrations((p) => [...p, d.integration]);
         toast({ title: "Eklendi", description: `${form.name} entegrasyonu eklendi.` });
       }
@@ -836,6 +877,82 @@ export function AdminIntegrations() {
             <Plus className="h-4 w-4" /> Platform Ekle
           </button>
         </div>
+      </div>
+
+      {/* ── Global Bakiye Çekme Sistemi ─────────────────────────────────── */}
+      <div className={cn(
+        "border rounded-xl p-4 transition-all",
+        billing.enabled ? "bg-amber-950/20 border-amber-700/40" : "bg-[#161616] border-[#1e1e1e]"
+      )}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className={cn("p-2 rounded-lg", billing.enabled ? "bg-amber-500/15" : "bg-[#222]")}>
+              <Coins className={cn("h-5 w-5", billing.enabled ? "text-amber-400" : "text-[#555]")} />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-white flex items-center gap-2">
+                Global Bakiye Çekme Sistemi
+                {billing.enabled
+                  ? <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5 font-medium">AKTİF</span>
+                  : <span className="text-[10px] bg-[#222] text-[#555] border border-[#333] rounded-full px-2 py-0.5 font-medium">KAPALI</span>
+                }
+              </p>
+              <p className="text-xs text-[#666] mt-0.5">
+                Entegrasyon kullanımında kullanıcı bakiyesinden token düşer
+              </p>
+            </div>
+          </div>
+          {/* Master switch */}
+          <button
+            onClick={() => saveBilling({ enabled: !billing.enabled })}
+            disabled={savingBilling}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all",
+              billing.enabled
+                ? "bg-amber-900/30 border-amber-700/50 text-amber-300 hover:bg-amber-900/50"
+                : "bg-[#222] border-[#333] text-[#888] hover:border-primary/40 hover:text-white"
+            )}>
+            {billing.enabled
+              ? <><ShieldOff className="h-4 w-4" /> Kapat</>
+              : <><ShieldCheck className="h-4 w-4" /> Etkinleştir</>}
+          </button>
+        </div>
+
+        {/* Detay ayarları — sadece aktifken göster */}
+        {billing.enabled && (
+          <div className="mt-4 pt-4 border-t border-amber-700/30 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-[#888] mb-1.5 block">Varsayılan ücret (token / kullanım)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min={0}
+                  value={billing.defaultChargeAmount}
+                  onChange={e => setBilling(b => ({ ...b, defaultChargeAmount: Math.max(0, parseInt(e.target.value) || 0) }))}
+                  onBlur={() => saveBilling({ defaultChargeAmount: billing.defaultChargeAmount })}
+                  className="w-32 bg-[#111] border border-[#333] rounded-lg px-3 py-1.5 text-sm text-white text-center"
+                />
+                <span className="text-xs text-[#666]">token (0 = entegrasyon bazlı)</span>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[#888] mb-1.5 block">Ne zaman çekilsin?</label>
+              <div className="flex gap-2">
+                {(["upload", "success"] as const).map(opt => (
+                  <button key={opt}
+                    onClick={() => saveBilling({ chargeOn: opt })}
+                    className={cn(
+                      "flex-1 px-3 py-1.5 rounded-lg text-xs border transition-all",
+                      billing.chargeOn === opt
+                        ? "border-amber-600/60 bg-amber-900/30 text-amber-300 font-semibold"
+                        : "border-[#333] bg-[#111] text-[#666] hover:border-[#444]"
+                    )}>
+                    {opt === "upload" ? "📤 Yükleme başında" : "✅ Başarılı yükleme"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filtreler */}
@@ -929,6 +1046,16 @@ export function AdminIntegrations() {
                         ? <ToggleRight className="h-3.5 w-3.5 shrink-0" />
                         : <ToggleLeft className="h-3.5 w-3.5 shrink-0" />}
                     </button>
+
+                    {/* Bakiye badge */}
+                    {added.chargeEnabled && (
+                      <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-900/30 border border-amber-700/40 rounded-lg">
+                        <Coins className="h-2.5 w-2.5 text-amber-400 shrink-0" />
+                        <span className="text-[9px] text-amber-300 font-medium">
+                          {added.chargeAmount > 0 ? `${added.chargeAmount} tk` : "global ücret"}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Eylem butonları */}
                     <div className="flex gap-1">
@@ -1168,6 +1295,46 @@ export function AdminIntegrations() {
                 <label htmlFor="autoUpload" className="text-sm text-[#aaa] cursor-pointer select-none">
                   Otomatik yüklemeyi etkinleştir
                 </label>
+              </div>
+
+              {/* ── Bakiye Çekme ─────────────────────────────────────────── */}
+              <div className={cn(
+                "rounded-xl border p-3 space-y-2.5 mt-1 transition-all",
+                form.chargeEnabled ? "bg-amber-950/20 border-amber-700/40" : "bg-[#111] border-[#1e1e1e]"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Coins className={cn("h-4 w-4", form.chargeEnabled ? "text-amber-400" : "text-[#444]")} />
+                    <span className="text-xs font-medium text-[#aaa]">Bakiye Çekme</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, chargeEnabled: !f.chargeEnabled }))}
+                    className={cn(
+                      "flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] border transition-all font-medium",
+                      form.chargeEnabled
+                        ? "bg-amber-900/40 border-amber-700/50 text-amber-300"
+                        : "bg-[#1e1e1e] border-[#333] text-[#555] hover:border-[#444]"
+                    )}>
+                    {form.chargeEnabled
+                      ? <><ToggleRight className="h-3.5 w-3.5" /> Açık</>
+                      : <><ToggleLeft className="h-3.5 w-3.5" /> Kapalı</>}
+                  </button>
+                </div>
+
+                {form.chargeEnabled && (
+                  <div>
+                    <label className="text-[11px] text-[#666] mb-1 block">
+                      Ücret (token / yükleme) — 0 = global varsayılan ({billing.defaultChargeAmount} tk)
+                    </label>
+                    <input
+                      type="number" min={0}
+                      value={form.chargeAmount}
+                      onChange={(e) => setForm(f => ({ ...f, chargeAmount: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      className="w-28 bg-[#111] border border-amber-700/40 rounded-lg px-3 py-1.5 text-sm text-white text-center"
+                    />
+                  </div>
+                )}
               </div>
 
               {selectedPlatform && (

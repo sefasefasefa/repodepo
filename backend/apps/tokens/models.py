@@ -22,6 +22,7 @@ class TokenTransaction(models.Model):
     TYPE_CHOICES = [
         ('purchase', 'Purchase'), ('tip', 'Tip'), ('receive', 'Receive'),
         ('commission', 'Commission'), ('withdrawal', 'Withdrawal'), ('refund', 'Refund'),
+        ('integration', 'Integration Charge'),
     ]
     STATUS_CHOICES = [('completed', 'Completed'), ('pending', 'Pending'), ('failed', 'Failed')]
 

@@ -185,6 +185,98 @@ def _sync_player(job, remote_url: str):
         logging.getLogger("crosspost").warning("_sync_player hata: %s", exc)
 
 
+def _resolve_billing_config(job):
+    """
+    (billing_settings, integration_config, amount) üçlüsünü döner.
+    Billing kapalı, entegrasyon charge_enabled değil veya amount=0 ise None döner.
+    """
+    try:
+        from apps.admin_panel.models import IntegrationBillingSettings, IntegrationConfig
+        billing = IntegrationBillingSettings.get()
+        if not billing.enabled:
+            return None
+        # charge_enabled=True olan ilk eşleşen config — birden fazla varsa
+        # id sıralaması (oluşturma tarihi) ile deterministik seç.
+        config = (
+            IntegrationConfig.objects
+            .filter(platform=job.site.adapter, is_active=True, charge_enabled=True)
+            .order_by('id')
+            .first()
+        )
+        if not config:
+            return None
+        amount = config.charge_amount if config.charge_amount > 0 else billing.default_charge_amount
+        if amount <= 0:
+            return None
+        return billing, config, amount
+    except Exception:
+        return None
+
+
+def _perform_deduction(job, config, amount, description):
+    """
+    Bakiye yeterliyse atomic blok içinde token düşer.
+    SQLite: atomic() yeterli (yazma seri).
+    PostgreSQL: user satırına select_for_update() eklenebilir.
+    """
+    try:
+        from apps.tokens.models import TokenTransaction
+        from django.db import transaction as db_transaction
+        from django.db.models import Sum
+
+        with db_transaction.atomic():
+            balance = (
+                TokenTransaction.objects
+                .filter(user=job.user, status='completed')
+                .aggregate(total=Sum('amount'))['total'] or 0
+            )
+            if balance < amount:
+                import logging
+                logging.getLogger('crosspost').info(
+                    'Entegrasyon ücreti atlandı — yetersiz bakiye '
+                    '(user=%s, gerekli=%s, mevcut=%s)', job.user_id, amount, balance
+                )
+                return
+            TokenTransaction.objects.create(
+                user=job.user,
+                type='integration',
+                amount=-amount,
+                description=description,
+                status='completed',
+            )
+    except Exception as exc:
+        import logging
+        logging.getLogger('crosspost').warning('_perform_deduction hata: %s', exc)
+
+
+def _deduct_on_upload(job):
+    """charge_on='upload' modu — yükleme BAŞINDA çekilir."""
+    resolved = _resolve_billing_config(job)
+    if not resolved:
+        return
+    billing, config, amount = resolved
+    if billing.charge_on != 'upload':
+        return
+    _perform_deduction(
+        job, config, amount,
+        f'{config.name} — yükleme başında ücret ({job.video.title[:80]})'
+    )
+
+
+def _deduct_on_success(job):
+    """charge_on='success' modu — yalnızca başarılı yüklemede çekilir."""
+    resolved = _resolve_billing_config(job)
+    if not resolved:
+        return
+    billing, config, amount = resolved
+    if billing.charge_on != 'success':
+        return
+    _perform_deduction(
+        job, config, amount,
+        f'{config.name} — başarılı yükleme ücreti ({job.video.title[:80]})'
+    )
+
+
 def _success(job, remote_url: str = "", response_text: str = ""):
     job.status = "success"
     job.remote_url = remote_url[:500]
@@ -192,12 +284,16 @@ def _success(job, remote_url: str = "", response_text: str = ""):
     job.finished_at = timezone.now()
     job.save()
     _sync_player(job, remote_url)
+    _deduct_on_success(job)
 
 
 def _run_job(job: CrossPostJob):
     job.status = "running"
     job.attempts = (job.attempts or 0) + 1
     job.save(update_fields=["status", "attempts"])
+
+    # charge_on='upload' → yükleme başlamadan önce bakiyeden düş
+    _deduct_on_upload(job)
 
     site = job.site
     adapter = site.adapter

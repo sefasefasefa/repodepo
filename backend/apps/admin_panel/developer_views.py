@@ -12,7 +12,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import ApiEndpointConfig, ApiClient, CdnConfig, IntegrationConfig
+from .models import ApiEndpointConfig, ApiClient, CdnConfig, IntegrationConfig, IntegrationBillingSettings
 from apps.subscriptions.models import Payment, UserSubscription, SubscriptionPlan
 from apps.tokens.models import TokenTransaction
 
@@ -60,6 +60,8 @@ def _fmt_integration(i, mask=True):
         'apiKey': ('••••••••' if mask and i.api_key else i.api_key),
         'email': i.email, 'autoUpload': i.auto_upload, 'isActive': i.is_active,
         'uploadCount': i.upload_count,
+        'chargeEnabled': i.charge_enabled,
+        'chargeAmount': i.charge_amount,
         'addedAt': i.created_at.isoformat() if i.created_at else None,
     }
 
@@ -282,6 +284,43 @@ def admin_cdn_test(request, cdn_id):
         return Response({'ok': False, 'error': str(e)})
 
 
+# ─── Integration Billing helpers ─────────────────────────────────────────────
+
+def _fmt_billing(b):
+    return {
+        'enabled': b.enabled,
+        'defaultChargeAmount': b.default_charge_amount,
+        'chargeOn': b.charge_on,
+        'updatedAt': b.updated_at.isoformat() if b.updated_at else None,
+    }
+
+
+@api_view(['GET', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def admin_integration_billing(request):
+    """Global entegrasyon bakiye çekme ayarları — tek satır singleton."""
+    if not _admin_required(request.user):
+        return Response({'error': 'Forbidden'}, status=403)
+    billing = IntegrationBillingSettings.get()
+    if request.method == 'GET':
+        return Response({'billing': _fmt_billing(billing)})
+    d = request.data
+    changed = []
+    if 'enabled' in d:
+        billing.enabled = bool(d['enabled'])
+        changed.append('enabled')
+    if 'defaultChargeAmount' in d:
+        billing.default_charge_amount = max(0, int(d['defaultChargeAmount'] or 0))
+        changed.append('default_charge_amount')
+    if 'chargeOn' in d and d['chargeOn'] in ('upload', 'success'):
+        billing.charge_on = d['chargeOn']
+        changed.append('charge_on')
+    if changed:
+        billing.save(update_fields=changed + ['updated_at'])
+    billing.refresh_from_db()
+    return Response({'billing': _fmt_billing(billing)})
+
+
 # ─── Integrations (Streamtape/Doodstream/Mixdrop) ─────────────────────────────
 
 @api_view(['GET', 'POST'])
@@ -290,7 +329,11 @@ def admin_integrations(request):
     if not _admin_required(request.user):
         return Response({'error': 'Forbidden'}, status=403)
     if request.method == 'GET':
-        return Response({'integrations': [_fmt_integration(i) for i in IntegrationConfig.objects.all()]})
+        billing = IntegrationBillingSettings.get()
+        return Response({
+            'integrations': [_fmt_integration(i) for i in IntegrationConfig.objects.all()],
+            'billing': _fmt_billing(billing),
+        })
     d = request.data
     if not d.get('platform') or not d.get('name'):
         return Response({'error': 'platform ve name zorunlu'}, status=400)
@@ -299,6 +342,8 @@ def admin_integrations(request):
         login=d.get('login'), key=d.get('key'),
         api_key=d.get('apiKey'), email=d.get('email'),
         auto_upload=d.get('autoUpload', True),
+        charge_enabled=bool(d.get('chargeEnabled', False)),
+        charge_amount=int(d.get('chargeAmount', 0) or 0),
     )
     return Response({'integration': _fmt_integration(i)})
 
@@ -337,6 +382,12 @@ def admin_integration_detail(request, integration_id):
     if d.get('email') is not None:
         i.email = d['email'] or None
         changed.append('email')
+    if 'chargeEnabled' in d:
+        i.charge_enabled = bool(d['chargeEnabled'])
+        changed.append('charge_enabled')
+    if 'chargeAmount' in d:
+        i.charge_amount = max(0, int(d['chargeAmount'] or 0))
+        changed.append('charge_amount')
     if changed:
         i.save(update_fields=changed)
     i.refresh_from_db()
