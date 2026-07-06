@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Coins, Check, Loader2, Zap, Star, Gift, Crown, BadgePercent, Lock } from "lucide-react";
+import { X, Coins, Check, Loader2, Zap, Star, Gift, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -34,8 +34,7 @@ export function TokenBuyModal({ onClose, onPurchased }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const [buying, setBuying]     = useState(false);
   const [success, setSuccess]   = useState<{ tokens: number; pkg: string } | null>(null);
-  const [couponEnabled] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
+  const [couponCode] = useState("");
 
   useEffect(() => {
     apiFetch("/tokens/packages")
@@ -108,41 +107,6 @@ export function TokenBuyModal({ onClose, onPurchased }: Props) {
             <p className="text-xs text-[#666] text-center">
               1 Token = $0.01 • Creator'lar %80 alır, %20 platform komisyonu
             </p>
-
-            <div className="rounded-xl border border-[#2a2a2a] bg-[#111] p-3 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold flex items-center gap-2">
-                    <BadgePercent className="h-4 w-4 text-[#777]" />
-                    Kupon Kodu
-                  </p>
-                  <p className="text-[11px] text-[#666] mt-1">Şu an kapalı. Sonra aktif edeceksin.</p>
-                </div>
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold bg-[#222] text-[#888] border border-[#333]">
-                  <Lock className="h-3 w-3" /> Pasif
-                </span>
-              </div>
-              <div className="flex gap-2 opacity-60 pointer-events-none select-none">
-                <input
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  placeholder="KUPON KODU"
-                  className="flex-1 h-10 rounded-lg bg-[#0f0f0f] border border-[#2a2a2a] px-3 text-sm text-white placeholder:text-[#555] outline-none"
-                  disabled
-                />
-                <Button type="button" variant="secondary" className="h-10 px-4 bg-[#222] text-[#777]" disabled>
-                  Kullan
-                </Button>
-              </div>
-              <div className="rounded-lg border border-dashed border-[#333] bg-black/20 px-3 py-2 text-[11px] text-[#777] flex items-center gap-2">
-                <BadgePercent className="h-3.5 w-3.5" />
-                Yıllık abonelikte indirim aktif olabilir; kupon alanı daha sonra açılacak.
-              </div>
-              <div className="rounded-lg border border-dashed border-[#333] bg-black/20 px-3 py-2 text-[11px] text-[#777] flex items-center gap-2">
-                <Lock className="h-3.5 w-3.5" />
-                Ücretsiz deneme şu an pasif.
-              </div>
-            </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               {packages.map(pkg => {
