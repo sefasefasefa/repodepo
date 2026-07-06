@@ -1801,15 +1801,82 @@ def get_custom_page(request, slug):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_related_videos(request, video_id):
+    """Gerçekten ilgili videoları döndürür: aynı kategori/etiket/kanal benzerliği
+    (içerik tabanlı) + bu videoyu izleyen diğer kullanıcıların izlediği diğer
+    videolar (işbirlikçi filtreleme — "bunu izleyenler şunu da izledi").
+    İki sinyal ağırlıklı olarak birleştirilip alakasız videolar elenir."""
     limit = min(int(request.query_params.get('limit', 10)), 20)
     video = _resolve_video(video_id)
     if not video:
         return Response({'videos': []})
-    qs = Video.objects.filter(
-        Q(category=video.category) | Q(creator=video.creator),
-        is_published=True
-    ).exclude(id=video.id).select_related('creator', 'category').order_by('-view_count')[:limit]
-    return Response({'videos': enrich_videos_bulk(list(qs), request.user)})
+
+    video_tags = set(video.tags or [])
+
+    # ── İçerik tabanlı adaylar: aynı kategori, aynı yaratıcı veya ortak etiket ──
+    tag_q = Q()
+    for t in video_tags:
+        tag_q |= Q(tags__icontains=t)
+    content_filter = Q(category=video.category) | Q(creator=video.creator)
+    if video_tags:
+        content_filter |= tag_q
+
+    content_candidates = list(
+        Video.objects.filter(content_filter, is_published=True)
+        .exclude(id=video.id)
+        .select_related('creator', 'category')[:200]
+    )
+
+    # ── İşbirlikçi filtreleme: bu videoyu izleyen kullanıcıların izlediği diğer videolar ──
+    co_watch_scores = {}
+    viewer_ids = list(
+        WatchHistory.objects.filter(video_id=video.id)
+        .values_list('user_id', flat=True).distinct()[:500]
+    )
+    co_watch_videos = {}
+    if viewer_ids:
+        co_rows = (
+            WatchHistory.objects.filter(user_id__in=viewer_ids)
+            .exclude(video_id=video.id)
+            .values('video_id', 'user_id', 'completion_rate')
+        )
+        for row in co_rows:
+            vid = row['video_id']
+            strength = 0.4 + 0.6 * (min(100, row.get('completion_rate') or 0) / 100)
+            co_watch_scores[vid] = co_watch_scores.get(vid, 0) + strength
+
+        if co_watch_scores:
+            top_co_ids = sorted(co_watch_scores, key=co_watch_scores.get, reverse=True)[:100]
+            co_watch_videos = {
+                v.id: v for v in Video.objects.filter(
+                    id__in=top_co_ids, is_published=True,
+                ).select_related('creator', 'category')
+            }
+
+    # ── Skorlama: içerik benzerliği + ortak izlenme gücünü birleştir ──
+    max_co = max(co_watch_scores.values()) if co_watch_scores else 1
+    merged = {v.id: v for v in content_candidates}
+    merged.update(co_watch_videos)
+
+    def score(v):
+        content_s = 0.0
+        if v.category_id and v.category_id == video.category_id:
+            content_s += 0.45
+        if v.creator_id == video.creator_id:
+            content_s += 0.25
+        if video_tags:
+            overlap = len(video_tags & set(v.tags or []))
+            content_s += 0.30 * (overlap / len(video_tags))
+        co_s = (co_watch_scores.get(v.id, 0) / max_co) if v.id in co_watch_scores else 0
+        # Sadece işbirlikçi sinyali olan ama içerikle hiç alakası olmayan
+        # videoları da değerli kabul ediyoruz, ama içerik + co-watch birleşimi
+        # en alakalı sonuçları öne çıkarır.
+        return content_s * 0.6 + co_s * 0.4
+
+    ranked = sorted(merged.values(), key=score, reverse=True)
+    # Skoru sıfır olan (ne kategori/kanal/etiket eşleşmesi ne de ortak izlenme
+    # sinyali olan) videoları ele — gerçekten alakasız içerik gösterme.
+    ranked = [v for v in ranked if score(v) > 0][:limit]
+    return Response({'videos': enrich_videos_bulk(ranked, request.user)})
 
 
 @api_view(['GET'])
