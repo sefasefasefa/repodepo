@@ -47,7 +47,8 @@ build = ["bash", "-c", "cd backend && pip install -r requirements.txt && pnpm in
 [userenv]
 
 [userenv.shared]
-ALLOWED_HOSTS = "hotpulse.me,www.hotpulse.me,*.hotpulse.me,*"
+ALLOWED_HOSTS = "*"
 CSRF_TRUSTED_ORIGINS = "https://*.replit.dev,https://*.repl.co,https://*.replit.app,http://localhost:8000,http://localhost:5000"
 DEBUG = "True"
-FORCE_SQLITE = "true"
+FORCE_SQLITE = "True"
+MEDIA_URL = "/media/"
