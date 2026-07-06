@@ -1350,11 +1350,47 @@ def video_heatmap(request, video_id):
 
     # WatchHistory güncelle (giriş yapmış kullanıcı için)
     if request.user.is_authenticated and (watch_time > 0 or completion_rate > 0):
-        wh, _ = WatchHistory.objects.get_or_create(user=request.user, video=video)
+        pause_count    = int(request.data.get('pauseCount', 0) or 0)
+        seek_count     = int(request.data.get('seekCount', 0) or 0)
+        replay_count   = int(request.data.get('replayCount', 0) or 0)
+        quality_chg    = int(request.data.get('qualityChanges', 0) or 0)
+        last_position  = int(request.data.get('lastPosition', 0) or 0)
+
+        wh, created = WatchHistory.objects.get_or_create(user=request.user, video=video)
+        update_fields = ['updated_at']
+
         if watch_time >= wh.watch_time or completion_rate >= wh.completion_rate:
             wh.watch_time = max(wh.watch_time, watch_time)
             wh.completion_rate = max(wh.completion_rate, completion_rate)
-            wh.save(update_fields=['watch_time', 'completion_rate', 'updated_at'])
+            update_fields += ['watch_time', 'completion_rate']
+
+        # Accumulate per-session engagement signals
+        if pause_count > 0:
+            wh.pause_count += pause_count
+            update_fields.append('pause_count')
+        if seek_count > 0:
+            wh.seek_count += seek_count
+            update_fields.append('seek_count')
+        if replay_count > 0:
+            wh.replay_count += replay_count
+            update_fields.append('replay_count')
+        if quality_chg > 0:
+            wh.quality_changes += quality_chg
+            update_fields.append('quality_changes')
+        if last_position > 0:
+            wh.last_position = last_position
+            update_fields.append('last_position')
+        # Only count a new session when > 30 min has passed since last activity.
+        # The player posts heatmap every ~15 s, so without this guard every poll
+        # would inflate session_count.
+        if not created:
+            from django.utils import timezone
+            gap = (timezone.now() - wh.updated_at).total_seconds()
+            if gap > 1800:  # 30 minutes
+                wh.session_count += 1
+                update_fields.append('session_count')
+
+        wh.save(update_fields=list(set(update_fields)))
 
     # Milestone AI olayları
     if milestones:

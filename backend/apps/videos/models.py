@@ -129,6 +129,13 @@ class WatchHistory(models.Model):
     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='watch_history')
     watch_time = models.IntegerField(default=0)
     completion_rate = models.IntegerField(default=0)
+    # Rich engagement signals — populated by the heatmap POST endpoint
+    pause_count = models.IntegerField(default=0)
+    seek_count = models.IntegerField(default=0)
+    replay_count = models.IntegerField(default=0)
+    quality_changes = models.IntegerField(default=0)
+    last_position = models.IntegerField(default=0)   # seconds from start
+    session_count = models.IntegerField(default=1)   # distinct watch sessions
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
