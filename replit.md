@@ -12,7 +12,23 @@ An 18+ social video sharing platform with video uploads, live streaming, messagi
 
 ## How to run
 
-The **Start application** workflow handles everything:
+### First run / after a clean environment
+
+Run these bootstrap steps once before starting the workflow:
+
+```bash
+# 1. Install Python dependencies
+cd backend && pip install -r requirements.txt
+
+# 2. Install frontend dependencies and build
+cd backend && pnpm install && pnpm --filter @workspace/streamvid run build
+```
+
+Re-run step 2 any time you change frontend source code.
+
+### Start the app
+
+The **Start application** workflow handles the rest (migrate → collectstatic → Gunicorn):
 ```
 cd backend && python3.11 manage.py migrate --run-syncdb --no-input && python3.11 manage.py collectstatic --noinput -v 0 && python3.11 -m gunicorn config.wsgi:application --config gunicorn.conf.py
 ```
