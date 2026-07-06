@@ -29,7 +29,8 @@ const AdminFeatureFlags        = lazy(() => import("@/components/admin/admin-fea
 const AdminCrosspostMonitor    = lazy(() => import("@/components/admin/admin-crosspost-monitor"));
 const AdminModeration          = lazy(() => import("@/components/admin/admin-moderation"));
 const AdminWithdrawals         = lazy(() => import("@/components/admin/admin-withdrawals"));
-import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower, SlidersHorizontal, ShieldCheck, Wallet, Search, ChevronDown, Film, UsersRound, Megaphone as MegaphoneIcon, Wallet as WalletIcon, ShieldAlert, Wrench } from "lucide-react";
+const AdminWatchInsights       = lazy(() => import("@/components/admin/admin-watch-insights"));
+import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower, SlidersHorizontal, ShieldCheck, Wallet, Search, ChevronDown, Film, UsersRound, Megaphone as MegaphoneIcon, Wallet as WalletIcon, ShieldAlert, Wrench, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 async function pulseFetch(path: string) {
@@ -96,6 +97,7 @@ const GROUPS = [
       { id: "moderation",   label: "Video Moderasyon", icon: ShieldCheck },
       { id: "home-filters", label: "Anasayfa Filtreleri", icon: SlidersHorizontal },
       { id: "pages",        label: "Özel Sayfalar", icon: LayoutTemplate },
+      { id: "watch-insights", label: "İzleme Analitiği", icon: Eye },
     ],
   },
   {
@@ -341,6 +343,7 @@ export default function Admin() {
             {tab === "affiliate" && <AdminAffiliate />}
             {tab === "badges" && <AdminBadges />}
             {tab === "pages" && <AdminCustomPages />}
+            {tab === "watch-insights" && <AdminWatchInsights />}
             {tab === "visitors" && <AdminVisitorMap />}
             {tab === "ab-tests" && <AdminABTests />}
             {tab === "revenue-proj" && <AdminRevenueProjection />}
