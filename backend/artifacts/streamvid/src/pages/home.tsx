@@ -417,6 +417,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState<HomeFilter | null>(null);
   const [homeFilters, setHomeFilters] = useState<HomeFilter[]>([]);
+  const contentRef = useRef<HTMLDivElement>(null);
   const { settings } = usePublicSiteSettings();
   const { user, token } = useAuth() as any;
 
@@ -489,6 +490,13 @@ export default function Home() {
   const visibleCategories = [...categories]
     .filter((c: Category) => (c as any).showOnHome !== false)
     .sort((a: any, b: any) => (a.homeOrder ?? 0) - (b.homeOrder ?? 0));
+
+  // Kategori veya filtre seçilince içerik alanına scroll
+  useEffect(() => {
+    if ((activeCategory || activeFilter) && contentRef.current) {
+      contentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [activeCategory, activeFilter]);
 
   // Filtre durumu
   const hasActiveSelection = !!activeFilter || !!activeCategory;
@@ -591,7 +599,7 @@ export default function Home() {
       )}
 
       {/* ── Ana İçerik ── */}
-      <div className="max-w-[1600px] mx-auto px-3 md:px-6 py-6 space-y-10">
+      <div ref={contentRef} className="max-w-[1600px] mx-auto px-3 md:px-6 py-6 space-y-10">
 
         {/* Aktif filtre / kategori sonuçları */}
         {hasActiveSelection && ffVideos !== "disabled" && (
