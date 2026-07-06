@@ -255,35 +255,41 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
             enableWorker: true,
             lowLatencyMode: false,
 
-            // ── Buffer: en kötü ağda bile biriktir ──────────────────
-            maxBufferLength: 120,
-            maxMaxBufferLength: 600,
-            maxBufferSize: 300 * 1000 * 1000,
-            maxBufferHole: 0.5,
-            backBufferLength: 60,
+            // ── Hızlı başlangıç: önce en düşük kaliteyi yükle ──────
+            startLevel: 0,               // her zaman en düşük kaliteden başla → ilk kare hızlı gelir
+            startFragPrefetch: true,     // manifest parse edilirken bile ilk segment indirilmeye başlar
+            autoStartLoad: true,
 
-            // ── Takılma kurtarma ────────────────────────────────────
-            highBufferWatchdogPeriod: 2,
-            nudgeMaxRetry: 10,
-            nudgeOffset: 0.1,
+            // ── Buffer: yeterince doldur ama başlangıcı yavaşlatma ─
+            maxBufferLength: 30,         // 30s yeterli (eski 120s başlangıcı geciktiriyordu)
+            maxMaxBufferLength: 120,
+            maxBufferSize: 60 * 1000 * 1000,   // 60 MB
+            maxBufferHole: 0.3,
+            backBufferLength: 30,
+            highBufferWatchdogPeriod: 3,
 
-            // ── ABR: Kaliteyi agresif artır, düşürmeye dirençli ────
-            abrEwmaDefaultEstimate: 2_000_000,
-            abrBandWidthFactor: 0.95,
-            abrBandWidthUpFactor: 0.6,
-            abrEwmaFastHalf: 3.0,
-            abrEwmaSlowHalf: 9.0,
-            startLevel: -1,
-            capLevelToPlayerSize: false,
+            // ── Takılma: küçük atlamalar yerine daha seyrek ama büyük ──
+            // (küçük çok sayıda nudge video hızlıymış hissi yaratır)
+            nudgeMaxRetry: 5,
+            nudgeOffset: 0.3,
 
-            // ── Retry: ağ hatalarında vazgeçme ──────────────────────
-            fragLoadingMaxRetry: 12,
-            fragLoadingRetryDelay: 200,
-            fragLoadingMaxRetryTimeout: 4000,
-            manifestLoadingMaxRetry: 1,
-            manifestLoadingRetryDelay: 100,
+            // ── ABR: muhafazakâr başla, yavaşça kaliteyi artır ─────
+            abrEwmaDefaultEstimate: 300_000,   // 300 kbps varsayım → düşük kaliteden güvenle başlar
+            abrBandWidthFactor: 0.85,           // bant genişliğinin %85'ini kullan (güvenlik payı)
+            abrBandWidthUpFactor: 0.5,          // kalite artışında temkinli ol
+            abrEwmaFastHalf: 2.0,
+            abrEwmaSlowHalf: 8.0,
+            capLevelToPlayerSize: true,         // oynatıcı boyutundan büyük kaliteye çıkma
+
+            // ── Retry: kötü ağda pes etme ───────────────────────────
+            fragLoadingMaxRetry: 15,
+            fragLoadingRetryDelay: 500,
+            fragLoadingMaxRetryTimeout: 10_000,
+            manifestLoadingMaxRetry: 4,
+            manifestLoadingRetryDelay: 500,
+            manifestLoadingMaxRetryTimeout: 8_000,
             levelLoadingMaxRetry: 10,
-            levelLoadingRetryDelay: 200,
+            levelLoadingRetryDelay: 500,
           });
 
           hlsRef.current = hls;
@@ -392,7 +398,8 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       const onStalled   = () => {
         if (!vid.paused && !vid.ended) {
           clearStallTimer();
-          stallTimerRef.current = setTimeout(triggerStallRecovery, 3000);
+          // 5s bekle — kötü ağda 3s çok erken tetiklenip gereksiz kurtarma yapıyordu
+          stallTimerRef.current = setTimeout(triggerStallRecovery, 5000);
         }
       };
 
@@ -484,6 +491,18 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
         vid.removeEventListener("loadedmetadata", onLoadedMetadata_);
       };
     }, [onEnded, onTimeUpdate, onLoadedMetadata, onErrorProp, clearStallTimer, clearLoadTimer, triggerStallRecovery, videoId]);
+
+    /* ── playbackRate: src değişince ve kullanıcı ayarında uygula ── */
+    useEffect(() => {
+      const vid = videoRef.current;
+      if (!vid) return;
+      // Yeni kaynak yüklendiğinde hız sıfırlanır; state'i geri uygula
+      const onLoadedMeta = () => { vid.playbackRate = playbackRate; };
+      vid.addEventListener("loadedmetadata", onLoadedMeta);
+      // Hemen de uygula (zaten yüklüyse)
+      vid.playbackRate = playbackRate;
+      return () => vid.removeEventListener("loadedmetadata", onLoadedMeta);
+    }, [playbackRate, src]);
 
     /* ── Fullscreen değişim ─────────────────────────────────────── */
     useEffect(() => {
@@ -641,7 +660,7 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
           className="w-full h-full object-contain"
           poster={poster}
           playsInline
-          preload="metadata"
+          preload="auto"
           {...(isProtected ? {
             controlsList: "nodownload noremoteplayback",
             disablePictureInPicture: true,
