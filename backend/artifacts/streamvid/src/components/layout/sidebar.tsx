@@ -247,14 +247,6 @@ export function Sidebar() {
             </div>
           )}
 
-          {nav("all-categories").enabled && ffCategories !== "disabled" && (
-            <Link href="/categories" onClick={onClose}>
-              <div className="mx-4 my-3 py-2.5 bg-[#2a2a2a] hover:bg-[#333] transition-colors rounded text-center text-sm text-[#ccc] font-medium border border-[#383838] cursor-pointer">
-                {nav("all-categories").label}
-              </div>
-            </Link>
-          )}
-
           {nav("playlists").enabled && (
             <Row icon={ListVideo} label={nav("playlists").label} href="/playlists" onClick={onClose} active={location === "/playlists"} featureKey="playlists" />
           )}
