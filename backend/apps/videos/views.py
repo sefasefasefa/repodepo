@@ -96,6 +96,7 @@ def _resolve_video(video_id, qs=None):
 def _resolve_cloudmail_url(url):
     """
     cloud.mail.ru paylaşım linkini direkt CDN URL'ine çevirir.
+    /api/v2/dispatcher endpoint'ini kullanır (HTML scraping yerine).
     Sonucu 40 dakika cache'de tutar (CDN token ömrü ~60 dk).
     """
     import urllib.parse
@@ -114,34 +115,49 @@ def _resolve_cloudmail_url(url):
             'User-Agent': (
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                 'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/120.0.0.0 Safari/537.36'
+                'Chrome/125.0.0.0 Safari/537.36'
             ),
+            'Accept-Language': 'tr,en;q=0.9',
+            'Referer': 'https://cloud.mail.ru/',
         }
         session = _rq.Session()
-        page = session.get(url, headers=headers, timeout=15)
-        if page.status_code != 200:
-            return url
 
-        base_match = re.search(
-            r'"weblink_view"\s*:\s*\{"count"\s*:\s*"\d+"\s*,\s*"url"\s*:\s*"([^"]+)"',
-            page.text
+        # Önce sayfayı aç — çerez almak için gerekli
+        session.get(url, headers=headers, timeout=15)
+
+        # Dispatcher API'si weblink_view CDN base URL'ini döner
+        disp = session.get(
+            'https://cloud.mail.ru/api/v2/dispatcher',
+            headers=headers, timeout=10
         )
-        if not base_match:
+        if disp.status_code != 200:
             return url
 
-        base_url = base_match.group(1)
+        body = disp.json().get('body', {})
+        wv_list = body.get('weblink_view', [])
+        if not wv_list:
+            return url
+        base_url = wv_list[0]['url']  # ör. https://clocloXX.cloud.mail.ru/weblink/view/
+
         parsed = urllib.parse.urlparse(url)
         path_parts = parsed.path.split('/public/', 1)
         if len(path_parts) < 2:
             return url
 
-        weblink_path = path_parts[1]
+        weblink_path = path_parts[1]  # ör. proP/YdahWwb4c/VID_....mp4
         cdn_url = base_url + weblink_path
-        cdn_resp = session.get(cdn_url, headers=headers, stream=True,
-                               timeout=20, allow_redirects=True)
+
+        # CDN isteği imzalı URL'e yönlendirir
+        cdn_resp = session.get(
+            cdn_url,
+            headers={**headers, 'Range': 'bytes=0-0'},
+            stream=True,
+            timeout=20,
+            allow_redirects=True,
+        )
 
         ct = cdn_resp.headers.get('Content-Type', '')
-        if cdn_resp.status_code == 200 and ('video' in ct or 'octet' in ct):
+        if cdn_resp.status_code in (200, 206) and ('video' in ct or 'octet' in ct):
             resolved = cdn_resp.url
             cache.set(cache_key, resolved, 40 * 60)  # 40 dakika
             return resolved
