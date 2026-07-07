@@ -2329,12 +2329,25 @@ def _download_any_url_to_server(video_id):
             tmp_dir = tempfile.mkdtemp(prefix='ytdl_')
             try:
                 out_tmpl = os.path.join(tmp_dir, '%(id)s.%(ext)s')
+                # Browser-like UA & headers — reduces 403s from servers that
+                # block non-browser requests on direct video URLs.
+                browser_ua = (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/125.0.0.0 Safari/537.36'
+                )
                 cmd = [
                     sys.executable, '-m', 'yt_dlp',
                     '--no-playlist',
                     '--no-warnings',
                     '--quiet',
                     '--no-part',
+                    '--user-agent', browser_ua,
+                    '--add-header', 'Accept:video/webm,video/ogg,video/*;q=0.9,*/*;q=0.8',
+                    '--add-header', 'Accept-Language:tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+                    '--add-header', 'Sec-Fetch-Dest:video',
+                    '--add-header', 'Sec-Fetch-Mode:no-cors',
+                    '--add-header', 'Sec-Fetch-Site:cross-site',
                     '--format', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
                     '--output', out_tmpl,
                     url,
