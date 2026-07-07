@@ -87,7 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("token", newToken);
     invalidateInitCache();
     setToken(newToken);
-    await refetch();
+    // Don't await refetch() — in TanStack Query v5 calling refetch() while
+    // the query is still in disabled state (enabled:false, before the
+    // setToken re-render) returns a promise that never resolves, keeping
+    // the login button in "submitting" state forever. The query fires
+    // automatically once setToken(newToken) triggers a re-render.
   };
 
   const handleRegister = async (data: RegisterBody) => {
@@ -99,7 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("token", newToken);
     invalidateInitCache();
     setToken(newToken);
-    await refetch();
+    // Same as handleLogin — don't await refetch() to avoid a TanStack Query v5
+    // stall when the query is still disabled at call time.
   };
 
   const handleLogout = async () => {
