@@ -211,8 +211,17 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
       return [ownSrc, ...players];
     }
 
-    // Harici URL → Kendi Oynatıcı yok, sadece CDN sekmeler göster
-    return [...players];
+    // Harici URL → mevcut player kayıtları varsa onları kullan
+    if (players.length > 0) return [...players];
+
+    // Player kaydı yok — video URL'inden otomatik oluştur
+    // Bilinen platform (StreamTape, DoodStream vb.) → resolveEmbedFromUrl ile doğru /e/ embed URL'ini al
+    const autoEmbed = resolveEmbedFromUrl(effectiveUrl);
+    if (autoEmbed) {
+      return [{ id: -1, playerName: "Oynatıcı", embedCode: autoEmbed, isDefault: true, quality: "HD", language: "TR" }];
+    }
+    // Bilinmeyen platform ya da direkt dosya → ham URL'i directUrl olarak ekle
+    return [{ id: -1, playerName: "Oynatıcı", directUrl: effectiveUrl, isDefault: true, quality: "HD", language: "TR" }];
   })();
 
   const defaultSource = allSources.find(p => p.isDefault) || allSources[0];
@@ -315,16 +324,16 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
 
   const effectiveEmbedHtml = (() => {
     if (!activeSource) return null;
-    // directUrl var ama native oynatılamıyor → iframe yap
+    // directUrl var ama native oynatılamıyor → platform resolve dene, yoksa iframe'e sar
     if (activeSource.directUrl && !isNativePlayable(activeSource.directUrl)) {
-      return toIframeHtml(activeSource.directUrl);
+      return resolveEmbedFromUrl(activeSource.directUrl) || toIframeHtml(activeSource.directUrl);
     }
     // embedCode var
     if (activeSource.embedCode) {
       const code = activeSource.embedCode.trim();
-      // Ham URL ise iframe'e sar
+      // Ham URL ise önce bilinen platform iframe'ine çevir (ör. /v/ → /e/), yoksa direkt sar
       if (code.startsWith('http://') || code.startsWith('https://')) {
-        return toIframeHtml(code);
+        return resolveEmbedFromUrl(code) || toIframeHtml(code);
       }
       return code;
     }
