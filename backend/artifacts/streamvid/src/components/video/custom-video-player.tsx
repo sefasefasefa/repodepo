@@ -226,8 +226,12 @@ export const CustomVideoPlayer = forwardRef<HTMLVideoElement, CustomVideoPlayerP
       // HLS stream mi?
       const isHlsStream = ext === 'm3u8' || src.includes('.m3u8');
 
+      // Backend stream endpoint'leri (/api/videos/X/stream) native MP4 döner —
+      // URL uzantısı "stream" olduğu için isBrowserNative false çıkmasın.
+      const isBackendStream = /\/api\/videos\/[^/]+\/stream/.test(src);
+
       // Doğrudan oynatılabilen format mı?
-      const isBrowserNative = ['mp4', 'webm', 'ogg', 'ogv'].includes(ext);
+      const isBrowserNative = ['mp4', 'webm', 'ogg', 'ogv'].includes(ext) || isBackendStream;
 
       if (isUnsupportedFormat && videoId) {
         // Desteklenmeyen format → backend proxy üzerinden aktar

@@ -219,6 +219,12 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
   const [active, setActive] = useState(defaultSource?.id ?? 0);
   const activeSource = allSources.find(p => p.id === active) || allSources[0];
 
+  // Iframe lazy-load: kullanıcı sekmede play'e basana kadar iframe DOM'a yazılmaz
+  const [iframeActivated, setIframeActivated] = useState(false);
+
+  // Sekme değişince iframe'i sıfırla (yeni kaynak seçilince eski iframe kapanır)
+  useEffect(() => { setIframeActivated(false); }, [active]);
+
   // Yerel dosya hazır olunca Kendi Oynatıcı'ya geç
   useEffect(() => {
     if (localVideoUrl && active !== 0) setActive(0);
@@ -407,11 +413,41 @@ function VideoPlayer({ video, players, onRefreshPlayers }: { video: any; players
                   token={token}
                 />
               ) : effectiveEmbedHtml ? (
-                <div
-                  key={effectiveEmbedHtml}
-                  className="w-full h-full"
-                  dangerouslySetInnerHTML={{ __html: effectiveEmbedHtml }}
-                />
+                iframeActivated ? (
+                  <div
+                    key={effectiveEmbedHtml}
+                    className="w-full h-full"
+                    dangerouslySetInnerHTML={{ __html: effectiveEmbedHtml }}
+                  />
+                ) : (
+                  /* Seçilmeden önce sadece thumbnail + play butonu göster */
+                  <div
+                    key={effectiveEmbedHtml + "_thumb"}
+                    className="w-full h-full relative cursor-pointer group/play"
+                    onClick={() => setIframeActivated(true)}
+                  >
+                    {video.thumbnailUrl ? (
+                      <img
+                        src={video.thumbnailUrl}
+                        alt={video.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#111]" />
+                    )}
+                    {/* Karartma */}
+                    <div className="absolute inset-0 bg-black/40 group-hover/play:bg-black/55 transition-colors" />
+                    {/* Oynat butonu */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                      <div className="w-20 h-20 rounded-full bg-white/15 border-2 border-white/50 flex items-center justify-center backdrop-blur-sm group-hover/play:scale-110 group-hover/play:bg-white/25 transition-all duration-200">
+                        <Play className="h-9 w-9 text-white fill-white ml-1" />
+                      </div>
+                      <span className="text-white/70 text-xs font-medium">
+                        {activeSource?.playerName ?? "Oynat"}
+                      </span>
+                    </div>
+                  </div>
+                )
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <p className="text-[#555] text-sm">Video kaynağı bulunamadı</p>
