@@ -851,7 +851,7 @@ export default function VideoWatch() {
                   </span>
                   <span className="text-xs sm:hidden">{user ? (video.likeCount ?? 0).toLocaleString() : (guestLiked ? "✓" : "")}</span>
                 </Button>
-                {((video.likeCount ?? 0) > 0 || guestLikeCount > 0) && (
+                {isCreatorOrAdmin && ((video.likeCount ?? 0) > 0 || guestLikeCount > 0) && (
                   <div className="flex items-center gap-1 ml-1 text-[10px] text-[#555]">
                     {(video.likeCount ?? 0) > 0 && (
                       <span title="Üye beğenisi" className="flex items-center gap-0.5">
