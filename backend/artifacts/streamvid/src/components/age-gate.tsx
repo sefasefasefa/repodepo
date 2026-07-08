@@ -5,12 +5,12 @@ import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 const AGE_KEY = "prnhbbbb_age_verified";
 const DENIED_KEY = "prnhbbbb_age_denied";
 
-const BYPASS_PATHS = ["/login", "/register", "/privacy-policy", "/impressum"];
+const BYPASS_PATHS = ["/login", "/register", "/privacy-policy", "/impressum", "/categories", "/videos"];
 
 function getInitialStatus(): "pending" | "verified" | "denied" {
   try {
     const path = window.location.pathname;
-    if (BYPASS_PATHS.some(p => path === p || path.startsWith(p + "?"))) return "verified";
+    if (BYPASS_PATHS.some(p => path === p || path.startsWith(p + "?") || path.startsWith(p + "/"))) return "verified";
     if (localStorage.getItem(AGE_KEY) === "1") return "verified";
     if (localStorage.getItem(DENIED_KEY) === "1") return "denied";
   } catch {}
