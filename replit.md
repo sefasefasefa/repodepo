@@ -17,11 +17,11 @@ An 18+ social video sharing platform with video uploads, live streaming, messagi
 Run these bootstrap steps once before starting the workflow:
 
 ```bash
-# 1. Install Python dependencies
-cd backend && pip install -r requirements.txt
+# 1. Install Python dependencies (from repo root)
+uv sync
 
-# 2. Install frontend dependencies and build
-cd backend && pnpm install && pnpm --filter @workspace/streamvid run build
+# 2. Build the frontend
+cd backend/artifacts/streamvid && pnpm install && pnpm run build
 ```
 
 Re-run step 2 any time you change frontend source code.
