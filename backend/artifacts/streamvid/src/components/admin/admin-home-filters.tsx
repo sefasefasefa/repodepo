@@ -65,7 +65,8 @@ export default function AdminHomeFilters() {
       fetch("/api/categories").then(r => r.json()),
     ]).then(([fd, cd]) => {
       setFilters(fd.filters ?? []);
-      setCategories(cd.categories ?? []);
+      // /api/categories returns a plain array, not {categories:[...]}
+      setCategories(Array.isArray(cd) ? cd : (cd.categories ?? []));
     }).finally(() => setLoading(false));
   }, []);
 
@@ -301,7 +302,10 @@ export default function AdminHomeFilters() {
                   {!f.isActive && <span className="text-[10px] text-[#555]">Pasif</span>}
                 </div>
                 <div className="text-[11px] text-[#555] mt-0.5">
-                  {f.type === "category" && `Kategori #${f.categoryId}`}
+                  {f.type === "category" && (
+                    categories.find(c => c.id === f.categoryId)?.name
+                      ?? (f.categoryId != null ? `Kategori #${f.categoryId}` : "Kategori seçilmedi")
+                  )}
                   {f.type !== "category" && f.sortBy && SORT_OPTIONS.find(s => s.value === f.sortBy)?.label}
                   {f.rules && Object.keys(f.rules).length > 0 && (
                     <span className="ml-2 text-[#444]">
