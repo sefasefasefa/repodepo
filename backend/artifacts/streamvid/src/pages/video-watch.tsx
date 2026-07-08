@@ -4,7 +4,7 @@ import { useGetVideo, useGetRelatedVideos, useLikeVideo, useListComments, useCre
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, Languages, Download, Check, SlidersHorizontal, ExternalLink, RefreshCw, Loader2 } from "lucide-react";
+import { Heart, Share2, Bookmark, Flag, ChevronDown, ChevronUp, Globe, Crown, Coins, FileText, Languages, Download, Check, SlidersHorizontal, ExternalLink, RefreshCw, Loader2, Play } from "lucide-react";
 import { ReportModal } from "@/components/report-modal";
 import { TokenTipModal } from "@/components/token-tip-modal";
 import { CustomRequestModal } from "@/components/custom-request-modal";

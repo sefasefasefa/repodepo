@@ -19,7 +19,7 @@ def user_videos(request, user_id):
     page = max(1, int(request.GET.get('page', 1)))
     limit = min(50, int(request.GET.get('limit', 20)))
     offset = (page - 1) * limit
-    qs = Video.objects.filter(creator=creator, is_published=True).order_by('-created_at')
+    qs = Video.objects.filter(creator=creator, is_published=True).select_related('category').order_by('-created_at')
     total = qs.count()
     videos = qs[offset:offset + limit]
     fu = format_user(creator)
@@ -35,7 +35,10 @@ def user_videos(request, user_id):
             'isPPV': getattr(v, 'is_ppv', False),
             'ppvPrice': float(v.ppv_price) if getattr(v, 'ppv_price', None) else None,
             'isPublished': v.is_published, 'tags': getattr(v, 'tags', []),
-            'categoryId': v.category_id, 'category': None,
+            'categoryId': v.category_id,
+            'category': {
+                'id': v.category.id, 'name': v.category.name, 'slug': v.category.slug,
+            } if v.category_id else None,
             'creator': fu, 'isLiked': False, 'isBookmarked': False,
             'createdAt': v.created_at.isoformat(),
         })

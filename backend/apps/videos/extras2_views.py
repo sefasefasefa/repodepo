@@ -215,6 +215,9 @@ def _fmt_video(v, liked_ids=None):
         'ppvPrice': float(v.ppv_price) if getattr(v, 'ppv_price', None) else None,
         'isPublished': v.is_published, 'tags': getattr(v, 'tags', []),
         'categoryId': v.category_id,
+        'category': {
+            'id': v.category.id, 'name': v.category.name, 'slug': v.category.slug,
+        } if v.category_id else None,
         'creator': {
             'id': v.creator_id,
             'username': v.creator.username if v.creator_id else None,
@@ -237,7 +240,7 @@ def recommendations_for_you(request):
 
     if not me:
         qs = (Video.objects.filter(is_published=True)
-              .select_related('creator')
+              .select_related('creator', 'category')
               .order_by('-view_count', '-like_count')[offset:offset + limit])
         return Response({
             'videos': [_fmt_video(v) for v in qs],
@@ -273,7 +276,7 @@ def recommendations_for_you(request):
 
     candidates = list(Video.objects.filter(is_published=True)
                       .exclude(creator_id=me.id)
-                      .select_related('creator')
+                      .select_related('creator', 'category')
                       .order_by('-created_at')[:300])
     not_watched = [v for v in candidates if v.id not in watched]
     max_cat = max(cat_affinity.values() or [1])
