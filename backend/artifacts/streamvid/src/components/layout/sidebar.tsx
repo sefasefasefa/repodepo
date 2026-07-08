@@ -236,7 +236,7 @@ export function Sidebar() {
                 <div className="px-9 py-3 text-[13px] text-[#555]">Kategori yok</div>
               ) : (
                 topCategories.map((cat: any) => (
-                  <Row key={cat.id} icon={TrendingUp} label={`${cat.name}${cat.videoCount > 0 ? ` (${cat.videoCount})` : ''}`} href={`/categories/${cat.id}`} onClick={onClose} sub featureKey="categories" />
+                  <Row key={cat.id} icon={TrendingUp} label={`${cat.name}${cat.videoCount > 0 ? ` (${cat.videoCount})` : ''}`} href={`/categories/${cat.slug}`} onClick={onClose} sub featureKey="categories" />
                 ))
               )}
               <Link href="/categories" onClick={onClose}>

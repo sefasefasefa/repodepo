@@ -53,7 +53,7 @@ async function fetchCategoryTags(categoryId: number): Promise<{ tag: string; cou
 
 export default function CategoryDetail() {
   const params = useParams();
-  const categoryId = parseInt(params.id || "0");
+  const slug = params.id || "";
 
   const [sort, setSort]         = useState("newest");
   const [duration, setDuration] = useState("");
@@ -64,26 +64,33 @@ export default function CategoryDetail() {
   const [showFilters, setShowFilters] = useState(false);
   const [layout, setLayout]     = useState<"grid" | "list">("grid");
 
-  useEffect(() => { setPage(1); }, [categoryId]);
+  useEffect(() => { setPage(1); }, [slug]);
 
-  const { data, isLoading, isFetching } = useListVideos({
-    categoryId: categoryId || undefined,
-    sort,
-    ...(duration ? { duration } : {}),
-    ...(type ? { type } : {}),
-    ...(premium ? { isPremium: premium === "true" } : {}),
-    ...(tag ? { tag } : {}),
-    page,
-    limit: 24,
-  } as any);
-
-  const { data: rawCategories } = useListCategories();
+  const { data: rawCategories, isLoading: categoriesLoading } = useListCategories();
   const allCategories: any[] = Array.isArray(rawCategories) ? rawCategories : (rawCategories as any)?.categories ?? [];
-  const category = allCategories.find((c: any) => c.id === categoryId);
+  const category = allCategories.find((c: any) => c.slug === slug);
+  const categoryId: number | undefined = category?.id;
+  // Only consider "not found" once categories have loaded and slug still didn't match
+  const categoryNotFound = !categoriesLoading && allCategories.length > 0 && !category;
+
+  const { data, isLoading, isFetching } = useListVideos(
+    {
+      categoryId: categoryId,
+      sort,
+      ...(duration ? { duration } : {}),
+      ...(type ? { type } : {}),
+      ...(premium ? { isPremium: premium === "true" } : {}),
+      ...(tag ? { tag } : {}),
+      page,
+      limit: 24,
+    } as any,
+    // Don't fetch videos until we have resolved the category ID from the slug
+    { query: { enabled: !!categoryId } } as any,
+  );
 
   const { data: tagData } = useQuery({
-    queryKey: ["category-tags", categoryId],
-    queryFn: () => fetchCategoryTags(categoryId),
+    queryKey: ["category-tags", slug],
+    queryFn: () => fetchCategoryTags(categoryId ?? 0),
     enabled: !!categoryId,
     staleTime: 5 * 60 * 1000,
   });
@@ -111,11 +118,25 @@ export default function CategoryDetail() {
             </span>
           </Link>
           <span>/</span>
-          <span className="text-white font-medium">{category?.name ?? `Kategori #${categoryId}`}</span>
+          <span className="text-white font-medium">{category?.name ?? (slug ? slug : "Kategori")}</span>
         </div>
 
+        {/* Kategori bulunamadı */}
+        {categoryNotFound && (
+          <div className="text-center py-24 text-muted-foreground">
+            <Grid3x3 className="h-16 w-16 mx-auto opacity-20 mb-4" />
+            <p className="font-medium text-lg">Kategori bulunamadı</p>
+            <p className="text-sm mt-1">Bu kategori mevcut değil veya kaldırılmış olabilir</p>
+            <Link href="/categories">
+              <button className="mt-4 px-4 py-2 rounded-lg border border-border text-sm hover:border-primary/50 transition-colors">
+                Tüm Kategorilere Dön
+              </button>
+            </Link>
+          </div>
+        )}
+
         {/* Kapak Görseli */}
-        {category?.coverImage && (
+        {!categoryNotFound && category?.coverImage && (
           <div className="relative h-40 md:h-56 w-full overflow-hidden rounded-2xl">
             <img
               src={category.coverImage}
@@ -131,14 +152,14 @@ export default function CategoryDetail() {
         )}
 
         {/* Başlık + Filtre Butonu */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {!categoryNotFound && <div className="flex flex-wrap items-center justify-between gap-3">
           {!category?.coverImage && (
             <div className="flex items-center gap-3">
               <div className="bg-primary/15 p-2.5 rounded-xl">
                 <Grid3x3 className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-xl font-bold">{category?.name ?? `Kategori #${categoryId}`}</h1>
+                <h1 className="text-xl font-bold">{category?.name ?? (slug ? slug : "Kategori")}</h1>
                 {!isLoading && <p className="text-xs text-muted-foreground">{totalCount.toLocaleString("tr")} video</p>}
               </div>
             </div>
@@ -170,7 +191,7 @@ export default function CategoryDetail() {
               )}
             </Button>
           </div>
-        </div>
+        </div>}
 
         {/* Filtre Paneli */}
         {showFilters && (

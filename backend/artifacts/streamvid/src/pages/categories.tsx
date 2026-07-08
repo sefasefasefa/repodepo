@@ -59,7 +59,7 @@ export default function Categories() {
               const emoji = CATEGORY_EMOJIS[cat.name] ?? "🎬";
               const coverImage: string | undefined = (cat as any).coverImage;
               return (
-                <Link key={cat.id} href={`/categories/${cat.id}`}>
+                <Link key={cat.id} href={`/categories/${cat.slug}`}>
                   <div
                     className={`group relative overflow-hidden rounded-2xl border-2 ${color.border} ${coverImage ? "bg-black" : `bg-gradient-to-br ${color.from} ${color.to}`} h-36 flex flex-col items-start justify-end p-4 cursor-pointer transition-all duration-300 hover:scale-[1.04] hover:shadow-2xl hover:shadow-black/60`}
                   >

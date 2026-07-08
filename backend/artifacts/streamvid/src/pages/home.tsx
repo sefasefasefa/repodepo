@@ -178,7 +178,7 @@ function CategoryCard({ category, index }: { category: Category; index: number }
   const colorIdx = index % colors.length;
 
   return (
-    <Link href={`/categories/${category.id}`}>
+    <Link href={`/categories/${category.slug}`}>
       <div className={cn(
         "relative overflow-hidden rounded-xl aspect-video cursor-pointer group bg-gradient-to-br",
         colors[colorIdx]
@@ -386,7 +386,7 @@ function CategorySection({ category }: { category: Category }) {
         icon={Play}
         title={`${category.name}`}
         subtitle={`${category.name} kategorisinin en çok izlenen videoları`}
-        href={`/categories/${category.id}`}
+        href={`/categories/${category.slug}`}
         iconColor="text-primary"
       />
       {isLoading ? <SectionSkeleton count={4} /> : <VideoGrid videos={videos} />}
