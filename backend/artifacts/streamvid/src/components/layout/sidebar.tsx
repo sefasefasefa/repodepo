@@ -113,7 +113,11 @@ export function Sidebar() {
   const [topCatsExpanded, setTopCatsExpanded] = useState(false);
   const [communityExpanded, setCommunityExpanded] = useState(false);
 
-  const { data: categoriesData } = useListCategories();
+  // Categories change rarely — cache for 10 min so sidebar never re-fetches on navigation
+  const { data: categoriesData } = useListCategories(
+    undefined,
+    { query: { staleTime: 10 * 60_000 } } as any,
+  );
   const categories: any[] = Array.isArray(categoriesData) ? categoriesData : (categoriesData as any)?.categories ?? [];
 
   const isCreator = user?.role === "creator";

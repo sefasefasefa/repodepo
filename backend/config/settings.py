@@ -293,8 +293,10 @@ if _using_sqlite:
             cursor = connection.cursor()
             cursor.execute("PRAGMA journal_mode=WAL;")
             cursor.execute("PRAGMA synchronous=NORMAL;")
-            cursor.execute("PRAGMA cache_size=-32000;")  # 32 MB page cache
+            cursor.execute("PRAGMA cache_size=-65536;")   # 64 MB page cache
             cursor.execute("PRAGMA temp_store=MEMORY;")
-            cursor.execute("PRAGMA mmap_size=134217728;")  # 128 MB mmap
+            cursor.execute("PRAGMA mmap_size=268435456;") # 256 MB mmap — avoids read syscalls
+            cursor.execute("PRAGMA busy_timeout=5000;")   # 5 s wait on write lock instead of instant error
+            cursor.execute("PRAGMA optimize;")            # let SQLite pick best query plan
 
     connection_created.connect(_sqlite_wal)

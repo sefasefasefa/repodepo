@@ -415,6 +415,9 @@ def list_videos(request):
     }
     if is_anon and page == 1 and not creator_id:
         cache.set(ck, result, 90)
+        resp = Response(result)
+        resp['Cache-Control'] = 'public, max-age=90, stale-while-revalidate=60'
+        return resp
     return Response(result)
 
 
