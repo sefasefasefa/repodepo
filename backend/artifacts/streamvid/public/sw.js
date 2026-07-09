@@ -12,7 +12,7 @@
  *   - HTML: network-first → stale-while-revalidate (repeat ziyaret anında yüklenir)
  */
 
-const CACHE_VER    = 'v6';
+const CACHE_VER    = 'v7';
 const STATIC_CACHE = `hp-static-${CACHE_VER}`;
 const API_CACHE    = `hp-api-${CACHE_VER}`;
 const INIT_TTL_MS  = 5 * 60 * 1000; // 5 dakika
