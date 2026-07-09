@@ -383,7 +383,7 @@ export default function Videos() {
             <span className="text-xs text-[#555]">Filtreler:</span>
             {categoryId && (
               <span className="flex items-center gap-1 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full">
-                {visibleCats.find((c: Category) => c.id === categoryId)?.name}
+                {visibleCats.find((c: Category) => c.id === categoryId)?.name || `Kategori #${categoryId}`}
                 <button onClick={() => setCategoryId(null)} className="hover:opacity-70 touch-manipulation">×</button>
               </span>
             )}

@@ -372,7 +372,7 @@ export default function CategoryDetail() {
         )}
 
         {/* Video Grid / Liste */}
-        {isLoading ? (
+        {(isLoading || categoriesLoading || (!categoryId && !categoryNotFound)) ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
               <Skeleton key={i} className="aspect-video w-full rounded-xl" />

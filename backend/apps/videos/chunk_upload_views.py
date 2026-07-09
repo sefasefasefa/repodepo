@@ -208,6 +208,15 @@ def chunk_complete(request):
         watermark_enabled=watermark_enabled,
         type=video_type,
     )
+    # Set M2M categories so category video counts and filters work correctly
+    if category_id:
+        try:
+            from .models import Category as _Cat
+            _cat_obj = _Cat.objects.filter(id=category_id).first()
+            if _cat_obj:
+                video.categories.set([_cat_obj])
+        except Exception:
+            pass
     User.objects.filter(id=request.user.id).update(video_count=F('video_count') + 1)
 
     # HLS dönüştürme — arka planda başlat
