@@ -432,9 +432,11 @@ class Command(BaseCommand):
             ('Premium Video 2',   'Özel premium içerik — demo.',     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4', 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/WeAreGoingOnBullrun.jpg', 90, True),
         ]
         count = 0
+        from apps.videos.views import _make_slug
         for i, (title, desc, url, thumb, duration, is_premium) in enumerate(sample_videos):
             v = Video.objects.create(
                 title=title, description=desc,
+                slug=_make_slug(title),
                 thumbnail_url=thumb, video_url=url, duration=duration,
                 creator=creators[i % len(creators)],
                 category=cats[i % len(cats)],
