@@ -14,26 +14,21 @@ An 18+ social video sharing platform with video uploads, live streaming, messagi
 
 ### First run / after a clean environment
 
-Run these bootstrap steps once before starting the workflow:
+Install Python dependencies once (from repo root):
 
 ```bash
-# 1. Install Python dependencies (from repo root)
 uv sync
-
-# 2. Build the frontend
-cd backend/artifacts/streamvid && pnpm install && pnpm run build
 ```
-
-Re-run step 2 any time you change frontend source code.
 
 ### Start the app
 
-The **Start application** workflow handles the rest (migrate → collectstatic → Gunicorn):
-```
-cd backend && python3.11 manage.py migrate --run-syncdb --no-input && python3.11 manage.py collectstatic --noinput -v 0 && python3.11 -m gunicorn config.wsgi:application --config gunicorn.conf.py
-```
+Press **Run** or start the **Start application** workflow. It automatically:
+1. Installs frontend dependencies and builds the React/Vite app
+2. Runs Django migrations
+3. Collects static files
+4. Starts Gunicorn on port 5000
 
-Django will serve the pre-built React frontend at `/` and the REST API at `/api/`.
+Django serves the React frontend at `/` and the REST API at `/api/`.
 
 ## Environment variables
 
