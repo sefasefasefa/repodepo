@@ -3,12 +3,14 @@ import time
 import hashlib
 import threading
 from collections import defaultdict
+from datetime import timedelta
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.core.cache import cache
 
-from .models import GeoRestrictionSettings
+from .models import GeoRestrictionSettings, VisitorLog
 
 # In-memory active-visitor session map (5-minute TTL).
 _sessions = {}
@@ -37,6 +39,16 @@ DEMO_LOCATIONS = [
     {'country': 'SG', 'city': 'Singapore',   'lat': 1.35,  'lng': 103.82},
     {'country': 'MX', 'city': 'Mexico City', 'lat': 19.43, 'lng': -99.13},
 ]
+
+# Period -> timedelta mapping (None = all-time)
+PERIODS = {
+    '5min':  timedelta(minutes=5),
+    '1h':    timedelta(hours=1),
+    '24h':   timedelta(hours=24),
+    '7d':    timedelta(days=7),
+    '30d':   timedelta(days=30),
+    'all':   None,
+}
 
 
 def _is_local_ip(ip):
@@ -82,7 +94,6 @@ def track_visitor(request):
         loc = DEMO_LOCATIONS[h % len(DEMO_LOCATIONS)]
         country, city, lat, lng = loc['country'], loc['city'], loc['lat'], loc['lng']
     else:
-        # No GeoIP library installed — return Unknown but record session
         country, city, lat, lng = 'Unknown', '', 0.0, 0.0
 
     with _sessions_lock:
@@ -94,6 +105,20 @@ def track_visitor(request):
             'lng': existing['lng'] if existing else lng,
             'page': page, 'last_seen': time.time(), 'user_id': user_id,
         }
+
+    # Persist to DB (fire and forget — don't block the response)
+    try:
+        VisitorLog.objects.create(
+            session_id=session_id,
+            country=country,
+            city=city,
+            lat=lat,
+            lng=lng,
+            page=page,
+        )
+    except Exception:
+        pass
+
     return Response({'ok': True})
 
 
@@ -102,15 +127,68 @@ def track_visitor(request):
 def admin_visitors(request):
     if request.user.role not in ('admin', 'moderator'):
         return Response({'error': 'Admin gerekli'}, status=403)
-    _prune_sessions()
-    with _sessions_lock:
-        active = list(_sessions.values())
+
+    period = request.GET.get('period', '5min')
+    country_filter = request.GET.get('country', '')
+
+    if period == '5min':
+        # Live mode: use in-memory sessions
+        _prune_sessions()
+        with _sessions_lock:
+            active = list(_sessions.values())
+
+        if country_filter:
+            active = [v for v in active if v['country'] == country_filter]
+
+        country_counts = defaultdict(int)
+        page_counts = defaultdict(int)
+        for v in active:
+            country_counts[v['country']] += 1
+            page_counts[v['page']] += 1
+
+        top_countries = [{'country': c, 'count': n} for c, n in
+                         sorted(country_counts.items(), key=lambda x: -x[1])[:10]]
+        top_pages = [{'page': p, 'count': n} for p, n in
+                     sorted(page_counts.items(), key=lambda x: -x[1])[:10]]
+
+        return Response({
+            'total': len(active),
+            'uniqueSessions': len(active),
+            'mode': 'live',
+            'visitors': [{
+                'id': v['id'], 'lat': v['lat'], 'lng': v['lng'],
+                'country': v['country'], 'city': v['city'], 'page': v['page'],
+                'lastSeen': v['last_seen'],
+            } for v in active],
+            'topCountries': top_countries,
+            'topPages': top_pages,
+        })
+
+    # Historical mode: query VisitorLog DB
+    td = PERIODS.get(period)
+    qs = VisitorLog.objects.all()
+    if td is not None:
+        since = timezone.now() - td
+        qs = qs.filter(timestamp__gte=since)
+    if country_filter:
+        qs = qs.filter(country=country_filter)
+
+    logs = list(qs.values('session_id', 'country', 'city', 'lat', 'lng', 'page', 'timestamp').order_by('-timestamp'))
+
+    # Deduplicate: one marker per session (latest location)
+    seen_sessions = {}
+    for log in logs:
+        sid = log['session_id']
+        if sid not in seen_sessions:
+            seen_sessions[sid] = log
+
+    visitors = list(seen_sessions.values())
 
     country_counts = defaultdict(int)
     page_counts = defaultdict(int)
-    for v in active:
-        country_counts[v['country']] += 1
-        page_counts[v['page']] += 1
+    for log in logs:
+        country_counts[log['country']] += 1
+        page_counts[log['page']] += 1
 
     top_countries = [{'country': c, 'count': n} for c, n in
                      sorted(country_counts.items(), key=lambda x: -x[1])[:10]]
@@ -118,12 +196,16 @@ def admin_visitors(request):
                  sorted(page_counts.items(), key=lambda x: -x[1])[:10]]
 
     return Response({
-        'total': len(active),
+        'total': len(logs),
+        'uniqueSessions': len(seen_sessions),
+        'mode': 'historical',
         'visitors': [{
-            'id': v['id'], 'lat': v['lat'], 'lng': v['lng'],
-            'country': v['country'], 'city': v['city'], 'page': v['page'],
-            'lastSeen': v['last_seen'],
-        } for v in active],
+            'id': str(v['session_id']),
+            'lat': v['lat'], 'lng': v['lng'],
+            'country': v['country'], 'city': v['city'],
+            'page': v['page'],
+            'lastSeen': v['timestamp'].timestamp() if v['timestamp'] else 0,
+        } for v in visitors[:200]],
         'topCountries': top_countries,
         'topPages': top_pages,
     })
@@ -141,7 +223,6 @@ def _get_geo_settings():
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def geo_check(request):
-    # Settings DB'den 5dk cache ile al
     cached_settings = cache.get('geo_settings:v1')
     if cached_settings is None:
         s = _get_geo_settings()
@@ -162,7 +243,6 @@ def geo_check(request):
     country = 'LOCAL' if is_local else 'XX'
     countries = cached_settings['countries']
     mode = cached_settings['mode']
-    # Ülke tespit edilemiyorsa (XX) engelleme — şüpheli trafiği bloke etme
     if country == 'XX':
         blocked = False
     elif mode == 'allowlist':

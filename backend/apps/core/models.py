@@ -88,3 +88,19 @@ class AbTestAssignment(models.Model):
     class Meta:
         db_table = 'ab_test_assignments'
         unique_together = ('test', 'session_id')
+
+
+class VisitorLog(models.Model):
+    session_id = models.CharField(max_length=200, db_index=True)
+    country = models.CharField(max_length=10, default='')
+    city = models.CharField(max_length=100, default='')
+    lat = models.FloatField(default=0.0)
+    lng = models.FloatField(default=0.0)
+    page = models.CharField(max_length=500, default='/')
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'visitor_logs'
+        indexes = [
+            models.Index(fields=['timestamp', 'country']),
+        ]
