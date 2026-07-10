@@ -55,6 +55,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_verified = models.BooleanField(default=False)
     sms_otp = models.CharField(max_length=10, null=True, blank=True)
     sms_otp_expires_at = models.DateTimeField(null=True, blank=True)
+    password_reset_token = models.CharField(max_length=64, null=True, blank=True)
+    password_reset_expires_at = models.DateTimeField(null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

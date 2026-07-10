@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, Phone, Smartphone, Eye, EyeOff } from "lucide-react";
+import { LogIn, Phone, Smartphone, Eye, EyeOff, KeyRound, ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
@@ -37,18 +37,41 @@ const otpSchema = z.object({
   code: z.string().length(6, "6 haneli kod girin"),
 });
 
+const forgotSchema = z.object({
+  identifier: z.string().min(1, "E-posta veya kullanıcı adı zorunludur"),
+});
+
+const resetSchema = z.object({
+  code: z.string().length(6, "6 haneli kodu girin"),
+  newPassword: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
+  confirmPassword: z.string().min(1, "Şifreyi tekrar girin"),
+}).refine(d => d.newPassword === d.confirmPassword, {
+  message: "Şifreler eşleşmiyor",
+  path: ["confirmPassword"],
+});
+
+type MainTab = "password" | "sms" | "forgot";
+
 export default function Login() {
   const { login } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [tab, setTab] = useState<"password" | "sms">("password");
+
+  const [tab, setTab] = useState<MainTab>("password");
   const [smsStep, setSmsStep] = useState<"phone" | "code">("phone");
   const [pendingPhone, setPendingPhone] = useState("");
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [smsBusy, setSmsBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Handle Google OAuth redirect token
+  // Forgot password state
+  const [forgotStep, setForgotStep] = useState<"request" | "reset">("request");
+  const [forgotIdentifier, setForgotIdentifier] = useState("");
+  const [devResetCode, setDevResetCode] = useState<string | null>(null);
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const googleToken = params.get("google_token");
@@ -84,6 +107,16 @@ export default function Login() {
   const otpForm = useForm<z.infer<typeof otpSchema>>({
     resolver: zodResolver(otpSchema),
     defaultValues: { code: "" },
+  });
+
+  const forgotForm = useForm<z.infer<typeof forgotSchema>>({
+    resolver: zodResolver(forgotSchema),
+    defaultValues: { identifier: "" },
+  });
+
+  const resetForm = useForm<z.infer<typeof resetSchema>>({
+    resolver: zodResolver(resetSchema),
+    defaultValues: { code: "", newPassword: "", confirmPassword: "" },
   });
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
@@ -143,54 +176,135 @@ export default function Login() {
     }
   };
 
+  const onForgotRequest = async (values: z.infer<typeof forgotSchema>) => {
+    setForgotBusy(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: values.identifier }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setForgotIdentifier(values.identifier);
+      setForgotStep("reset");
+      if (d.dev_code) setDevResetCode(d.dev_code);
+      toast({ title: "Kod gönderildi", description: d.message });
+    } catch (e: any) {
+      toast({ title: "Hata", description: e.message, variant: "destructive" });
+    } finally {
+      setForgotBusy(false);
+    }
+  };
+
+  const onResetPassword = async (values: z.infer<typeof resetSchema>) => {
+    setForgotBusy(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: forgotIdentifier,
+          code: values.code,
+          newPassword: values.newPassword,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      localStorage.setItem("token", d.access);
+      toast({ title: "Başarılı", description: "Şifreniz sıfırlandı, giriş yapılıyor..." });
+      window.location.href = "/";
+    } catch (e: any) {
+      toast({ title: "Hata", description: e.message, variant: "destructive" });
+    } finally {
+      setForgotBusy(false);
+    }
+  };
+
+  const switchTab = (t: MainTab) => {
+    setTab(t);
+    setForgotStep("request");
+    setDevResetCode(null);
+    setForgotIdentifier("");
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto p-4 max-w-md flex flex-col justify-center min-h-[calc(100vh-4rem)]">
         <div className="bg-[#141414] border border-[#2a2a2a] p-8 rounded-2xl shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-violet-500" />
 
+          {/* Header */}
           <div className="text-center mb-8">
             <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
-              <LogIn className="h-6 w-6 text-white" />
+              {tab === "forgot" ? (
+                <KeyRound className="h-6 w-6 text-white" />
+              ) : (
+                <LogIn className="h-6 w-6 text-white" />
+              )}
             </div>
-            <h1 className="text-2xl font-bold text-white">Giriş Yap</h1>
-            <p className="text-[#666] text-sm mt-1">Hesabınıza erişmek için giriş yapın</p>
+            <h1 className="text-2xl font-bold text-white">
+              {tab === "forgot" ? "Şifremi Unuttum" : "Giriş Yap"}
+            </h1>
+            <p className="text-[#666] text-sm mt-1">
+              {tab === "forgot"
+                ? forgotStep === "request"
+                  ? "Hesabınıza bağlı e-posta veya kullanıcı adını girin"
+                  : "Gönderilen kodu ve yeni şifrenizi girin"
+                : "Hesabınıza erişmek için giriş yapın"}
+            </p>
           </div>
 
-          {/* Google ile Giriş */}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full mb-4 h-11 border-[#333] bg-[#1e1e1e] text-white hover:bg-[#2a2a2a] flex items-center gap-3"
-            onClick={onGoogleLogin}
-          >
-            <FcGoogle className="h-5 w-5 flex-shrink-0" />
-            <span className="font-medium">Google ile Giriş Yap</span>
-          </Button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 h-px bg-[#2a2a2a]" />
-            <span className="text-[#555] text-xs">veya</span>
-            <div className="flex-1 h-px bg-[#2a2a2a]" />
-          </div>
-
-          {/* Tab selector */}
-          <div className="flex rounded-lg border border-[#2a2a2a] mb-6 overflow-hidden">
+          {/* Forgot password tab — back button */}
+          {tab === "forgot" && (
             <button
-              onClick={() => setTab("password")}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${tab === "password" ? "bg-primary text-white" : "text-[#666] hover:text-[#aaa]"}`}
+              onClick={() => switchTab("password")}
+              className="flex items-center gap-1.5 text-[#666] hover:text-[#aaa] text-sm mb-5 transition-colors"
             >
-              Şifre ile
+              <ArrowLeft className="h-4 w-4" />
+              Giriş sayfasına dön
             </button>
-            <button
-              onClick={() => { setTab("sms"); setSmsStep("phone"); setDevOtp(null); }}
-              className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${tab === "sms" ? "bg-primary text-white" : "text-[#666] hover:text-[#aaa]"}`}
-            >
-              <Smartphone className="h-3.5 w-3.5" /> SMS Kodu
-            </button>
-          </div>
+          )}
 
+          {/* Google login + divider — only on login tabs */}
+          {tab !== "forgot" && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mb-4 h-11 border-[#333] bg-[#1e1e1e] text-white hover:bg-[#2a2a2a] flex items-center gap-3"
+                onClick={onGoogleLogin}
+              >
+                <FcGoogle className="h-5 w-5 flex-shrink-0" />
+                <span className="font-medium">Google ile Giriş Yap</span>
+              </Button>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-[#2a2a2a]" />
+                <span className="text-[#555] text-xs">veya</span>
+                <div className="flex-1 h-px bg-[#2a2a2a]" />
+              </div>
+            </>
+          )}
+
+          {/* Tab selector — only on login tabs */}
+          {tab !== "forgot" && (
+            <div className="flex rounded-lg border border-[#2a2a2a] mb-6 overflow-hidden">
+              <button
+                onClick={() => switchTab("password")}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${tab === "password" ? "bg-primary text-white" : "text-[#666] hover:text-[#aaa]"}`}
+              >
+                Şifre ile
+              </button>
+              <button
+                onClick={() => { switchTab("sms"); setSmsStep("phone"); setDevOtp(null); }}
+                className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${tab === "sms" ? "bg-primary text-white" : "text-[#666] hover:text-[#aaa]"}`}
+              >
+                <Smartphone className="h-3.5 w-3.5" /> SMS Kodu
+              </button>
+            </div>
+          )}
+
+          {/* ── Password login ── */}
           {tab === "password" && (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -217,7 +331,16 @@ export default function Login() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[#aaa] text-sm">Şifre</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-[#aaa] text-sm">Şifre</FormLabel>
+                        <button
+                          type="button"
+                          onClick={() => switchTab("forgot")}
+                          className="text-xs text-primary hover:underline transition-colors"
+                        >
+                          Şifremi Unuttum
+                        </button>
+                      </div>
                       <FormControl>
                         <div className="relative">
                           <Input
@@ -252,6 +375,7 @@ export default function Login() {
             </Form>
           )}
 
+          {/* ── SMS login ── */}
           {tab === "sms" && smsStep === "phone" && (
             <Form {...smsForm}>
               <form onSubmit={smsForm.handleSubmit(onSendSms)} className="space-y-4">
@@ -338,6 +462,165 @@ export default function Login() {
                   className="w-full text-xs text-[#555] hover:text-primary text-center mt-1"
                   onClick={() => smsForm.handleSubmit(onSendSms)(smsForm.getValues() as any)}
                   disabled={smsBusy}
+                >
+                  Kodu tekrar gönder
+                </button>
+              </form>
+            </Form>
+          )}
+
+          {/* ── Forgot password — step 1: request code ── */}
+          {tab === "forgot" && forgotStep === "request" && (
+            <Form {...forgotForm}>
+              <form onSubmit={forgotForm.handleSubmit(onForgotRequest)} className="space-y-4">
+                <FormField
+                  control={forgotForm.control}
+                  name="identifier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[#aaa] text-sm">E-posta veya Kullanıcı Adı</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="admin veya ornek@email.com"
+                          autoComplete="email"
+                          className="bg-[#1e1e1e] border-[#333] text-white placeholder:text-[#555] focus:border-primary"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-400 text-xs" />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full h-11 font-semibold bg-primary hover:bg-primary/90"
+                  disabled={forgotBusy}
+                >
+                  {forgotBusy ? "Gönderiliyor..." : "Sıfırlama Kodu Gönder"}
+                </Button>
+              </form>
+            </Form>
+          )}
+
+          {/* ── Forgot password — step 2: enter code + new password ── */}
+          {tab === "forgot" && forgotStep === "reset" && (
+            <Form {...resetForm}>
+              <form onSubmit={resetForm.handleSubmit(onResetPassword)} className="space-y-4">
+                <p className="text-[#888] text-sm">
+                  <KeyRound className="inline h-3.5 w-3.5 mr-1" />
+                  <span className="text-[#aaa]">{forgotIdentifier}</span> hesabına gönderilen kodu girin
+                </p>
+
+                {devResetCode && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-yellow-400 text-sm font-mono">
+                    <span className="text-yellow-500/60 text-xs">Geliştirici modu — Kod: </span>
+                    {devResetCode}
+                  </div>
+                )}
+
+                <FormField
+                  control={resetForm.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[#aaa] text-sm">Sıfırlama Kodu</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="123456"
+                          maxLength={6}
+                          className="bg-[#1e1e1e] border-[#333] text-white placeholder:text-[#555] focus:border-primary font-mono text-center text-xl tracking-[0.5em]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-400 text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={resetForm.control}
+                  name="newPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[#aaa] text-sm">Yeni Şifre</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showNewPassword ? "text" : "password"}
+                            placeholder="En az 6 karakter"
+                            autoComplete="new-password"
+                            className="bg-[#1e1e1e] border-[#333] text-white placeholder:text-[#555] focus:border-primary pr-10"
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] hover:text-[#aaa] transition-colors"
+                            tabIndex={-1}
+                          >
+                            {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-red-400 text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={resetForm.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[#aaa] text-sm">Yeni Şifre (Tekrar)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="Şifreyi tekrar girin"
+                            autoComplete="new-password"
+                            className="bg-[#1e1e1e] border-[#333] text-white placeholder:text-[#555] focus:border-primary pr-10"
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] hover:text-[#aaa] transition-colors"
+                            tabIndex={-1}
+                          >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-red-400 text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 border-[#333] text-[#aaa]"
+                    onClick={() => { setForgotStep("request"); setDevResetCode(null); }}
+                    disabled={forgotBusy}
+                  >
+                    Geri
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 font-semibold bg-primary hover:bg-primary/90"
+                    disabled={forgotBusy}
+                  >
+                    {forgotBusy ? "Sıfırlanıyor..." : "Şifremi Sıfırla"}
+                  </Button>
+                </div>
+
+                <button
+                  type="button"
+                  className="w-full text-xs text-[#555] hover:text-primary text-center"
+                  onClick={() => forgotForm.handleSubmit(onForgotRequest)({ identifier: forgotIdentifier })}
+                  disabled={forgotBusy}
                 >
                   Kodu tekrar gönder
                 </button>

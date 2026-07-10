@@ -251,6 +251,79 @@ def change_password(request):
     return Response({'message': 'Şifre güncellendi'})
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password(request):
+    from django.utils import timezone
+    from datetime import timedelta
+    import random
+
+    identifier = (request.data.get('email') or request.data.get('username') or '').strip().lower()
+    if not identifier:
+        return Response({'error': 'E-posta veya kullanıcı adı zorunludur'}, status=400)
+
+    try:
+        user = User.objects.get(Q(email__iexact=identifier) | Q(username__iexact=identifier))
+    except User.DoesNotExist:
+        return Response({'message': 'Eğer bu hesap mevcutsa, sıfırlama kodu gönderildi.'})
+
+    code = f"{random.randint(100000, 999999)}"
+    user.password_reset_token = code
+    user.password_reset_expires_at = timezone.now() + timedelta(minutes=15)
+    user.save(update_fields=['password_reset_token', 'password_reset_expires_at'])
+
+    import os
+    is_dev = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
+
+    response_data = {'message': 'Sıfırlama kodu gönderildi.'}
+    if is_dev:
+        response_data['dev_code'] = code
+
+    return Response(response_data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    from django.utils import timezone
+
+    identifier = (request.data.get('email') or request.data.get('username') or '').strip().lower()
+    code = (request.data.get('code') or '').strip()
+    new_password = request.data.get('newPassword', request.data.get('new_password', ''))
+
+    if not identifier or not code or not new_password:
+        return Response({'error': 'Kimlik, kod ve yeni şifre zorunludur'}, status=400)
+
+    if len(new_password) < 6:
+        return Response({'error': 'Şifre en az 6 karakter olmalıdır'}, status=400)
+
+    try:
+        user = User.objects.get(Q(email__iexact=identifier) | Q(username__iexact=identifier))
+    except User.DoesNotExist:
+        return Response({'error': 'Geçersiz kod veya hesap bulunamadı'}, status=400)
+
+    if not user.password_reset_token or user.password_reset_token != code:
+        return Response({'error': 'Geçersiz veya hatalı kod'}, status=400)
+
+    if not user.password_reset_expires_at or timezone.now() > user.password_reset_expires_at:
+        return Response({'error': 'Kodun süresi doldu, tekrar talep edin'}, status=400)
+
+    user.set_password(new_password)
+    user.password_reset_token = None
+    user.password_reset_expires_at = None
+    user.generate_session_token()
+    user.save()
+
+    tokens = get_jwt_tokens(user)
+    return Response({
+        'message': 'Şifre başarıyla sıfırlandı',
+        'access': tokens['access'],
+        'refresh': tokens['refresh'],
+        'token': user.session_token,
+        'user': format_user(user),
+    })
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_users(request):

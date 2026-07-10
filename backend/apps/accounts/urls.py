@@ -14,6 +14,8 @@ urlpatterns = [
     path('auth/update-profile', views.update_profile),
     path('auth/upload-avatar', views.upload_avatar),
     path('auth/change-password', views.change_password),
+    path('auth/forgot-password', views.forgot_password),
+    path('auth/reset-password', views.reset_password),
     # SMS / phone verification
     path('auth/sms/send', phone_views.sms_send),
     path('auth/sms/verify', phone_views.sms_verify),
