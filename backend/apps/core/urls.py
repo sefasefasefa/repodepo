@@ -12,6 +12,9 @@ urlpatterns = [
     path('track', visitor_views.track_visitor),
     path('admin/visitors', visitor_views.admin_visitors),
     path('admin/visitors/chart', visitor_views.admin_visitors_chart),
+    path('admin/visitor-report/settings', visitor_views.visitor_report_settings),
+    path('admin/visitor-report/send', visitor_views.visitor_report_send),
+    path('admin/visitor-report/preview', visitor_views.visitor_report_preview),
     # Geo restriction
     path('geo/check', visitor_views.geo_check),
     path('geo/admin/settings', visitor_views.geo_admin_settings),

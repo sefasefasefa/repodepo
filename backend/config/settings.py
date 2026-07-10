@@ -233,6 +233,19 @@ SECURE_SSL_REDIRECT = False  # Her ortamda False — redirect Cloudflare/nginx s
 # HTTPS'e geçildiğinde 'same-origin' olarak açılabilir.
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
+# ── Email (SMTP via env vars, console fallback in dev) ────────────────────────
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend'
+)
+EMAIL_HOST          = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT          = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS       = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('true', '1')
+EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', 'Hotpulse <noreply@hotpulse.me>')
+SITE_NAME           = os.environ.get('SITE_NAME', 'Hotpulse')
+
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024 * 1024  # 10 GB
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB form data

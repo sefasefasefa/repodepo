@@ -262,6 +262,256 @@ def admin_visitors_chart(request):
     return Response({'bucket': bucket, 'period': period, 'points': points})
 
 
+# ─── Visitor Report helpers ───────────────────────────────────────────────────
+
+def _get_report_settings():
+    s = VisitorReportSettings.objects.first()
+    if not s:
+        s = VisitorReportSettings.objects.create()
+    return s
+
+
+def _build_report_stats(days=7):
+    """Compute stats dict for the report covering the last `days` days."""
+    since = timezone.now() - timedelta(days=days)
+    qs = VisitorLog.objects.filter(timestamp__gte=since)
+    logs = list(qs.values('session_id', 'country', 'page', 'timestamp'))
+
+    total_visits = len(logs)
+    unique_sessions = len(set(l['session_id'] for l in logs))
+
+    country_counts: dict = defaultdict(int)
+    page_counts: dict = defaultdict(int)
+    for l in logs:
+        if l['country']:
+            country_counts[l['country']] += 1
+        page_counts[l['page']] += 1
+
+    top_countries = sorted(country_counts.items(), key=lambda x: -x[1])[:10]
+    top_pages = sorted(page_counts.items(), key=lambda x: -x[1])[:10]
+
+    # Previous period for comparison
+    prev_since = since - timedelta(days=days)
+    prev_total = VisitorLog.objects.filter(timestamp__gte=prev_since, timestamp__lt=since).count()
+    change_pct = round(((total_visits - prev_total) / max(prev_total, 1)) * 100, 1)
+
+    return {
+        'total_visits': total_visits,
+        'unique_sessions': unique_sessions,
+        'top_countries': top_countries,
+        'top_pages': top_pages,
+        'change_pct': change_pct,
+        'prev_total': prev_total,
+        'days': days,
+    }
+
+
+COUNTRY_NAMES_PY = {
+    'TR': 'Türkiye', 'US': 'ABD', 'GB': 'Birleşik Krallık', 'DE': 'Almanya',
+    'FR': 'Fransa', 'JP': 'Japonya', 'BR': 'Brezilya', 'RU': 'Rusya',
+    'AU': 'Avustralya', 'IN': 'Hindistan', 'CA': 'Kanada', 'ES': 'İspanya',
+    'IT': 'İtalya', 'NL': 'Hollanda', 'AE': 'BAE', 'SG': 'Singapur', 'MX': 'Meksika',
+}
+
+PAGE_LABELS_PY = {
+    '/': 'Ana Sayfa', '/videos': 'Videolar', '/shorts': 'Shorts',
+    '/login': 'Giriş', '/register': 'Kayıt', '/pricing': 'Fiyatlar',
+}
+
+
+def _fmt_page(page):
+    if page in PAGE_LABELS_PY:
+        return PAGE_LABELS_PY[page]
+    if page.startswith('/videos/'):
+        return 'Video İzleme'
+    if page.startswith('/creator/'):
+        return 'Creator'
+    if page.startswith('/categories/'):
+        return 'Kategori'
+    return page
+
+
+def _build_report_html(stats, site_name='Hotpulse', site_url=''):
+    from django.utils.timezone import now as tz_now
+    date_str = tz_now().strftime('%d %B %Y')
+    days = stats['days']
+    period_label = f'Son {days} gün'
+    change_sign = '+' if stats['change_pct'] >= 0 else ''
+    change_color = '#22c55e' if stats['change_pct'] >= 0 else '#ef4444'
+
+    country_rows = ''.join(
+        f'<tr><td style="padding:6px 12px;color:#ccc;">{i+1}. {COUNTRY_NAMES_PY.get(c, c)}</td>'
+        f'<td style="padding:6px 12px;color:#fff;font-weight:bold;text-align:right;">{n}</td></tr>'
+        for i, (c, n) in enumerate(stats['top_countries'])
+    )
+    page_rows = ''.join(
+        f'<tr><td style="padding:6px 12px;color:#ccc;">{_fmt_page(p)}</td>'
+        f'<td style="padding:6px 12px;color:#a855f7;font-weight:bold;text-align:right;">{n}</td></tr>'
+        for p, n in stats['top_pages']
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="tr">
+<head><meta charset="UTF-8"><title>{site_name} — Ziyaretçi Raporu</title></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:system-ui,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:32px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1e1e1e;border-radius:16px;overflow:hidden;">
+
+  <!-- Header -->
+  <tr><td style="background:linear-gradient(135deg,#1a0533,#0f0f1a);padding:36px 40px;text-align:center;">
+    <h1 style="margin:0;color:#a855f7;font-size:28px;letter-spacing:-0.5px;">{site_name}</h1>
+    <p style="margin:8px 0 0;color:#888;font-size:14px;">Ziyaretçi Analiz Raporu — {date_str}</p>
+    <p style="margin:4px 0 0;color:#555;font-size:12px;">{period_label}</p>
+  </td></tr>
+
+  <!-- Stats -->
+  <tr><td style="padding:32px 40px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td width="50%" style="padding-right:8px;">
+          <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px;text-align:center;">
+            <p style="margin:0;color:#666;font-size:12px;">Toplam Ziyaret</p>
+            <p style="margin:8px 0 0;color:#fff;font-size:36px;font-weight:800;">{stats['total_visits']}</p>
+            <p style="margin:4px 0 0;font-size:12px;color:{change_color};">{change_sign}{stats['change_pct']}% önceki döneme göre</p>
+          </div>
+        </td>
+        <td width="50%" style="padding-left:8px;">
+          <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px;text-align:center;">
+            <p style="margin:0;color:#666;font-size:12px;">Tekil Ziyaretçi</p>
+            <p style="margin:8px 0 0;color:#22c55e;font-size:36px;font-weight:800;">{stats['unique_sessions']}</p>
+            <p style="margin:4px 0 0;font-size:12px;color:#555;">benzersiz oturum</p>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- Top Countries -->
+  <tr><td style="padding:24px 40px 0;">
+    <h3 style="margin:0 0 12px;color:#aaa;font-size:14px;font-weight:600;">🌍 En Fazla Ziyaretçi — Ülke</h3>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a1a;border-radius:10px;overflow:hidden;">
+      {'<tr><td style="padding:12px;color:#555;text-align:center;font-size:12px;">Veri yok</td></tr>' if not stats['top_countries'] else country_rows}
+    </table>
+  </td></tr>
+
+  <!-- Top Pages -->
+  <tr><td style="padding:20px 40px 0;">
+    <h3 style="margin:0 0 12px;color:#aaa;font-size:14px;font-weight:600;">📄 En Çok Ziyaret Edilen Sayfalar</h3>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a1a;border-radius:10px;overflow:hidden;">
+      {'<tr><td style="padding:12px;color:#555;text-align:center;font-size:12px;">Veri yok</td></tr>' if not stats['top_pages'] else page_rows}
+    </table>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="padding:32px 40px;text-align:center;border-top:1px solid #1e1e1e;margin-top:24px;">
+    <p style="margin:0;color:#555;font-size:12px;">{site_name} Admin Raporu — Otomatik Gönderildi</p>
+    {'<p style="margin:6px 0 0;"><a href="' + site_url + '/panel/analytics" style="color:#a855f7;font-size:12px;text-decoration:none;">Detaylı analiz için tıklayın →</a></p>' if site_url else ''}
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _send_visitor_report_now(settings_obj=None):
+    """Generate and send the visitor report. Returns (ok, message)."""
+    from django.core.mail import EmailMultiAlternatives
+    from django.conf import settings as dj_settings
+
+    s = settings_obj or _get_report_settings()
+    if not s.recipients:
+        return False, 'Alıcı listesi boş'
+
+    days_map = {'daily': 1, 'weekly': 7, 'monthly': 30}
+    days = days_map.get(s.frequency, 7)
+
+    stats = _build_report_stats(days=days)
+    site_name = getattr(dj_settings, 'SITE_NAME', 'Hotpulse')
+    site_url = getattr(dj_settings, 'SITE_URL', '')
+    html = _build_report_html(stats, site_name=site_name, site_url=site_url)
+
+    period_label = {'daily': 'Günlük', 'weekly': 'Haftalık', 'monthly': 'Aylık'}.get(s.frequency, 'Haftalık')
+    subject = f'{site_name} {period_label} Ziyaretçi Raporu — {stats["total_visits"]} ziyaret'
+
+    try:
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=f'{site_name} {period_label} Ziyaretçi Raporu\n\n'
+                 f'Toplam ziyaret: {stats["total_visits"]}\n'
+                 f'Tekil ziyaretçi: {stats["unique_sessions"]}\n',
+            from_email=dj_settings.DEFAULT_FROM_EMAIL,
+            to=s.recipients,
+        )
+        msg.attach_alternative(html, 'text/html')
+        msg.send()
+        s.last_sent = timezone.now()
+        s.save(update_fields=['last_sent'])
+        return True, f'{len(s.recipients)} alıcıya gönderildi'
+    except Exception as e:
+        return False, str(e)
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def visitor_report_settings(request):
+    if request.user.role not in ('admin', 'moderator'):
+        return Response({'error': 'Admin gerekli'}, status=403)
+    s = _get_report_settings()
+    if request.method == 'GET':
+        return Response({
+            'isEnabled': s.is_enabled,
+            'recipients': s.recipients or [],
+            'frequency': s.frequency,
+            'dayOfWeek': s.day_of_week,
+            'hour': s.hour,
+            'lastSent': s.last_sent.isoformat() if s.last_sent else None,
+        })
+    d = request.data
+    if 'isEnabled' in d:
+        s.is_enabled = bool(d['isEnabled'])
+    if 'recipients' in d:
+        s.recipients = [e.strip() for e in d['recipients'] if e.strip()]
+    if 'frequency' in d and d['frequency'] in ('daily', 'weekly', 'monthly'):
+        s.frequency = d['frequency']
+    if 'dayOfWeek' in d:
+        s.day_of_week = int(d['dayOfWeek'])
+    if 'hour' in d:
+        s.hour = max(0, min(23, int(d['hour'])))
+    s.save()
+    return Response({'ok': True, 'isEnabled': s.is_enabled, 'frequency': s.frequency})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def visitor_report_send(request):
+    if request.user.role not in ('admin', 'moderator'):
+        return Response({'error': 'Admin gerekli'}, status=403)
+    s = _get_report_settings()
+    ok, msg = _send_visitor_report_now(s)
+    if ok:
+        return Response({'ok': True, 'message': msg})
+    return Response({'ok': False, 'message': msg}, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def visitor_report_preview(request):
+    if request.user.role not in ('admin', 'moderator'):
+        return Response({'error': 'Admin gerekli'}, status=403)
+    from django.conf import settings as dj_settings
+    from django.http import HttpResponse
+    s = _get_report_settings()
+    days_map = {'daily': 1, 'weekly': 7, 'monthly': 30}
+    days = days_map.get(s.frequency, 7)
+    stats = _build_report_stats(days=days)
+    site_name = getattr(dj_settings, 'SITE_NAME', 'Hotpulse')
+    site_url = getattr(dj_settings, 'SITE_URL', '')
+    html = _build_report_html(stats, site_name=site_name, site_url=site_url)
+    return HttpResponse(html, content_type='text/html')
+
+
 # ─── Geo restriction ──────────────────────────────────────────────────────────
 
 def _get_geo_settings():

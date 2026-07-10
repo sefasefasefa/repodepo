@@ -90,6 +90,32 @@ class AbTestAssignment(models.Model):
         unique_together = ('test', 'session_id')
 
 
+class VisitorReportSettings(models.Model):
+    FREQUENCY_CHOICES = [
+        ('daily',   'Günlük'),
+        ('weekly',  'Haftalık'),
+        ('monthly', 'Aylık'),
+    ]
+    DAY_CHOICES = [
+        (0, 'Pazartesi'), (1, 'Salı'), (2, 'Çarşamba'), (3, 'Perşembe'),
+        (4, 'Cuma'), (5, 'Cumartesi'), (6, 'Pazar'),
+    ]
+
+    is_enabled  = models.BooleanField(default=False)
+    recipients  = models.JSONField(default=list)
+    frequency   = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='weekly')
+    day_of_week = models.IntegerField(default=0, help_text='0=Pzt … 6=Paz (haftalık için)')
+    hour        = models.IntegerField(default=8, help_text='0-23 arası saat')
+    last_sent   = models.DateTimeField(null=True, blank=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'visitor_report_settings'
+
+    def __str__(self):
+        return f'Visitor Report ({self.frequency}, enabled={self.is_enabled})'
+
+
 class VisitorLog(models.Model):
     session_id = models.CharField(max_length=200, db_index=True)
     country = models.CharField(max_length=10, default='')
