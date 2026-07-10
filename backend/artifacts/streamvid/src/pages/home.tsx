@@ -492,9 +492,13 @@ export default function Home() {
     .sort((a: any, b: any) => (a.homeOrder ?? 0) - (b.homeOrder ?? 0));
 
   // Kategori veya filtre seçilince içerik alanına scroll
+  // scrollIntoView yerine window.scrollTo kullanıyoruz: navbar (56px) + filtre bar (~52px) yüksekliğini hesaba katıyoruz
   useEffect(() => {
     if ((activeCategory || activeFilter) && contentRef.current) {
-      contentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      const rect = contentRef.current.getBoundingClientRect();
+      const STICKY_OFFSET = 56 + 52; // navbar + filter bar
+      const scrollTop = window.scrollY + rect.top - STICKY_OFFSET;
+      window.scrollTo({ top: Math.max(0, scrollTop), behavior: "smooth" });
     }
   }, [activeCategory, activeFilter]);
 
@@ -544,6 +548,7 @@ export default function Home() {
               {/* Tümü */}
               <button
                 onClick={() => { setActiveFilter(null); setActiveCategory(null); }}
+                style={{ touchAction: "manipulation" }}
                 className={cn(
                   "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border",
                   !activeFilter && !activeCategory
@@ -558,6 +563,7 @@ export default function Home() {
               {homeFilters.map((f) => (
                 <button
                   key={f.id}
+                  style={{ touchAction: "manipulation" }}
                   onClick={() => {
                     if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
                     setActiveFilter(f);
@@ -579,6 +585,7 @@ export default function Home() {
               {visibleCategories.slice(0, 15).map((cat: Category) => (
                 <button
                   key={cat.id}
+                  style={{ touchAction: "manipulation" }}
                   onClick={() => {
                     setActiveFilter(null);
                     setActiveCategory(activeCategory === cat.id ? null : cat.id);
