@@ -211,6 +211,57 @@ def admin_visitors(request):
     })
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_visitors_chart(request):
+    if request.user.role not in ('admin', 'moderator'):
+        return Response({'error': 'Admin gerekli'}, status=403)
+
+    period = request.GET.get('period', '24h')
+    country_filter = request.GET.get('country', '')
+
+    td = PERIODS.get(period)
+    qs = VisitorLog.objects.all()
+    if td is not None:
+        since = timezone.now() - td
+        qs = qs.filter(timestamp__gte=since)
+    if country_filter:
+        qs = qs.filter(country=country_filter)
+
+    # Determine bucket size based on period
+    if period in ('5min', '1h'):
+        # bucket by minute
+        bucket = 'minute'
+    elif period in ('24h', '7d'):
+        # bucket by hour
+        bucket = 'hour'
+    else:
+        # bucket by day
+        bucket = 'day'
+
+    from django.db.models import Count
+    from django.db.models.functions import TruncMinute, TruncHour, TruncDay
+
+    trunc_fn = {'minute': TruncMinute, 'hour': TruncHour, 'day': TruncDay}[bucket]
+    rows = (
+        qs.annotate(bucket=trunc_fn('timestamp'))
+          .values('bucket')
+          .annotate(visits=Count('id'), unique=Count('session_id', distinct=True))
+          .order_by('bucket')
+    )
+
+    points = [
+        {
+            'time': r['bucket'].isoformat(),
+            'visits': r['visits'],
+            'unique': r['unique'],
+        }
+        for r in rows
+    ]
+
+    return Response({'bucket': bucket, 'period': period, 'points': points})
+
+
 # ─── Geo restriction ──────────────────────────────────────────────────────────
 
 def _get_geo_settings():

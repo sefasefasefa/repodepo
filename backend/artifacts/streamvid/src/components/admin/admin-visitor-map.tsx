@@ -3,6 +3,7 @@ import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "re
 import { useAuth } from "@/lib/auth";
 import { Users, Globe, TrendingUp, RefreshCw, Wifi, MapPin, Clock, Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AdminVisitorChart from "./admin-visitor-chart";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -407,6 +408,9 @@ export default function AdminVisitorMap() {
           </div>
         </div>
       </div>
+
+      {/* Traffic chart */}
+      <AdminVisitorChart period={period} countryFilter={countryFilter} />
     </div>
   );
 }

@@ -11,6 +11,7 @@ urlpatterns = [
     # Visitor tracking + admin live-map
     path('track', visitor_views.track_visitor),
     path('admin/visitors', visitor_views.admin_visitors),
+    path('admin/visitors/chart', visitor_views.admin_visitors_chart),
     # Geo restriction
     path('geo/check', visitor_views.geo_check),
     path('geo/admin/settings', visitor_views.geo_admin_settings),
