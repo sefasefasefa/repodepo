@@ -9,15 +9,37 @@ class CoreConfig(AppConfig):
     def ready(self):
         """
         Gunicorn preload_app=True ile master process'te bir kez çalışır.
-        SEO ve Geo ayarlarını başlangıçta hafızaya alarak ilk isteği hızlandırır.
+        Senkron olarak çalışan kısım fork öncesi tamamlanır → tüm worker'lar
+        hazır cache ile başlar (LocMemCache fork'ta kopyalanır).
         """
+        # ── Senkron: fork öncesi çalışır, tüm worker'lara kopyalanır ─────────
+        self._warm_init_cache()
+
+        # ── Asenkron: SEO/Geo nesneleri — fork sonrası her worker kendi ──────
         import threading
-        threading.Thread(target=self._warm_caches, daemon=True).start()
+        threading.Thread(target=self._warm_secondary_caches, daemon=True).start()
 
     @staticmethod
-    def _warm_caches():
+    def _warm_init_cache():
+        """
+        /api/init anon cache'i master process'te ısıtır.
+        preload_app=True ile Gunicorn worker'lar fork'landığında bu veriyi miras alır.
+        """
+        try:
+            from django.core.cache import cache
+            from apps.core.views import _ANON_INIT_CACHE_KEY, _build_init_anon
+            if not cache.get(_ANON_INIT_CACHE_KEY):
+                result = _build_init_anon()
+                cache.set(_ANON_INIT_CACHE_KEY, result, 300)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _warm_secondary_caches():
+        """SEO ve Geo nesnelerini her worker'da arka planda ısıtır."""
         import time
-        time.sleep(1)
+        time.sleep(0.5)
+
         try:
             from apps.admin_panel.models import SeoSettings
             from apps.core.seo_views import _seo_cache

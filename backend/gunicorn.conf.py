@@ -29,6 +29,19 @@ keepalive = 5
 # Uygulamayı master process'te önceden yükle; worker fork'lar hızlı başlar
 preload_app = True
 
+def post_fork(server, worker):
+    """Her worker fork'landıktan sonra kendi init cache'ini ısıtır."""
+    try:
+        import django
+        from django.core.cache import cache
+        from apps.core.views import _ANON_INIT_CACHE_KEY, _build_init_anon
+        if not cache.get(_ANON_INIT_CACHE_KEY):
+            result = _build_init_anon()
+            cache.set(_ANON_INIT_CACHE_KEY, result, 300)
+    except Exception:
+        pass
+
+
 accesslog = "-"
 errorlog = "-"
 loglevel = "warning"
