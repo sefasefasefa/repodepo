@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { preloadCommonRoutes } from "@/lib/preload-routes";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { SidebarProvider } from "@/lib/sidebar-context";
 import { NotificationProvider } from "@/lib/use-notifications";
 import { MiningProvider } from "@/lib/use-mining";
@@ -95,6 +95,16 @@ function PageLoader() {
   );
 }
 
+/** Admin sayfasına sadece admin/moderator rolündeki kullanıcılar erişebilir. */
+function AdminGuard() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  if (!user || !["admin", "moderator"].includes((user as any).role ?? "")) {
+    return <Redirect to="/" />;
+  }
+  return <Admin />;
+}
+
 function RouterInner() {
   usePageTracking();
   useWebMCP();
@@ -127,7 +137,7 @@ function RouterInner() {
         <Route path="/pricing" component={gated("pricing", Pricing)} />
         <Route path="/payment" component={gated("payment", Payment)} />
         <Route path="/creator/dashboard" component={gated("creator_dashboard", CreatorDashboard)} />
-        <Route path="/admin" component={Admin} />
+        <Route path="/admin" component={AdminGuard} />
         <Route path="/developer" component={DeveloperPage} />
         <Route path="/upload" component={gated("upload", Upload)} />
         <Route path="/stories" component={gated("stories", Stories)} />
@@ -145,7 +155,7 @@ function RouterInner() {
         <Route path="/crosspost-jobs" component={CrosspostJobs} />
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/impressum" component={Impressum} />
-        <Route component={NotFound} />
+        <Route component={() => <Redirect to="/" />} />
       </Switch>
     </Suspense>
   );
