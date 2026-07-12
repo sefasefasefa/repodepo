@@ -98,7 +98,15 @@ function PageLoader() {
 /** Admin sayfasına sadece admin/moderator rolündeki kullanıcılar erişebilir. */
 function AdminGuard() {
   const { user, isLoading } = useAuth();
-  if (isLoading) return <PageLoader />;
+
+  // Token yoksa (anonim kullanıcı) → React render olmadan önce HTML script zaten
+  // yönlendirmiştir; ama güvenlik için burada da kontrol et.
+  if (!localStorage.getItem("token")) return <Redirect to="/" />;
+
+  // Token var ama user verisi henüz yüklenmediyse → spinner gösterme, sessizce bekle.
+  // Yanlış role sahip kullanıcılar admin sayfasını hiç görmez.
+  if (isLoading) return null;
+
   if (!user || !["admin", "moderator"].includes((user as any).role ?? "")) {
     return <Redirect to="/" />;
   }

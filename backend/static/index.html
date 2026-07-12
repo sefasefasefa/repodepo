@@ -5,6 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>Hotpulse</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Bilinmeyen URL'leri React yüklenmeden anında yönlendir -->
+    <script>
+    (function(){
+      var p = window.location.pathname.replace(/\/+$/,'') || '/';
+      // Dinamik prefix'ler — /:id veya /:slug içerebilir
+      var prefixes = [
+        '/videos','/shorts','/search','/categories','/creators',
+        '/profile','/notifications','/playlists','/history','/bookmarks',
+        '/subscriptions','/pricing','/payment','/creator/dashboard',
+        '/developer','/upload','/stories','/my-requests','/affiliate',
+        '/messages','/live','/match','/leaderboard','/become-creator',
+        '/crosspost-jobs','/privacy-policy','/impressum','/page',
+        '/login','/register','/admin',
+      ];
+      if(p === '/') return; // anasayfa — geç
+      var ok = prefixes.some(function(pre){ return p === pre || p.indexOf(pre+'/') === 0; });
+      if(!ok){ window.location.replace('/'); return; }
+      // /admin için: token yoksa anında anasayfaya gönder
+      if(p === '/admin' || p.indexOf('/admin/') === 0){
+        try{ if(!localStorage.getItem('token')){ window.location.replace('/'); return; } }catch(e){}
+      }
+    })();
+    </script>
     <!-- GA preconnect only if analytics consent already given -->
     <script>
     (function(){
@@ -92,7 +115,7 @@
     });
     </script>
     <!--VITE_CSS_NONBLOCKING-->
-    <script type="module" crossorigin src="/assets/index-UfOCQwFc.js"></script>
+    <script type="module" crossorigin src="/assets/index-BhSGX3AN.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/routing-Dzxl_G4t.js">
     <link rel="modulepreload" crossorigin href="/assets/react-query-BOBJp0Fm.js">
     <link rel="modulepreload" crossorigin href="/assets/ui-tooltip-RLOx4YMX.js">
