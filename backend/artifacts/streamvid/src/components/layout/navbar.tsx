@@ -6,7 +6,7 @@ import { useFeatureState } from "@/lib/feature-flags";
 import { usePublicSiteSettings } from "@/lib/use-public-site-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Menu, Bell, Plus, X, CheckCheck, Coins, MessageCircle } from "lucide-react";
+import { Search, Menu, Bell, Plus, X, CheckCheck, Coins, MessageCircle, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { MiningStatus } from "@/components/mining-status";
 import { TokenBuyModal } from "@/components/token-buy-modal";
