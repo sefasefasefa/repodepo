@@ -567,7 +567,8 @@ export default function Home() {
                   style={{ touchAction: "manipulation" }}
                   onClick={() => {
                     if (f.type === "category" && f.categoryId) {
-                      navigate(`/categories/${f.categoryId}`);
+                      const cat = categories.find((c: Category) => c.id === f.categoryId);
+                      navigate(`/categories/${cat?.slug ?? f.categoryId}`);
                     } else {
                       if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
                       setActiveFilter(f);
@@ -592,7 +593,7 @@ export default function Home() {
                   key={cat.id}
                   style={{ touchAction: "manipulation" }}
                   onClick={() => {
-                    navigate(`/categories/${cat.id}`);
+                    navigate(`/categories/${cat.slug ?? cat.id}`);
                   }}
                   className={cn(
                     "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border",
