@@ -198,8 +198,10 @@ export function TokenBuyModal({ onClose, onPurchased }: Props) {
     return (
       <>
         <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
-        <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-[#1a1a1a] border-t border-[#2a2a2a] rounded-t-2xl shadow-2xl"
-          style={{ maxHeight: "78dvh" }}>
+        <div
+          className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-[#1a1a1a] border-t border-[#2a2a2a] rounded-t-2xl shadow-2xl"
+          style={{ maxHeight: "min(72dvh, 520px)" }}
+        >
           {header}
           {body}
         </div>
@@ -215,10 +217,10 @@ export function TokenBuyModal({ onClose, onPurchased }: Props) {
       <div
         className="fixed z-50 flex flex-col bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-2xl"
         style={{
-          top: "56px",      // navbar yüksekliği
+          top: "56px",
           right: "12px",
-          width: "340px",
-          maxHeight: "min(480px, calc(100vh - 68px))",
+          width: "min(320px, calc(100vw - 24px))",
+          maxHeight: "min(65vh, 460px)",
         }}
       >
         {header}
