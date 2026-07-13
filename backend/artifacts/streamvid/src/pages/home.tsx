@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useListVideos } from "@workspace/api-client-react";
 import { VideoCard } from "@/components/video/video-card";
@@ -414,6 +414,7 @@ interface HomeFilter {
 
 // ── Main Home Page ─────────────────────────────────────────────────────────────
 export default function Home() {
+  const [, navigate] = useLocation();
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState<HomeFilter | null>(null);
   const [homeFilters, setHomeFilters] = useState<HomeFilter[]>([]);
@@ -565,9 +566,13 @@ export default function Home() {
                   key={f.id}
                   style={{ touchAction: "manipulation" }}
                   onClick={() => {
-                    if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
-                    setActiveFilter(f);
-                    setActiveCategory(f.type === "category" && f.categoryId ? f.categoryId : null);
+                    if (f.type === "category" && f.categoryId) {
+                      navigate(`/categories/${f.categoryId}`);
+                    } else {
+                      if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
+                      setActiveFilter(f);
+                      setActiveCategory(null);
+                    }
                   }}
                   className={cn(
                     "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border flex items-center gap-1.5",
@@ -587,8 +592,7 @@ export default function Home() {
                   key={cat.id}
                   style={{ touchAction: "manipulation" }}
                   onClick={() => {
-                    setActiveFilter(null);
-                    setActiveCategory(activeCategory === cat.id ? null : cat.id);
+                    navigate(`/categories/${cat.id}`);
                   }}
                   className={cn(
                     "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border",
