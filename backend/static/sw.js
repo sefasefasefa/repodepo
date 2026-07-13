@@ -50,16 +50,24 @@ self.addEventListener('install', event => {
   );
 });
 
-// ── Activate: eski cache'leri temizle ───────────────────────────────
+// ── Activate: eski cache'leri temizle + tüm sekmeleri yenile ────────
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k.startsWith('hp-') && k !== STATIC_CACHE && k !== API_CACHE)
-          .map(k => caches.delete(k))
+    caches.keys()
+      .then(keys =>
+        Promise.all(
+          keys
+            .filter(k => k.startsWith('hp-') && k !== STATIC_CACHE && k !== API_CACHE)
+            .map(k => caches.delete(k))
+        )
       )
-    ).then(() => self.clients.claim())
+      .then(() => self.clients.claim())
+      .then(() =>
+        // Yeni SW devreye girince tüm açık sekmeleri yenile (taze içerik)
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+          clients.forEach(client => client.navigate(client.url));
+        })
+      )
   );
 });
 

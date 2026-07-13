@@ -950,13 +950,27 @@ def spa_index(request, *args, **kwargs):
     return resp
 
 
+def _serve_sw(request):
+    """sw.js her zaman no-cache — tarayıcı SW güncellemesini anında algılar."""
+    candidates = list(settings.STATICFILES_DIRS) + [settings.STATIC_ROOT]
+    for root in candidates:
+        full = os.path.join(str(root), 'sw.js')
+        if os.path.exists(full):
+            resp = FileResponse(open(full, 'rb'), content_type='application/javascript')
+            resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            resp['Pragma'] = 'no-cache'
+            resp['Expires'] = '0'
+            return resp
+    raise Http404
+
 urlpatterns += [
+    re_path(r'^sw\.js$', _serve_sw),
     re_path(r'^(?P<path>assets/.+)$', _serve_from_static),
     re_path(r'^(?P<path>favicon\.[a-zA-Z0-9]+)$', _serve_from_static),
     re_path(r'^(?P<path>mining-worker\.js)$', _serve_from_static),
     re_path(r'^(?P<path>opengraph\.[a-zA-Z]+)$', _serve_from_static),
-    # Video sayfaları — server-side OG meta + JSON-LD enjeksiyonu
+    # Video sayfalari - server-side OG meta + JSON-LD enjeksiyonu
     re_path(r'^videos/(?P<slug>[\w.-]+)$', video_seo_page),
-    # SPA catch-all — auth.md ve well-known dışındaki her şey
+    # SPA catch-all - auth.md ve well-known disindaki her sey
     re_path(r'^(?!api/|django-admin/|static/|media/|assets/|auth\.md$|\.well-known/).*$', global_seo_page),
 ]
