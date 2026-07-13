@@ -1001,20 +1001,31 @@ export default function VideoWatch() {
             <div className="px-4 pt-4 pb-3">
               <p className="text-[#888] font-medium">{video.viewCount?.toLocaleString()} görüntülenme • {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}</p>
             </div>
-            {(video.category || autoCategory) && (
+            {((video.categories && video.categories.length > 0) || video.category || autoCategory) && (
               <div className="border-t border-[#2a2a2a] px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
-                {video.category && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#666] text-xs shrink-0">Kategori</span>
-                    <button
-                      onClick={() => setLocation(`/categories/${video.category.slug}`)}
-                      className="inline-flex items-center gap-1 bg-primary/15 text-primary text-xs font-semibold px-2.5 py-1 rounded-full border border-primary/25 hover:bg-primary/25 transition-colors"
-                    >
-                      {video.category.name}
-                    </button>
-                  </div>
-                )}
-                {autoCategory && autoCategory.categoryId !== video.category?.id && (
+                {(() => {
+                  const cats: { id: number; name: string; slug: string }[] =
+                    video.categories && video.categories.length > 0
+                      ? video.categories
+                      : video.category
+                      ? [{ id: video.category.id, name: video.category.name, slug: video.category.slug }]
+                      : [];
+                  return cats.length > 0 ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[#666] text-xs shrink-0">Kategori</span>
+                      {cats.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setLocation(`/categories/${cat.slug}`)}
+                          className="inline-flex items-center gap-1 bg-primary/15 text-primary text-xs font-semibold px-2.5 py-1 rounded-full border border-primary/25 hover:bg-primary/25 transition-colors"
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
+                {autoCategory && !((video.categories ?? []).some((c: any) => c.id === autoCategory.categoryId)) && autoCategory.categoryId !== video.category?.id && (
                   <div className="flex items-center gap-2">
                     <span className="text-[#666] text-xs shrink-0">Otomatik</span>
                     <button

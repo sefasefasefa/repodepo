@@ -178,9 +178,16 @@ def enrich_video(v, user=None):
     creator = v.creator
     # prefetch_related ile yüklendiyse ekstra sorgu yapma
     try:
-        cat_ids = [c.id for c in v.categories.all()]
+        all_cats = list(v.categories.all())
+        cat_ids = [c.id for c in all_cats]
+        cats_full = [{'id': c.id, 'name': c.name, 'slug': c.slug} for c in all_cats]
     except Exception:
         cat_ids = []
+        cats_full = []
+
+    # Ensure primary category is always included in the full list
+    if cat and not any(c['id'] == cat.id for c in cats_full):
+        cats_full.insert(0, {'id': cat.id, 'name': cat.name, 'slug': cat.slug})
 
     return {
         'id': v.id,
@@ -206,6 +213,7 @@ def enrich_video(v, user=None):
         'tags': v.tags or [],
         'categoryId': v.category_id,
         'categoryIds': cat_ids,
+        'categories': cats_full,
         'category': {
             'id': cat.id, 'name': cat.name, 'slug': cat.slug,
             'iconUrl': cat.icon_url, 'videoCount': cat.video_count

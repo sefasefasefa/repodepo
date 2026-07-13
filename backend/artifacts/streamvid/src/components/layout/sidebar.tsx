@@ -231,25 +231,6 @@ export function Sidebar() {
             <Row icon={Tv} label={nav("channels").label} href="/creators" onClick={onClose} featureKey="creators" />
           )}
 
-          {nav("top-cats").enabled && (
-            <Row icon={TrendingUp} label={nav("top-cats").label} expandable expanded={topCatsExpanded} onToggle={() => setTopCatsExpanded(p => !p)} featureKey="categories" />
-          )}
-          {nav("top-cats").enabled && topCatsExpanded && ffCategories !== "disabled" && (
-            <div className="bg-[#161616]">
-              {topCategories.length === 0 ? (
-                <div className="px-9 py-3 text-[13px] text-[#555]">Kategori yok</div>
-              ) : (
-                topCategories.map((cat: any) => (
-                  <Row key={cat.id} icon={TrendingUp} label={`${cat.name}${cat.videoCount > 0 ? ` (${cat.videoCount})` : ''}`} href={`/categories/${cat.slug}`} onClick={onClose} sub featureKey="categories" />
-                ))
-              )}
-              <Link href="/categories" onClick={onClose}>
-                <div className="flex items-center justify-center gap-1.5 py-3 border-b border-[#2c2c2c] text-[12px] text-[#555] hover:text-[#888] transition-colors">
-                  <ChevronDown className="h-4 w-4" /> Tümünü Gör
-                </div>
-              </Link>
-            </div>
-          )}
 
           {nav("playlists").enabled && (
             <Row icon={ListVideo} label={nav("playlists").label} href="/playlists" onClick={onClose} active={location === "/playlists"} featureKey="playlists" />
