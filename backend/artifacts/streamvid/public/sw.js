@@ -1,22 +1,21 @@
 /**
- * Hotpulse Service Worker v6
+ * Hotpulse Service Worker v8
  *
  * Cache-First           : /assets/, /static/ — immutable hash'li dosyalar (0ms)
  * Cache-First (sınırlı) : /media/           — büyük dosyalar hariç
  * Stale-While-Revalidate: /api/init         — anında + arka planda yenile
- * Stale-While-Revalidate: HTML sayfaları    — anında (cache varsa) + arka planda yenile
+ * Network-First         : HTML sayfaları    — her zaman taze; offline'da cache
  * Network-First         : diğer /api/       — her zaman taze
  *
- * v6 değişiklikleri:
- *   - Install: kritik asset'leri önceden önbelleğe al (pre-cache)
- *   - HTML: network-first → stale-while-revalidate (repeat ziyaret anında yüklenir)
+ * v8 değişiklikleri:
+ *   - HTML: stale-while-revalidate → network-first
+ *     (deployment sonrası tüm ziyaretçiler anında güncel sürümü alır)
  */
 
-const CACHE_VER    = 'v7';
+const CACHE_VER    = 'v8';
 const STATIC_CACHE = `hp-static-${CACHE_VER}`;
 const API_CACHE    = `hp-api-${CACHE_VER}`;
 const INIT_TTL_MS  = 5 * 60 * 1000; // 5 dakika
-const HTML_TTL_MS  = 10 * 60 * 1000; // 10 dakika
 
 // ── Install: kritik asset'leri önceden önbelleğe al ─────────────────
 self.addEventListener('install', event => {
@@ -100,10 +99,9 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // HTML sayfaları: Stale-While-Revalidate
-  // Cache varsa anında döner (0ms) + arka planda yeniler
-  // → Repeat ziyarette mobilde de anında yüklenir
-  event.respondWith(staleWhileRevalidateHtml(req));
+  // HTML sayfaları: Network-First
+  // Her zaman ağdan çeker; offline'da cache'e düşer
+  event.respondWith(networkFirstHtml(req));
 });
 
 // ── Stale-While-Revalidate: /api/init ───────────────────────────────
@@ -141,32 +139,19 @@ async function staleWhileRevalidateInit(request) {
   return fresh || new Response('{}', { status: 503 });
 }
 
-// ── Stale-While-Revalidate: HTML sayfaları ──────────────────────────
-// Cache varsa: anında döner + arka planda yeniler (mobilde kritik)
-// Cache yoksa: ağı bekler, gelince cache'e yazar
-async function staleWhileRevalidateHtml(request) {
-  const cache  = await caches.open(STATIC_CACHE);
-  const cached = await cache.match(request) || await cache.match('/');
-
-  const fetchAndCache = fetch(request).then(res => {
+// ── Network-First: HTML sayfaları ───────────────────────────────────
+// Her zaman ağdan çeker → deployment sonrası anında güncel sayfa
+// Ağ başarısız olursa cache'e düşer; o da yoksa offline sayfası gösterir
+async function networkFirstHtml(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  try {
+    const res = await fetch(request);
     if (res.ok) cache.put(request, res.clone());
     return res;
-  }).catch(() => null);
-
-  if (cached) {
-    const cachedAt = parseInt(cached.headers.get('x-sw-cached-at') || '0');
-    if (!cachedAt || Date.now() - cachedAt < HTML_TTL_MS) {
-      fetchAndCache; // arka planda yenile, bekletme
-      return cached;
-    }
-    // Süre dolmuş — ağı bekle ama hata olursa cache'i kullan
-    const fresh = await fetchAndCache;
-    return fresh || cached;
+  } catch {
+    const cached = await cache.match(request) || await cache.match('/');
+    return cached || offlinePage();
   }
-
-  // İlk ziyaret: ağı bekle
-  const fresh = await fetchAndCache;
-  return fresh || offlinePage();
 }
 
 // ── Cache-First ──────────────────────────────────────────────────────
