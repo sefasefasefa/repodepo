@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'apps.core.no_cache_html_middleware.NoCacheHtmlMiddleware',  # index.html hiç cache'lenmez
     'django.middleware.gzip.GZipMiddleware',        # API yanıtlarını sıkıştır (JS/JSON ~70% küçülür)
     'django.middleware.security.SecurityMiddleware',
     'apps.core.security_log_middleware.IPBlockMiddleware',  # admin panelinden engellenen IP'leri en başta reddet

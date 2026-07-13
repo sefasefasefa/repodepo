@@ -931,6 +931,9 @@ def spa_index(request, *args, **kwargs):
     if os.path.exists(index_path):
         resp = FileResponse(open(index_path, 'rb'), content_type='text/html')
         resp["Link"] = _LINK_HEADER
+        resp["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp["Pragma"] = "no-cache"
+        resp["Expires"] = "0"
         return resp
     resp = HttpResponse(
         '<!DOCTYPE html><html><body>'
