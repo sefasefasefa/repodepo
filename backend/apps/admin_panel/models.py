@@ -57,6 +57,7 @@ class SiteSettings(models.Model):
     registration_enabled = models.BooleanField(default=True)
     creator_application_enabled = models.BooleanField(default=True)
     contact_email = models.EmailField(null=True, blank=True)
+    service_worker_enabled = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

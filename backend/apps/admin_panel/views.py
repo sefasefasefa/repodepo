@@ -378,6 +378,7 @@ def public_site_config(request):
         'primaryColor': s.primary_color,
         'registrationEnabled': s.registration_enabled,
         'maintenanceMode': s.maintenance_mode,
+        'serviceWorkerEnabled': s.service_worker_enabled,
     }
     cache.set('site_config:public', result, 120)
     resp = Response(result)
@@ -399,6 +400,7 @@ def get_site_settings(request):
         'registrationEnabled': s.registration_enabled,
         'creatorApplicationEnabled': s.creator_application_enabled,
         'contactEmail': s.contact_email,
+        'serviceWorkerEnabled': s.service_worker_enabled,
     })
 
 
@@ -418,6 +420,7 @@ def update_site_settings(request):
     s.registration_enabled = data.get('registrationEnabled', s.registration_enabled)
     s.creator_application_enabled = data.get('creatorApplicationEnabled', s.creator_application_enabled)
     s.contact_email = data.get('contactEmail', s.contact_email)
+    s.service_worker_enabled = data.get('serviceWorkerEnabled', s.service_worker_enabled)
     s.save()
     cache.delete('site_config:public')
     try:

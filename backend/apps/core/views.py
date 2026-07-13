@@ -143,6 +143,7 @@ def _build_init_anon():
         'primaryColor': s.primary_color,
         'registrationEnabled': s.registration_enabled,
         'maintenanceMode': s.maintenance_mode,
+        'serviceWorkerEnabled': s.service_worker_enabled,
     }
 
     # ── features ────────────────────────────────────────────────────────

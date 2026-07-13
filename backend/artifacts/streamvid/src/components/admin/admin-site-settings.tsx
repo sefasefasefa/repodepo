@@ -37,10 +37,12 @@ function GeneralTab() {
         primaryColor: d.primaryColor ?? "#7c3aed",
         registrationEnabled: d.registrationEnabled ?? true,
         maintenanceMode: d.maintenanceMode ?? false,
+        serviceWorkerEnabled: d.serviceWorkerEnabled ?? false,
       }))
       .catch(() => setForm({
         siteName: "", siteDescription: "", logoUrl: "", faviconUrl: "",
         primaryColor: "#7c3aed", registrationEnabled: true, maintenanceMode: false,
+        serviceWorkerEnabled: false,
       }))
       .finally(() => setLoading(false));
   }, [token]);
@@ -62,6 +64,7 @@ function GeneralTab() {
           primaryColor: form.primaryColor,
           registrationEnabled: form.registrationEnabled,
           maintenanceMode: form.maintenanceMode,
+          serviceWorkerEnabled: form.serviceWorkerEnabled,
         }),
       });
       if (!r.ok) {
@@ -141,6 +144,7 @@ function GeneralTab() {
         {[
           { key: "registrationEnabled", label: "Kullanıcı Kaydı", desc: "Yeni kayıtlara izin ver", color: "bg-primary" },
           { key: "maintenanceMode", label: "Bakım Modu", desc: "Siteyi ziyaretçilere kapat", color: "bg-red-500" },
+          { key: "serviceWorkerEnabled", label: "Service Worker (Cache)", desc: "Kapatılırsa site her ziyarette sunucudan en güncel sürümü çeker, offline/hızlı açılış cache'i devre dışı kalır", color: "bg-blue-500" },
         ].map(({ key, label, desc, color }) => (
           <div key={key} className="flex items-center justify-between">
             <div><p className="text-sm text-white">{label}</p><p className="text-xs text-[#555]">{desc}</p></div>
@@ -150,6 +154,11 @@ function GeneralTab() {
             </button>
           </div>
         ))}
+        {form.serviceWorkerEnabled === false && (
+          <p className="text-[11px] text-[#555] leading-relaxed pt-1 border-t border-[#1a1a1a]">
+            Kayıt sonrası bu ayar ziyaretçilerin sonraki sayfa yüklemesinde uygulanır; mevcut Service Worker ve cache'leri otomatik olarak temizlenir.
+          </p>
+        )}
       </div>
       <button onClick={save} disabled={saving}
         className={cn("w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all",

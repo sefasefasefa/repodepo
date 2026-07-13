@@ -9,6 +9,7 @@ export interface PublicSiteSettings {
   faviconUrl: string | null;
   primaryColor: string;
   registrationEnabled: boolean;
+  serviceWorkerEnabled: boolean;
 }
 
 const DEFAULT: PublicSiteSettings = {
@@ -18,6 +19,7 @@ const DEFAULT: PublicSiteSettings = {
   faviconUrl: null,
   primaryColor: "#7c3aed",
   registrationEnabled: true,
+  serviceWorkerEnabled: false,
 };
 
 interface Ctx {

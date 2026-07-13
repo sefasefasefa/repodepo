@@ -28,6 +28,7 @@ export interface InitData {
     primaryColor: string;
     registrationEnabled: boolean;
     maintenanceMode: boolean;
+    serviceWorkerEnabled: boolean;
   };
   features: {
     flags: Record<string, string>;

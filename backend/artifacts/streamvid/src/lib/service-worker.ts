@@ -34,3 +34,23 @@ export function registerSW() {
       });
   });
 }
+
+/**
+ * Service Worker admin panelden kapatıldığında çağrılır.
+ * Daha önce SW yüklemiş ziyaretçilerde kayıtlı worker'ı ve
+ * oluşturduğu cache'leri temizler, böylece site normal bir
+ * web sitesi gibi (her ziyarette sunucudan güncel sürüm) davranır.
+ */
+export function unregisterSW() {
+  if (!("serviceWorker" in navigator)) return;
+
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((reg) => reg.unregister());
+  }).catch(() => {});
+
+  if ("caches" in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((key) => caches.delete(key));
+    }).catch(() => {});
+  }
+}
