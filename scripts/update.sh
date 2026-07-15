@@ -311,11 +311,30 @@ if [ "$OS" = "windows" ]; then
         exit 1
     fi
     TARBALL="${ORIGIN}/archive/refs/heads/main.tar.gz"
+    TARBALL_TMP="$(mktemp --suffix=.tar.gz 2>/dev/null || echo "/tmp/hotpulse_update_$.tar.gz")"
     echo "   Indiriliyor: $TARBALL"
-    if ! curl -fsSL --max-time 120 "$TARBALL" | tar xz --strip-components=1 2>/dev/null; then
+    # --max-time YOK: repo buyuk olabilir (media/ vs.), hard limit indirmeyi
+    # yarida keser. Bunun yerine:
+    #   --connect-timeout 30  → baglanti kurulamazsa 30sn'de vazgec
+    #   --speed-limit 512     → 512 byte/sn altina duserse...
+    #   --speed-time 30       → ...30 sn boyunca devam ederse iptal et (gercek stall)
+    #   --retry 3             → gecici hatalarda 3 kez tekrar dene
+    if ! curl -fSL \
+            --connect-timeout 30 \
+            --speed-limit 512 --speed-time 30 \
+            --retry 3 --retry-delay 5 \
+            --output "$TARBALL_TMP" \
+            "$TARBALL"; then
+        rm -f "$TARBALL_TMP"
         echo "   [HATA] Tarball indirilemedi! Internet ve repo URL kontrol edin."
         exit 1
     fi
+    if ! tar xz --strip-components=1 -f "$TARBALL_TMP" 2>/dev/null; then
+        rm -f "$TARBALL_TMP"
+        echo "   [HATA] Tarball acılamadi — dosya bozuk olabilir."
+        exit 1
+    fi
+    rm -f "$TARBALL_TMP"
     echo "   Kod guncellendi."
 else
     # Linux: normal git pull
