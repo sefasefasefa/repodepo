@@ -319,13 +319,17 @@ if [ "$OS" = "windows" ]; then
     CLONE_TMP="$(mktemp -d 2>/dev/null || echo "/tmp/hotpulse_clone_$")"
     _UPDATE_OK=false
 
-    # ── Yöntem 1: git clone --depth=1 ───────────────────────────────
-    echo "   git clone --depth=1 deneniyor (sadece son commit)..."
+    # ── Yöntem 1: git clone --depth=1 --filter=blob:limit:512k ─────
+    # --filter=blob:limit:512k → 512 KB'dan büyük blob'lar (video/gorsel)
+    # hic indirilmez; sadece kaynak kodu gelir. GitHub bu filtreyi destekler.
+    echo "   git clone --depth=1 --filter=blob:limit:512k deneniyor..."
+    echo "   (buyuk media dosyalari atlanacak — sadece kaynak kodu inecek)"
     if GIT_TERMINAL_PROMPT=0 \
        git clone \
            --depth=1 \
            --branch main \
            --single-branch \
+           --filter=blob:limit:512k \
            -c gc.auto=0 \
            -c gc.autoDetach=false \
            --quiet \
