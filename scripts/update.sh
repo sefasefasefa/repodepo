@@ -296,73 +296,103 @@ sleep 1
 # ── 2. Kodu guncelle ───────────────────────────────────────────────
 echo "[2/6] Kod guncelleniyor..."
 if [ "$OS" = "windows" ]; then
-    # Windows'ta git gc, pack dosyalarini silerken Defender kilitlemesinden
-    # "Should I try again?" sorusu cikiyor. Git bunu CONIN$ C API ile sorar;
-    # hicbir env degiskeni veya flag bunu engelleyemez.
+    # Neden tarball/clone, neden git fetch değil:
+    #   git fetch → Defender yeni pack dosyasini kilitler → git gc silerken
+    #   CONIN$ üzerinden "try again?" sorusu açar → hicbir env/flag kapatamaz.
     #
-    # KALICI COZUM: git fetch yerine GitHub'dan tarball indir.
-    # Tarball'da pack/gc islemi yok → Defender'in kilitleyecegi dosya olusmuyor.
-    # Tarball yalnizca git-tracked dosyalari icerir; db.sqlite3, .env, media/
-    # tarball'da olmadigi icin tar xz onlara dokunmaz.
+    # YENİ STRATEJİ: git clone --depth=1 (sadece son commit, gecmis yok)
+    #   - Taze klasore clone → eski pack yok → gc calismiyor → CONIN$ yok
+    #   - Sadece kaynak kodunu kopyala, media/ atlaniyor
+    #   - media/ sunucuda kullanicilarin yuklediginden degismez; yeniden
+    #     indirmek gereksiz ve yavas → mevcut dosyalar yerinde kalir
+    #   - Sonuc: sadece kaynak kodu indirilir (~MB), medya atlanir (~GB)
+    #
+    # YEDEK: clone basarisiz olursa tarball (medyasiz, sadece src)
 
-    ORIGIN=$(git remote get-url origin 2>/dev/null | sed 's|\.git$||')
-    if [ -z "$ORIGIN" ]; then
+    GIT_URL=$(git remote get-url origin 2>/dev/null)
+    ORIGIN=$(echo "$GIT_URL" | sed 's|\.git$||')
+    if [ -z "$GIT_URL" ]; then
         echo "   [HATA] git remote bulunamadi. 'git remote -v' kontrol edin."
         exit 1
     fi
-    TARBALL="${ORIGIN}/archive/refs/heads/main.tar.gz"
-    TARBALL_TMP="$(mktemp --suffix=.tar.gz 2>/dev/null || echo "/tmp/hotpulse_update_$.tar.gz")"
-    echo "   Indiriliyor: $TARBALL"
 
-    _DOWNLOAD_OK=false
+    CLONE_TMP="$(mktemp -d 2>/dev/null || echo "/tmp/hotpulse_clone_$")"
+    _UPDATE_OK=false
 
-    # 1. aria2c — paralel parcali indirme (GitHub per-connection limitini aser)
-    if command -v aria2c &>/dev/null; then
-        echo "   aria2c bulundu — 16 paralel parca ile indiriliyor..."
-        if aria2c \
-                --split=16 \
-                --max-connection-per-server=16 \
-                --min-split-size=1M \
-                --connect-timeout=30 \
-                --max-tries=3 \
-                --retry-wait=5 \
-                --console-log-level=warn \
-                --summary-interval=10 \
-                --out="$(basename "$TARBALL_TMP")" \
-                --dir="$(dirname "$TARBALL_TMP")" \
-                "$TARBALL"; then
-            _DOWNLOAD_OK=true
-        else
-            echo "   [UYARI] aria2c basarisiz — curl ile tekrar deneniyor..."
-            rm -f "$TARBALL_TMP"
-        fi
+    # ── Yöntem 1: git clone --depth=1 ───────────────────────────────
+    echo "   git clone --depth=1 deneniyor (sadece son commit)..."
+    if GIT_TERMINAL_PROMPT=0 \
+       git clone \
+           --depth=1 \
+           --branch main \
+           --single-branch \
+           -c gc.auto=0 \
+           -c gc.autoDetach=false \
+           --quiet \
+           "$GIT_URL" "$CLONE_TMP" 2>/dev/null; then
+
+        echo "   Clone basarili — kaynak dosyalari kopyalaniyor (media/ atlanıyor)..."
+        # media/ atlanıyor: sunucudaki kullanici yukleme dosyalari korunuyor
+        # .git/ atlanıyor: calisma dizinindeki git geçmişine dokunma
+        (
+          cd "$CLONE_TMP" && \
+          tar cf - \
+              --exclude='.git' \
+              --exclude='./media' \
+              --exclude='./backend/media' \
+              . 2>/dev/null
+        ) | tar xf - 2>/dev/null
+        _UPDATE_OK=true
+    else
+        echo "   [UYARI] git clone basarisiz — tarball yontemine geciyor..."
     fi
+    rm -rf "$CLONE_TMP"
 
-    # 2. curl — aria2c yoksa veya basarisizsa
-    if [ "$_DOWNLOAD_OK" = "false" ]; then
-        if ! command -v aria2c &>/dev/null; then
-            echo "   curl ile indiriliyor..."
-            echo "   Ipucu: 'choco install aria2' ile aria2c kurarak indirmeyi hizlandirabilirsiniz."
+    # ── Yöntem 2: tarball (medyasız extract) ────────────────────────
+    if [ "$_UPDATE_OK" = "false" ]; then
+        TARBALL="${ORIGIN}/archive/refs/heads/main.tar.gz"
+        TARBALL_TMP="$(mktemp --suffix=.tar.gz 2>/dev/null || echo "/tmp/hotpulse_update_$.tar.gz")"
+        echo "   Indiriliyor: $TARBALL"
+
+        _DL_OK=false
+        if command -v aria2c &>/dev/null; then
+            echo "   aria2c — 16 paralel parca..."
+            if aria2c \
+                    --split=16 --max-connection-per-server=16 \
+                    --min-split-size=1M --connect-timeout=30 \
+                    --max-tries=3 --retry-wait=5 \
+                    --console-log-level=warn --summary-interval=10 \
+                    --out="$(basename "$TARBALL_TMP")" \
+                    --dir="$(dirname "$TARBALL_TMP")" \
+                    "$TARBALL"; then
+                _DL_OK=true
+            else
+                echo "   [UYARI] aria2c basarisiz — curl ile deneniyor..."
+                rm -f "$TARBALL_TMP"
+            fi
         fi
-        if ! curl -fSL \
+        if [ "$_DL_OK" = "false" ]; then
+            curl -fSL \
                 --connect-timeout 30 \
                 --speed-limit 512 --speed-time 60 \
                 --retry 3 --retry-delay 5 \
                 --output "$TARBALL_TMP" \
-                "$TARBALL"; then
+                "$TARBALL" || { rm -f "$TARBALL_TMP"; echo "   [HATA] Indirme basarisiz!"; exit 1; }
+        fi
+
+        # Extract: media/ ve db.sqlite3 atlanıyor (mevcut dosyalar korunuyor)
+        if ! tar xz --strip-components=1 \
+                --exclude='*/media/*' \
+                --exclude='*/backend/db.sqlite3' \
+                -f "$TARBALL_TMP" 2>/dev/null; then
             rm -f "$TARBALL_TMP"
-            echo "   [HATA] Tarball indirilemedi! Internet ve repo URL kontrol edin."
+            echo "   [HATA] Tarball acılamadi — dosya bozuk olabilir."
             exit 1
         fi
-        _DOWNLOAD_OK=true
+        rm -f "$TARBALL_TMP"
+        _UPDATE_OK=true
     fi
 
-    if ! tar xz --strip-components=1 -f "$TARBALL_TMP" 2>/dev/null; then
-        rm -f "$TARBALL_TMP"
-        echo "   [HATA] Tarball acılamadi — dosya bozuk olabilir."
-        exit 1
-    fi
-    rm -f "$TARBALL_TMP"
     echo "   Kod guncellendi."
 else
     # Linux: normal git pull
