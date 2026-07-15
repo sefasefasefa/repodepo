@@ -567,8 +567,9 @@ export default function Home() {
                   style={{ touchAction: "manipulation" }}
                   onClick={() => {
                     if (f.type === "category" && f.categoryId) {
-                      const cat = categories.find((c: Category) => c.id === f.categoryId);
-                      navigate(`/categories/${cat?.slug ?? f.categoryId}`);
+                      if (activeCategory === f.categoryId && activeFilter === null) { setActiveCategory(null); return; }
+                      setActiveCategory(f.categoryId);
+                      setActiveFilter(null);
                     } else {
                       if (activeFilter?.id === f.id) { setActiveFilter(null); setActiveCategory(null); return; }
                       setActiveFilter(f);
@@ -593,7 +594,9 @@ export default function Home() {
                   key={cat.id}
                   style={{ touchAction: "manipulation" }}
                   onClick={() => {
-                    navigate(`/categories/${cat.slug ?? cat.id}`);
+                    if (activeCategory === cat.id && !activeFilter) { setActiveCategory(null); return; }
+                    setActiveCategory(cat.id);
+                    setActiveFilter(null);
                   }}
                   className={cn(
                     "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border",
@@ -690,27 +693,6 @@ export default function Home() {
                     iconColor="text-yellow-400"
                   />
                   <CreatorRow creators={creators} />
-                </section>
-              </>
-            )}
-
-            {/* 4. Kategoriler ── (LayoutGrid ikonu, Users değil) */}
-            {ffCategories !== "disabled" && visibleCategories.length > 0 && (
-              <>
-                <Divider />
-                <section>
-                  <SectionHeader
-                    icon={LayoutGrid}
-                    title="Kategoriler"
-                    subtitle="İlginizi çeken kategoriye göz atın"
-                    href="/categories"
-                    iconColor="text-violet-400"
-                  />
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
-                    {visibleCategories.slice(0, 12).map((cat: Category, i) => (
-                      <CategoryCard key={cat.id} category={cat} index={i} />
-                    ))}
-                  </div>
                 </section>
               </>
             )}
@@ -819,13 +801,6 @@ export default function Home() {
               </>
             )}
 
-            {/* 10. Kategoriye göre en iyi videolar ── */}
-            {ffVideos !== "disabled" && ffCategories !== "disabled" && visibleCategories.slice(0, 4).map((cat: Category) => (
-              <div key={cat.id}>
-                <Divider />
-                <CategorySection category={cat} />
-              </div>
-            ))}
           </>
         )}
       </div>
