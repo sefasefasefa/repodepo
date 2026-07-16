@@ -316,7 +316,7 @@ if [ "$OS" = "windows" ]; then
         exit 1
     fi
 
-    CLONE_TMP="$(mktemp -d 2>/dev/null || echo "/tmp/hotpulse_clone_$")"
+    CLONE_TMP="/tmp/hotpulse_clone_$$"
     _UPDATE_OK=false
 
     # ── Yöntem 1: git clone --depth=1 --filter=blob:limit:512k ─────
@@ -355,7 +355,13 @@ if [ "$OS" = "windows" ]; then
     # ── Yöntem 2: tarball (medyasız extract) ────────────────────────
     if [ "$_UPDATE_OK" = "false" ]; then
         TARBALL="${ORIGIN}/archive/refs/heads/main.tar.gz"
-        TARBALL_TMP="$(mktemp --suffix=.tar.gz 2>/dev/null || echo "/tmp/hotpulse_update_$.tar.gz")"
+        # PID tabanlı yol — mktemp KULLANMA.
+        # mktemp önce boş bir placeholder dosyası oluşturur;
+        # aria2c aynı isimde dosya görünce çakışmayı önlemek için
+        # .1 ekler (tmp.XXX.tar.1.gz) → tar bulamaz → "bozuk" hatası.
+        # PID yolu önceden var olmaz, aria2c tam istenen isimle yazar.
+        TARBALL_TMP="/tmp/hotpulse_update_$$.tar.gz"
+        rm -f "$TARBALL_TMP"   # önceki başarısız denemeden kalan varsa temizle
         echo "   Indiriliyor: $TARBALL"
 
         _DL_OK=false
