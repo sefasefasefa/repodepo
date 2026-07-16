@@ -355,13 +355,12 @@ if [ "$OS" = "windows" ]; then
     # ── Yöntem 2: tarball (medyasız extract) ────────────────────────
     if [ "$_UPDATE_OK" = "false" ]; then
         TARBALL="${ORIGIN}/archive/refs/heads/main.tar.gz"
-        # PID tabanlı yol — mktemp KULLANMA.
-        # mktemp önce boş bir placeholder dosyası oluşturur;
-        # aria2c aynı isimde dosya görünce çakışmayı önlemek için
-        # .1 ekler (tmp.XXX.tar.1.gz) → tar bulamaz → "bozuk" hatası.
-        # PID yolu önceden var olmaz, aria2c tam istenen isimle yazar.
-        TARBALL_TMP="/tmp/hotpulse_update_$$.tar.gz"
-        rm -f "$TARBALL_TMP"   # önceki başarısız denemeden kalan varsa temizle
+        # mktemp -d ile BOŞ bir geçici DIZIN oluştur, içine sabit isimli dosya koy.
+        # mktemp --suffix=.tar.gz (dosya) kullanıldığında aria2c placeholder'ı görüp
+        # .1 ekliyor (tmp.XXX.tar.1.gz) → tar yolu bulamıyor → hata.
+        # Dizin yaklaşımında: dizin boş, update.tar.gz içinde yok → çakışma imkânsız.
+        _DL_DIR="$(mktemp -d 2>/dev/null || echo "/tmp/hp_dl_$$")"
+        TARBALL_TMP="$_DL_DIR/update.tar.gz"
         echo "   Indiriliyor: $TARBALL"
 
         _DL_OK=false
@@ -372,8 +371,8 @@ if [ "$OS" = "windows" ]; then
                     --min-split-size=1M --connect-timeout=30 \
                     --max-tries=3 --retry-wait=5 \
                     --console-log-level=warn --summary-interval=10 \
-                    --out="$(basename "$TARBALL_TMP")" \
-                    --dir="$(dirname "$TARBALL_TMP")" \
+                    --out="update.tar.gz" \
+                    --dir="$_DL_DIR" \
                     "$TARBALL"; then
                 _DL_OK=true
             else
@@ -399,7 +398,7 @@ if [ "$OS" = "windows" ]; then
             echo "   [HATA] Tarball acılamadi — dosya bozuk olabilir."
             exit 1
         fi
-        rm -f "$TARBALL_TMP"
+        rm -rf "$_DL_DIR"
         _UPDATE_OK=true
     fi
 
