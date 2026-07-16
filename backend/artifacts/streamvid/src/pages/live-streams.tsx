@@ -96,7 +96,7 @@ export default function LiveStreamsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); document.title = "Canlı Yayınlar"; }, []);
 
   return (
     <AppLayout>

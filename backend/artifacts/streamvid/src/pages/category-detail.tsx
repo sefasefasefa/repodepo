@@ -121,6 +121,12 @@ export default function CategoryDetail() {
 
   useEffect(() => { setPage(1); }, [slug]);
 
+  // SEO: kategori adına göre sayfa başlığını güncelle
+  useEffect(() => {
+    if (category?.name) document.title = `${category.name} Videoları`;
+    else if (slug) document.title = slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+  }, [category?.name, slug]);
+
   const { data: rawCategories, isLoading: categoriesLoading } = useListCategories();
   const allCategories: any[] = Array.isArray(rawCategories)
     ? rawCategories

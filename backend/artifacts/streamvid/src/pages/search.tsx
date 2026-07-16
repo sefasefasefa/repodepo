@@ -23,6 +23,11 @@ export default function Search() {
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "all");
   const [showFilters, setShowFilters] = useState(false);
 
+  // SEO: arama terimine göre sayfa başlığını güncelle
+  useEffect(() => {
+    document.title = q ? `"${q}" — Arama Sonuçları` : "Video Ara";
+  }, [q]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setSort(params.get("sort") || "relevance");

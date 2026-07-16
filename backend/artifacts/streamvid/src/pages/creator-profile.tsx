@@ -32,6 +32,15 @@ export default function CreatorProfile() {
   }, [currentUser]);
 
   const { data: user, isLoading: userLoading } = useGetUser(userId, { query: { enabled: !!userId, queryKey: getGetUserQueryKey(userId) } });
+
+  // SEO: kullanıcı adına göre sayfa başlığını güncelle
+  useEffect(() => {
+    const u = user as any;
+    if (u) {
+      const name = u.displayName || u.username;
+      if (name) document.title = `${name} — İçerik Üreticisi`;
+    }
+  }, [(user as any)?.id]);
   const { data: videosData, isLoading: videosLoading } = useGetUserVideos(userId, { enabled: !!userId } as any);
 
   const openDm = async () => {

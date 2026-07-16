@@ -145,6 +145,10 @@
     // ── ANLIK 18+ GATE — React parse edilmeden önce çalışır (0ms gecikme) ─────
     (function(){
       try{
+        // Arama motoru botları için yaş kapısını atla → içerik indexlenebilir
+        var ua=navigator.userAgent||'';
+        if(/bot|crawler|spider|googlebot|bingbot|yandexbot|duckduckbot|slurp|baiduspider|facebookexternalhit|twitterbot|rogerbot|linkedinbot|embedly|showyoubot|outbrain|pinterest|developers\.google\.com/i.test(ua)) return;
+
         var AGE='prnhbbbb_age_verified', DENY='prnhbbbb_age_denied';
         var path=window.location.pathname;
         if(['/login','/register','/privacy-policy','/impressum'].some(function(p){return path===p||path.indexOf(p+'?')===0;})) return;

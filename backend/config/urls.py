@@ -13,7 +13,7 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 
-from apps.core.sitemap import sitemap_xml, robots_txt
+from apps.core.sitemap import sitemap_xml, sitemap_pages_xml, sitemap_videos_xml, robots_txt
 from apps.core.seo_views import video_seo_page, global_seo_page
 from django.http import JsonResponse, HttpResponse
 
@@ -746,8 +746,10 @@ urlpatterns = [
     path('.well-known/http-message-signatures-directory', jwks_directory, name='jwks_directory'),
 
     # SEO
-    path('sitemap.xml', sitemap_xml, name='sitemap'),
-    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sitemap.xml',        sitemap_xml,        name='sitemap'),
+    path('sitemap-pages.xml',  sitemap_pages_xml,  name='sitemap_pages'),
+    path('sitemap-videos.xml', sitemap_videos_xml, name='sitemap_videos'),
+    path('robots.txt',         robots_txt,         name='robots_txt'),
 
     # JWT token endpoints
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

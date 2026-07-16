@@ -115,7 +115,7 @@
     });
     </script>
     <!--VITE_CSS_NONBLOCKING-->
-    <script type="module" crossorigin src="/assets/index-Cht6XSeF.js"></script>
+    <script type="module" crossorigin src="/assets/index-Cn4fHDRM.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/routing-Dzxl_G4t.js">
     <link rel="modulepreload" crossorigin href="/assets/react-query-BOBJp0Fm.js">
     <link rel="modulepreload" crossorigin href="/assets/ui-tooltip-RLOx4YMX.js">
@@ -152,6 +152,10 @@
     // ── ANLIK 18+ GATE — React parse edilmeden önce çalışır (0ms gecikme) ─────
     (function(){
       try{
+        // Arama motoru botları için yaş kapısını atla → içerik indexlenebilir
+        var ua=navigator.userAgent||'';
+        if(/bot|crawler|spider|googlebot|bingbot|yandexbot|duckduckbot|slurp|baiduspider|facebookexternalhit|twitterbot|rogerbot|linkedinbot|embedly|showyoubot|outbrain|pinterest|developers\.google\.com/i.test(ua)) return;
+
         var AGE='prnhbbbb_age_verified', DENY='prnhbbbb_age_denied';
         var path=window.location.pathname;
         if(['/login','/register','/privacy-policy','/impressum'].some(function(p){return path===p||path.indexOf(p+'?')===0;})) return;

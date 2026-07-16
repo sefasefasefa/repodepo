@@ -103,6 +103,9 @@ export default function Videos() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
 
+  // SEO: sayfa başlığını güncelle
+  useEffect(() => { document.title = "Videolar"; }, []);
+
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     setSort(p.get("sort") || "newest");
