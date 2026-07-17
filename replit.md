@@ -61,7 +61,7 @@ docs/             # Platform documentation
 
 Create a superuser with:
 ```
-cd backend && python3.11 manage.py createsuperuser
+cd backend && uv run python3.11 manage.py createsuperuser
 ```
 
 Django admin is at `/admin/`. The platform also has a custom admin panel at `/panel/`.
