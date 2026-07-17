@@ -126,7 +126,9 @@ export default function Videos() {
   } as any);
 
   const { data: catsData } = useListCategories();
-  const categories: Category[] = (catsData as any)?.categories ?? [];
+  const categories: Category[] = Array.isArray(catsData)
+    ? (catsData as any)
+    : (catsData as any)?.categories ?? [];
   const visibleCats = categories.filter((c: Category) => (c.videoCount ?? 0) > 0);
 
   const [tags, setTags] = useState<{ tag: string; count: number }[]>([]);

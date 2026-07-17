@@ -367,7 +367,10 @@ def list_videos(request):
 
     qs = Video.objects.filter(is_published=True).select_related('creator', 'category').prefetch_related('categories')
     if category_id:
-        qs = qs.filter(category_id=category_id)
+        from django.db.models import Q as _Q
+        qs = qs.filter(
+            _Q(category_id=category_id) | _Q(categories__id=category_id)
+        ).distinct()
     if video_type:
         qs = qs.filter(type=video_type)
     if is_premium is not None:

@@ -636,6 +636,11 @@ export default function Home() {
                   : "Kategoriye göre videolar"
               }
               iconColor="text-primary"
+              href={
+                !activeFilter && activeCategoryObj
+                  ? `/categories/${(activeCategoryObj as any).slug}`
+                  : undefined
+              }
             />
             {filteredLoading ? (
               <SectionSkeleton count={6} />
@@ -650,9 +655,11 @@ export default function Home() {
           </section>
         )}
 
-        {/* Aktif filtre yokken tüm bölümleri göster */}
-        {!hasActiveSelection && (
-          <>
+        {/* Filtre aktifken ayraç */}
+        {hasActiveSelection && <Divider />}
+
+        {/* Ana bölümler — filtre aktif olsa da her zaman göster */}
+        <>
             {/* 1. Sana Özel — sadece giriş yapmış kullanıcılar */}
             {ffVideos !== "disabled" && <ForYouSection />}
 
@@ -802,7 +809,6 @@ export default function Home() {
             )}
 
           </>
-        )}
       </div>
     </AppLayout>
   );
