@@ -47,6 +47,9 @@ PERIODS = {
     '24h':   timedelta(hours=24),
     '7d':    timedelta(days=7),
     '30d':   timedelta(days=30),
+    '3m':    timedelta(days=90),
+    '6m':    timedelta(days=180),
+    '1y':    timedelta(days=365),
     'all':   None,
 }
 
@@ -230,19 +233,27 @@ def admin_visitors_chart(request):
 
     # Determine bucket size based on period
     if period in ('5min', '1h'):
-        # bucket by minute
         bucket = 'minute'
     elif period in ('24h', '7d'):
-        # bucket by hour
         bucket = 'hour'
-    else:
-        # bucket by day
+    elif period in ('30d', '3m'):
         bucket = 'day'
+    elif period in ('6m', '1y'):
+        bucket = 'week'
+    else:
+        # all-time: bucket by month
+        bucket = 'month'
 
     from django.db.models import Count
-    from django.db.models.functions import TruncMinute, TruncHour, TruncDay
+    from django.db.models.functions import TruncMinute, TruncHour, TruncDay, TruncWeek, TruncMonth
 
-    trunc_fn = {'minute': TruncMinute, 'hour': TruncHour, 'day': TruncDay}[bucket]
+    trunc_fn = {
+        'minute': TruncMinute,
+        'hour': TruncHour,
+        'day': TruncDay,
+        'week': TruncWeek,
+        'month': TruncMonth,
+    }[bucket]
     rows = (
         qs.annotate(bucket=trunc_fn('timestamp'))
           .values('bucket')

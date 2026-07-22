@@ -40,12 +40,15 @@ const PAGE_LABELS: Record<string, string> = {
 };
 
 const PERIODS = [
-  { value: "5min", label: "Canlı", sublabel: "Son 5 dk", color: "text-green-400", bg: "bg-green-400/10 border-green-500/30", live: true },
-  { value: "1h",   label: "1 Saat",    sublabel: "Son 60 dk",  color: "text-blue-400",   bg: "bg-blue-400/10 border-blue-500/30" },
-  { value: "24h",  label: "24 Saat",   sublabel: "Bugün",      color: "text-violet-400", bg: "bg-violet-400/10 border-violet-500/30" },
-  { value: "7d",   label: "7 Gün",     sublabel: "Bu hafta",   color: "text-amber-400",  bg: "bg-amber-400/10 border-amber-500/30" },
-  { value: "30d",  label: "30 Gün",    sublabel: "Bu ay",      color: "text-orange-400", bg: "bg-orange-400/10 border-orange-500/30" },
-  { value: "all",  label: "Tüm Zamanlar", sublabel: "Genel",   color: "text-pink-400",   bg: "bg-pink-400/10 border-pink-500/30" },
+  { value: "5min", label: "Canlı",        sublabel: "Son 5 dk",    color: "text-green-400",  bg: "bg-green-400/10 border-green-500/30", live: true },
+  { value: "1h",   label: "1 Saat",       sublabel: "Son 60 dk",   color: "text-blue-400",   bg: "bg-blue-400/10 border-blue-500/30" },
+  { value: "24h",  label: "1 Gün",        sublabel: "Son 24 saat", color: "text-cyan-400",   bg: "bg-cyan-400/10 border-cyan-500/30" },
+  { value: "7d",   label: "7 Gün",        sublabel: "Bu hafta",    color: "text-violet-400", bg: "bg-violet-400/10 border-violet-500/30" },
+  { value: "30d",  label: "1 Ay",         sublabel: "Son 30 gün",  color: "text-amber-400",  bg: "bg-amber-400/10 border-amber-500/30" },
+  { value: "3m",   label: "3 Ay",         sublabel: "Son 90 gün",  color: "text-orange-400", bg: "bg-orange-400/10 border-orange-500/30" },
+  { value: "6m",   label: "6 Ay",         sublabel: "Son 180 gün", color: "text-rose-400",   bg: "bg-rose-400/10 border-rose-500/30" },
+  { value: "1y",   label: "1 Yıl",        sublabel: "Son 365 gün", color: "text-fuchsia-400",bg: "bg-fuchsia-400/10 border-fuchsia-500/30" },
+  { value: "all",  label: "Tüm Zamanlar", sublabel: "Genel",       color: "text-pink-400",   bg: "bg-pink-400/10 border-pink-500/30" },
 ];
 
 function formatPage(page: string) {

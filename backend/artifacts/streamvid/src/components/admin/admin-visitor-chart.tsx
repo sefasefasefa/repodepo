@@ -13,7 +13,7 @@ interface ChartPoint {
 }
 
 interface ChartData {
-  bucket: "minute" | "hour" | "day";
+  bucket: "minute" | "hour" | "day" | "week" | "month";
   period: string;
   points: ChartPoint[];
 }
@@ -24,14 +24,19 @@ const PERIOD_LABELS: Record<string, string> = {
   "24h":  "Son 24 Saat",
   "7d":   "Son 7 Gün",
   "30d":  "Son 30 Gün",
+  "3m":   "Son 3 Ay",
+  "6m":   "Son 6 Ay",
+  "1y":   "Son 1 Yıl",
   "all":  "Tüm Zamanlar",
 };
 
-function formatLabel(time: string, bucket: "minute" | "hour" | "day") {
+function formatLabel(time: string, bucket: "minute" | "hour" | "day" | "week" | "month") {
   const d = new Date(time);
   if (bucket === "minute") return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
   if (bucket === "hour")   return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" }).replace(",", "");
-  return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short" });
+  if (bucket === "day")    return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short" });
+  if (bucket === "week")   return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
 }
 
 function CustomTooltip({ active, payload, label, bucket }: any) {

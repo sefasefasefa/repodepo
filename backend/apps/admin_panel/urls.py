@@ -8,9 +8,11 @@ from . import abtests_views as abt
 from . import extra_views as ex
 from . import payments_views as pay
 from . import watch_insights_views as wi
+from . import video_analytics_views as va
 
 urlpatterns = [
     path('admin/watch-insights', wi.watch_insights),
+    path('admin/video-analytics', va.video_analytics),
     path('analytics/platform', views.platform_analytics),
     path('analytics/creator/<int:user_id>', views.creator_analytics),
     path('admin/reports', views.list_reports),
