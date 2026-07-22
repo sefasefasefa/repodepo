@@ -84,8 +84,7 @@ const GROUPS = [
     label: "Genel Bakış",
     icon: LayoutDashboard,
     tabs: [
-      { id: "dashboard", label: "Genel Bakış", icon: LayoutDashboard },
-      { id: "health",    label: "Sağlık Monitörü", icon: HeartPulse },
+      { id: "dashboard", label: "Genel Bakış & Sağlık", icon: LayoutDashboard },
     ],
   },
   {
@@ -286,13 +285,27 @@ export default function Admin() {
             <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" /></div>}>
             {tab === "dashboard" && (
               <div className="space-y-6 max-w-5xl">
-                <h1 className="text-2xl font-bold">Genel Bakış</h1>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <LayoutDashboard className="h-6 w-6 text-primary" /> Genel Bakış &amp; Sağlık Monitörü
+                </h1>
+
+                {/* ── Platform metrikleri ── */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <StatCard label="Toplam Kullanıcı" value={dashboard?.totalUsers} sub={`+${dashboard?.newUsersThisWeek ?? 0} bu hafta`} icon={Users} />
-                  <StatCard label="Toplam Video" value={dashboard?.totalVideos} sub={`+${dashboard?.newVideosThisWeek ?? 0} bu hafta`} icon={Video} />
-                  <StatCard label="Bekleyen Rapor" value={dashboard?.pendingReports} icon={AlertTriangle} color="text-red-400" />
-                  <StatCard label="Toplam Gelir" value={`$${Number(dashboard?.totalRevenue ?? 0).toFixed(2)}`} icon={DollarSign} color="text-primary" />
+                  <StatCard label="Toplam Kullanıcı"  value={dashboard?.totalUsers}                                    sub={`+${dashboard?.newUsersThisWeek ?? 0} bu hafta`}  icon={Users}       />
+                  <StatCard label="Toplam Video"       value={dashboard?.totalVideos}                                   sub={`+${dashboard?.newVideosThisWeek ?? 0} bu hafta`} icon={Video}       />
+                  <StatCard label="Toplam Gelir"       value={`$${Number(dashboard?.totalRevenue ?? 0).toFixed(2)}`}    sub="tüm zamanlar"                                     icon={DollarSign}  color="text-primary" />
+                  <StatCard label="Bekleyen Rapor"     value={dashboard?.pendingReports ?? 0}                           sub="inceleme bekliyor"                                icon={AlertTriangle} color={(dashboard?.pendingReports ?? 0) > 0 ? "text-red-400" : "text-green-400"} />
                 </div>
+
+                {/* ── Haftalık büyüme + sistem durumu ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard label="Yeni Kullanıcı"   value={dashboard?.newUsersThisWeek ?? 0}  sub="son 7 gün"   icon={Users}       color="text-cyan-400"   />
+                  <StatCard label="Yeni Video"         value={dashboard?.newVideosThisWeek ?? 0} sub="son 7 gün"   icon={Video}       color="text-violet-400" />
+                  <StatCard label="API Durumu"         value="OK"                                sub="son kontrol: şimdi" icon={HeartPulse}  color="text-green-400"  />
+                  <StatCard label="Sistem Sağlığı"     value={(dashboard?.pendingReports ?? 0) > 0 ? "Uyarı" : "İyi"} sub={(dashboard?.pendingReports ?? 0) > 0 ? `${dashboard?.pendingReports} bekleyen rapor` : "tüm sistemler normal"} icon={BarChart3} color={(dashboard?.pendingReports ?? 0) > 0 ? "text-amber-400" : "text-green-400"} />
+                </div>
+
+                {/* ── Son raporlar + Top creators ── */}
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
                     <h2 className="font-bold mb-4 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-red-400" /> Son Raporlar</h2>
@@ -325,6 +338,34 @@ export default function Admin() {
                     ) : <p className="text-[#555] text-sm text-center py-6">Veri yok</p>}
                   </div>
                 </div>
+
+                {/* ── Genel durum + dikkat gerektirenler ── */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 space-y-3">
+                    <h2 className="font-bold flex items-center gap-2"><HeartPulse className="h-4 w-4 text-green-400" /> Genel Durum</h2>
+                    {[
+                      { label: "Toplam kullanıcı",  value: dashboard?.totalUsers ?? "—" },
+                      { label: "Toplam video",       value: dashboard?.totalVideos ?? "—" },
+                      { label: "Toplam gelir",       value: `$${Number(dashboard?.totalRevenue ?? 0).toFixed(2)}`, color: "text-primary" },
+                      { label: "Bekleyen rapor",     value: dashboard?.pendingReports ?? 0, color: (dashboard?.pendingReports ?? 0) > 0 ? "text-red-400" : "text-green-400" },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className="flex items-center justify-between text-sm py-1.5 border-b border-[#252525] last:border-0">
+                        <span className="text-[#888]">{label}</span>
+                        <span className={cn("font-medium", color || "text-white")}>{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
+                    <h2 className="font-bold mb-3 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-400" /> Dikkat Gerektirenler</h2>
+                    {(dashboard?.pendingReports ?? 0) > 0 ? (
+                      <button onClick={() => setTab("reports")} className="w-full text-left text-sm bg-red-900/20 border border-red-900/30 rounded-lg p-3 hover:bg-red-900/30 transition-colors">
+                        {dashboard?.pendingReports} bekleyen rapor var — incelemek için tıkla
+                      </button>
+                    ) : (
+                      <p className="text-sm text-[#555] py-4 text-center">Bekleyen bir sorun yok, sistem sağlıklı ✓</p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
             {tab === "videos" && <AdminVideos />}
@@ -354,45 +395,6 @@ export default function Admin() {
             {tab === "home-filters" && <AdminHomeFilters />}
             {tab === "moderation" && <AdminModeration />}
             {tab === "withdrawals" && <AdminWithdrawals />}
-            {tab === "health" && (
-              <div className="space-y-6 max-w-5xl">
-                <h1 className="text-2xl font-bold">Sağlık Monitörü</h1>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <StatCard label="API Durumu" value="OK" sub="Son kontrol: şimdi" icon={HeartPulse} color="text-green-400" />
-                  <StatCard label="Yeni Kullanıcı" value={dashboard?.newUsersThisWeek ?? 0} sub="Son 7 gün" icon={Users} />
-                  <StatCard label="Yeni Video" value={dashboard?.newVideosThisWeek ?? 0} sub="Son 7 gün" icon={Video} />
-                  <StatCard label="Açık Uyarı" value={dashboard?.pendingReports ?? 0} sub="Bekleyen raporlar" icon={AlertTriangle} color={dashboard?.pendingReports ? "text-red-400" : "text-green-400"} />
-                </div>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5 space-y-3">
-                    <h2 className="font-bold flex items-center gap-2"><HeartPulse className="h-4 w-4 text-green-400" /> Genel Durum</h2>
-                    <div className="flex items-center justify-between text-sm py-1.5 border-b border-[#252525]">
-                      <span className="text-[#888]">Toplam kullanıcı</span><span className="font-medium">{dashboard?.totalUsers ?? "—"}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm py-1.5 border-b border-[#252525]">
-                      <span className="text-[#888]">Toplam video</span><span className="font-medium">{dashboard?.totalVideos ?? "—"}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm py-1.5 border-b border-[#252525]">
-                      <span className="text-[#888]">Toplam gelir</span><span className="font-medium text-primary">${Number(dashboard?.totalRevenue ?? 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm py-1.5">
-                      <span className="text-[#888]">Bekleyen rapor</span>
-                      <span className={cn("font-medium", dashboard?.pendingReports ? "text-red-400" : "text-green-400")}>{dashboard?.pendingReports ?? 0}</span>
-                    </div>
-                  </div>
-                  <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-5">
-                    <h2 className="font-bold mb-3 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-400" /> Dikkat Gerektirenler</h2>
-                    {(dashboard?.pendingReports ?? 0) > 0 ? (
-                      <button onClick={() => setTab("reports")} className="w-full text-left text-sm bg-red-900/20 border border-red-900/30 rounded-lg p-3 hover:bg-red-900/30 transition-colors">
-                        {dashboard?.pendingReports} bekleyen rapor var — incelemek için tıkla
-                      </button>
-                    ) : (
-                      <p className="text-sm text-[#555] py-4 text-center">Bekleyen bir sorun yok, sistem sağlıklı.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
             </Suspense>
           </main>
         </div>

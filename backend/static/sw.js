@@ -1,5 +1,5 @@
 /**
- * Hotpulse Service Worker v10
+ * Hotpulse Service Worker v11
  *
  * Cache-First           : /assets/, /static/ — immutable hash'li dosyalar (0ms)
  * Cache-First (sınırlı) : /media/           — büyük dosyalar hariç
@@ -7,11 +7,11 @@
  * Network-First         : HTML sayfaları    — her zaman taze; offline'da cache
  * Network-First         : diğer /api/       — her zaman taze
  *
- * v10 değişiklikleri:
- *   - Cache temizleme: admin visitor map tab bar güncellemesi için eski cache'ler silindi
+ * v11 değişiklikleri:
+ *   - Cache temizleme: period tab basitleştirme + admin dashboard/health tab birleştirme
  */
 
-const CACHE_VER    = 'v10';
+const CACHE_VER    = 'v11';
 const STATIC_CACHE = `hp-static-${CACHE_VER}`;
 const API_CACHE    = `hp-api-${CACHE_VER}`;
 const INIT_TTL_MS  = 5 * 60 * 1000; // 5 dakika
