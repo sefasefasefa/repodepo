@@ -153,6 +153,15 @@ WHITENOISE_ROOT = str(BASE_DIR / 'static')
 WHITENOISE_AUTOREFRESH = False
 WHITENOISE_MAX_AGE = 31536000  # 1 yıl (hash'li dosyalar için)
 
+def _whitenoise_add_headers(headers, path, url):
+    """sw.js için no-cache uygula — diğer asset'ler 1 yıl cache'li kalır."""
+    if url.endswith('/sw.js') or url == '/sw.js':
+        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        headers['Pragma'] = 'no-cache'
+        headers['Expires'] = '0'
+
+WHITENOISE_ADD_HEADERS_FUNCTION = _whitenoise_add_headers
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 

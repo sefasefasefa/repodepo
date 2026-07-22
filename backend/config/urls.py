@@ -953,15 +953,23 @@ def spa_index(request, *args, **kwargs):
 
 
 def _serve_sw(request):
-    """sw.js her zaman no-cache — tarayıcı SW güncellemesini anında algılar."""
+    """sw.js her zaman no-cache, ETag yok — tarayıcı SW güncellemesini anında algılar."""
+    import time
     candidates = list(settings.STATICFILES_DIRS) + [settings.STATIC_ROOT]
     for root in candidates:
         full = os.path.join(str(root), 'sw.js')
         if os.path.exists(full):
-            resp = FileResponse(open(full, 'rb'), content_type='application/javascript')
+            with open(full, 'r', encoding='utf-8') as f:
+                content = f.read()
+            # Timestamp comment => her istekte içerik farklı => ETag asla eşleşmez
+            content += f'\n// served-at: {int(time.time())}\n'
+            resp = HttpResponse(content, content_type='application/javascript; charset=utf-8')
             resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             resp['Pragma'] = 'no-cache'
             resp['Expires'] = '0'
+            # ETag ve Last-Modified'ı sil — conditional GET'i engelle
+            del resp['ETag']
+            del resp['Last-Modified']
             return resp
     raise Http404
 
