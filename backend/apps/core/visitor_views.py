@@ -92,13 +92,12 @@ def track_visitor(request):
     if not session_id:
         return Response({'ok': True})
 
-    # Pick a demo location deterministically from session id for local IPs
-    if _is_local_ip(ip):
-        h = int(hashlib.md5(str(session_id).encode()).hexdigest(), 16)
-        loc = DEMO_LOCATIONS[h % len(DEMO_LOCATIONS)]
-        country, city, lat, lng = loc['country'], loc['city'], loc['lat'], loc['lng']
-    else:
-        country, city, lat, lng = 'Unknown', '', 0.0, 0.0
+    # GeoIP not yet implemented — assign a deterministic demo location from
+    # the session_id hash so every visitor shows on the map.  When real GeoIP
+    # is added (Task #2) this block will be replaced with an actual lookup.
+    h = int(hashlib.md5(str(session_id).encode()).hexdigest(), 16)
+    loc = DEMO_LOCATIONS[h % len(DEMO_LOCATIONS)]
+    country, city, lat, lng = loc['country'], loc['city'], loc['lat'], loc['lng']
 
     with _sessions_lock:
         existing = _sessions.get(session_id)
@@ -136,10 +135,33 @@ def admin_visitors(request):
     country_filter = request.GET.get('country', '')
 
     if period == '5min':
-        # Live mode: use in-memory sessions
+        # Live mode: use in-memory sessions, supplemented by recent DB records
+        # so seeded / replayed data is always visible even without real HTTP traffic.
         _prune_sessions()
         with _sessions_lock:
-            active = list(_sessions.values())
+            active_mem = {s['id']: s for s in _sessions.values()}
+
+        # Merge DB records from the last 5 minutes (deduplicated by session_id)
+        since_live = timezone.now() - timedelta(minutes=5)
+        db_recent = (
+            VisitorLog.objects
+            .filter(timestamp__gte=since_live)
+            .exclude(country__in=['', 'Unknown'])
+            .values('session_id', 'country', 'city', 'lat', 'lng', 'page', 'timestamp')
+            .order_by('-timestamp')[:200]
+        )
+        for row in db_recent:
+            sid = row['session_id']
+            if sid not in active_mem:
+                active_mem[sid] = {
+                    'id': sid,
+                    'country': row['country'], 'city': row['city'],
+                    'lat': row['lat'], 'lng': row['lng'],
+                    'page': row['page'],
+                    'last_seen': row['timestamp'].timestamp(),
+                }
+
+        active = list(active_mem.values())
 
         if country_filter:
             active = [v for v in active if v['country'] == country_filter]
