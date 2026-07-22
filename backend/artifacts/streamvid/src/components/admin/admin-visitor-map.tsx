@@ -485,21 +485,32 @@ export default function AdminVisitorMap() {
       </div>
 
       {/* ── Main content tabs ─────────────────────────────────────────────── */}
-      <div className="flex gap-1 border-b border-[#1e1e1e]">
+      <div className="flex gap-2 bg-[#111] border border-[#252525] rounded-2xl p-1.5">
         {[
-          { id: "visitors" as const, label: "Ziyaretçi Haritası", icon: Globe },
-          { id: "videos"   as const, label: "Video Dashboard",    icon: BarChart3 },
-        ].map(({ id, label, icon: Icon }) => (
+          { id: "visitors" as const, label: "Ziyaretçi Haritası", icon: Globe,     badge: data ? fmt(data.total) : null,                 color: "#a855f7" },
+          { id: "videos"   as const, label: "Video Dashboard",    icon: BarChart3, badge: s    ? fmt(s.totalVideos)  : null,               color: "#06b6d4" },
+        ].map(({ id, label, icon: Icon, badge, color }) => (
           <button key={id} onClick={() => setActiveTab(id)}
             style={{ touchAction: "manipulation" }}
             className={cn(
-              "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px",
+              "relative flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all",
               activeTab === id
-                ? "border-primary text-white"
-                : "border-transparent text-[#555] hover:text-[#888]"
+                ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]"
+                : "text-[#666] hover:text-[#aaa] hover:bg-[#161616]"
             )}>
-            <Icon className="h-4 w-4" />
+            <span className={cn("p-1 rounded-lg transition-colors", activeTab === id ? "opacity-100" : "opacity-50")}
+              style={{ background: activeTab === id ? `${color}22` : "transparent" }}>
+              <Icon className="h-4 w-4" style={{ color: activeTab === id ? color : undefined }} />
+            </span>
             {label}
+            {badge !== null && badge !== undefined && (
+              <span className={cn(
+                "ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full tabular-nums transition-colors",
+                activeTab === id ? "text-white" : "text-[#555]"
+              )} style={{ background: activeTab === id ? `${color}25` : "#1a1a1a" }}>
+                {badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
