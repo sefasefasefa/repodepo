@@ -30,7 +30,6 @@ const AdminCrosspostMonitor    = lazy(() => import("@/components/admin/admin-cro
 const AdminModeration          = lazy(() => import("@/components/admin/admin-moderation"));
 const AdminWithdrawals         = lazy(() => import("@/components/admin/admin-withdrawals"));
 const AdminWatchInsights       = lazy(() => import("@/components/admin/admin-watch-insights"));
-const AdminVideoDashboard      = lazy(() => import("@/components/admin/admin-video-dashboard"));
 import { Users, Video, AlertTriangle, DollarSign, LayoutDashboard, Megaphone, CreditCard, TrendingUp, HardDrive, Link2, Shield, Settings2, Crown, Code2, Share2, Award, LayoutTemplate, Globe, FlaskConical, HeartPulse, Mail, Gift, ToggleLeft, RadioTower, SlidersHorizontal, ShieldCheck, Wallet, Search, ChevronDown, Film, UsersRound, Megaphone as MegaphoneIcon, Wallet as WalletIcon, ShieldAlert, Wrench, Eye, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -99,7 +98,6 @@ const GROUPS = [
       { id: "home-filters", label: "Anasayfa Filtreleri", icon: SlidersHorizontal },
       { id: "pages",        label: "Özel Sayfalar", icon: LayoutTemplate },
       { id: "watch-insights",    label: "İzleme Analitiği",   icon: Eye },
-      { id: "video-dashboard",   label: "Video Analitik",     icon: BarChart3 },
     ],
   },
   {
@@ -346,7 +344,6 @@ export default function Admin() {
             {tab === "badges" && <AdminBadges />}
             {tab === "pages" && <AdminCustomPages />}
             {tab === "watch-insights" && <AdminWatchInsights />}
-            {tab === "video-dashboard" && <AdminVideoDashboard />}
             {tab === "visitors" && <AdminVisitorMap />}
             {tab === "ab-tests" && <AdminABTests />}
             {tab === "revenue-proj" && <AdminRevenueProjection />}
