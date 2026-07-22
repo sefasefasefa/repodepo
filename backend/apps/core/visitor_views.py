@@ -17,27 +17,10 @@ _sessions = {}
 _sessions_lock = threading.Lock()
 MAX_AGE_S = 5 * 60
 
+# Single fallback location used when GeoIP is unavailable (no real GeoIP library configured).
+# Real visitors on hotpulse.me will appear here until a GeoIP service is integrated.
 DEMO_LOCATIONS = [
-    {'country': 'TR', 'city': 'Istanbul',    'lat': 41.01, 'lng': 28.97},
-    {'country': 'TR', 'city': 'Ankara',      'lat': 39.93, 'lng': 32.86},
-    {'country': 'TR', 'city': 'Izmir',       'lat': 38.41, 'lng': 27.14},
-    {'country': 'DE', 'city': 'Berlin',      'lat': 52.52, 'lng': 13.40},
-    {'country': 'US', 'city': 'New York',    'lat': 40.71, 'lng': -74.01},
-    {'country': 'US', 'city': 'Los Angeles', 'lat': 34.05, 'lng': -118.24},
-    {'country': 'GB', 'city': 'London',      'lat': 51.51, 'lng': -0.13},
-    {'country': 'FR', 'city': 'Paris',       'lat': 48.85, 'lng': 2.35},
-    {'country': 'JP', 'city': 'Tokyo',       'lat': 35.69, 'lng': 139.69},
-    {'country': 'BR', 'city': 'São Paulo',   'lat': -23.55, 'lng': -46.63},
-    {'country': 'RU', 'city': 'Moscow',      'lat': 55.75, 'lng': 37.62},
-    {'country': 'AU', 'city': 'Sydney',      'lat': -33.87, 'lng': 151.21},
-    {'country': 'IN', 'city': 'Mumbai',      'lat': 19.08, 'lng': 72.88},
-    {'country': 'CA', 'city': 'Toronto',     'lat': 43.65, 'lng': -79.38},
-    {'country': 'ES', 'city': 'Madrid',      'lat': 40.42, 'lng': -3.70},
-    {'country': 'IT', 'city': 'Rome',        'lat': 41.90, 'lng': 12.50},
-    {'country': 'NL', 'city': 'Amsterdam',   'lat': 52.37, 'lng': 4.90},
-    {'country': 'AE', 'city': 'Dubai',       'lat': 25.20, 'lng': 55.27},
-    {'country': 'SG', 'city': 'Singapore',   'lat': 1.35,  'lng': 103.82},
-    {'country': 'MX', 'city': 'Mexico City', 'lat': 19.43, 'lng': -99.13},
+    {'country': 'TR', 'city': 'Istanbul', 'lat': 41.01, 'lng': 28.97},
 ]
 
 # Period -> timedelta mapping (None = all-time)

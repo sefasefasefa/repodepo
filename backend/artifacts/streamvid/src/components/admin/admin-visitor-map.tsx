@@ -67,14 +67,13 @@ const PAGE_LABELS: Record<string, string> = {
 };
 
 const PERIODS = [
-  { value: "5min", label: "Canlı",   sublabel: "Son 5 dk",    live: true,  accent: "#22c55e" },
-  { value: "1h",   label: "1 Saat",  sublabel: "Son 1 saat",  live: false, accent: "#3b82f6" },
-  { value: "4h",   label: "4 Saat",  sublabel: "Son 4 saat",  live: false, accent: "#8b5cf6" },
-  { value: "24h",  label: "Günlük",  sublabel: "Son 24 saat", live: false, accent: "#06b6d4" },
-  { value: "7d",   label: "Haftalık",sublabel: "Son 7 gün",   live: false, accent: "#a78bfa" },
-  { value: "30d",  label: "Aylık",   sublabel: "Son 30 gün",  live: false, accent: "#f59e0b" },
-  { value: "1y",   label: "Yıllık",  sublabel: "Son 365 gün", live: false, accent: "#f97316" },
-  { value: "all",  label: "Tümü",    sublabel: "Tüm zamanlar",live: false, accent: "#ec4899" },
+  { value: "5min", label: "Canlı", sublabel: "Son 5 dk",     live: true,  accent: "#22c55e" },
+  { value: "1h",   label: "Saat",  sublabel: "Son 1 saat",   live: false, accent: "#3b82f6" },
+  { value: "24h",  label: "Gün",   sublabel: "Son 24 saat",  live: false, accent: "#06b6d4" },
+  { value: "7d",   label: "Hafta", sublabel: "Son 7 gün",    live: false, accent: "#a78bfa" },
+  { value: "30d",  label: "Ay",    sublabel: "Son 30 gün",   live: false, accent: "#f59e0b" },
+  { value: "1y",   label: "Yıl",   sublabel: "Son 365 gün",  live: false, accent: "#f97316" },
+  { value: "all",  label: "Tümü",  sublabel: "Tüm zamanlar", live: false, accent: "#ec4899" },
 ];
 
 const BAR_COLORS = [

@@ -53,11 +53,7 @@ class Command(BaseCommand):
         self._create_badge_definitions(force)
 
         if env == 'dev':
-            self._create_moderator(force)
-            self._create_sample_creators(force)
-            self._create_sample_users(force)
-            self._create_sample_videos(force)
-            self._create_sample_subscriptions(force)
+            self._create_test_user(force)
 
         self.stdout.write(self.style.SUCCESS('Seed data complete.'))
         if env == 'prod':
@@ -92,6 +88,19 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f'  [DEV] Admin → username=admin  password=admin123  email=Admin@admin.com'))
         else:
             self.stdout.write(self.style.SUCCESS(f'  Admin created → username=admin  password={password}'))
+
+    # ── Test User (dev only) ───────────────────────────────────────────────────
+    def _create_test_user(self, force):
+        if User.objects.filter(username='test').exists() and not force:
+            return
+        user, created = User.objects.get_or_create(username='test', defaults=dict(
+            email='test@hotpulse.local', display_name='Test Kullanıcı',
+            role='user', is_verified=True, bio='Deneme hesabı.',
+        ))
+        if created or force:
+            user.set_password('test123')
+            user.save()
+            self.stdout.write(self.style.WARNING('  [DEV] Test user → username=test  password=test123'))
 
     # ── Moderator ──────────────────────────────────────────────────────────────
     def _create_moderator(self, force):
