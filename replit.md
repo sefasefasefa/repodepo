@@ -1,71 +1,39 @@
-# Hotpulse (Soci)
+# Soci / Hotpulse — Social Video Platform
 
-An 18+ social video sharing platform with video uploads, live streaming, messaging, and a token-based economy.
+A full-stack social video platform with video sharing, live streaming, stories, messaging, and a token-based economy.
 
 ## Stack
-
-- **Backend:** Python 3.11, Django 4.2, Django REST Framework, SimpleJWT
-- **Frontend:** React + Vite (pre-compiled static assets served via WhiteNoise)
-- **Database:** SQLite (dev) — set `DATABASE_URL` to switch to PostgreSQL in production
-- **Static serving:** WhiteNoise middleware
-- **Server:** Gunicorn (Linux/Replit)
+- **Backend:** Python 3.11, Django 4.2, Django REST Framework
+- **Frontend:** React + Vite (source in `backend/artifacts/streamvid/`, built output served by Django)
+- **Database:** SQLite (default; PostgreSQL supported via `DATABASE_URL`)
+- **Server:** Gunicorn on port 5000
 
 ## How to run
-
-### First run / after a clean environment
-
-Install Python dependencies once (from repo root):
-
-```bash
-uv sync
-```
-
-### Start the app
-
-Press **Run** or start the **Start application** workflow. It automatically:
-1. Installs frontend dependencies and builds the React/Vite app
+The **Start application** workflow handles everything:
+1. Builds the React frontend (`pnpm run build`)
 2. Runs Django migrations
 3. Collects static files
 4. Starts Gunicorn on port 5000
 
-Django serves the React frontend at `/` and the REST API at `/api/`.
+## Key paths
+- Backend entry: `backend/config/wsgi.py`, `backend/manage.py`
+- Django apps: `backend/apps/`
+- Frontend source: `backend/artifacts/streamvid/`
+- Static files (served): `backend/static/`
+- Media uploads: `media/`
+- Gunicorn config: `backend/gunicorn.conf.py`
 
-## Environment variables
+## Environment
+- `SESSION_SECRET` — used as Django `SECRET_KEY` (set as a Replit Secret)
+- `ALLOWED_HOSTS=*` — set in `.replit` userenv
+- `FORCE_SQLITE=True` — set in `.replit` userenv (forces SQLite regardless of DATABASE_URL)
+- `CSRF_TRUSTED_ORIGINS` — set in `.replit` userenv for Replit domains
 
-Set via Replit Secrets / environment:
+## Dev credentials
+- Admin panel: `/django-admin/` — username `admin`, password `admin123`
 
-| Variable | Default | Description |
-|---|---|---|
-| `SECRET_KEY` / `SESSION_SECRET` | insecure fallback | Django secret key — set a strong value in production |
-| `DEBUG` | `True` | Set `False` in production |
-| `ALLOWED_HOSTS` | `*` | Comma-separated allowed hosts |
-| `FORCE_SQLITE` | `true` | Force SQLite even if `DATABASE_URL` is set |
-| `DATABASE_URL` | (none) | PostgreSQL connection string for production |
-
-## Project layout
-
-```
-backend/
-  apps/           # Django apps (accounts, videos, social, live, messaging, tokens, subscriptions, …)
-  artifacts/      # Frontend source (React + Vite workspace)
-  config/         # Django settings, URLs, WSGI
-  static/         # Compiled frontend assets (committed)
-  media/          # User-uploaded files (committed)
-  db.sqlite3      # Dev database
-infra/            # Nginx configs
-scripts/          # Backup/restore and OS-specific setup scripts
-docs/             # Platform documentation
-```
-
-## Admin
-
-Create a superuser with:
-```
-cd backend && uv run python3.11 manage.py createsuperuser
-```
-
-Django admin is at `/admin/`. The platform also has a custom admin panel at `/panel/`.
+## Notes
+- `backend/.python-version` pins uv to Python 3.11 (required — uv defaults to 3.12 which breaks Django imports)
+- Frontend must be rebuilt (`pnpm run build`) after source changes for them to take effect
 
 ## User preferences
-
-- Always use `python3.11` (not `python` or `python3`)
