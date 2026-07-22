@@ -1,5 +1,5 @@
 /**
- * Hotpulse Service Worker v8
+ * Hotpulse Service Worker v9
  *
  * Cache-First           : /assets/, /static/ — immutable hash'li dosyalar (0ms)
  * Cache-First (sınırlı) : /media/           — büyük dosyalar hariç
@@ -7,12 +7,11 @@
  * Network-First         : HTML sayfaları    — her zaman taze; offline'da cache
  * Network-First         : diğer /api/       — her zaman taze
  *
- * v8 değişiklikleri:
- *   - HTML: stale-while-revalidate → network-first
- *     (deployment sonrası tüm ziyaretçiler anında güncel sürümü alır)
+ * v9 değişiklikleri:
+ *   - Cache temizleme: analitik merkezi güncellemesi için eski cache'ler silindi
  */
 
-const CACHE_VER    = 'v8';
+const CACHE_VER    = 'v9';
 const STATIC_CACHE = `hp-static-${CACHE_VER}`;
 const API_CACHE    = `hp-api-${CACHE_VER}`;
 const INIT_TTL_MS  = 5 * 60 * 1000; // 5 dakika
