@@ -485,29 +485,28 @@ export default function AdminVisitorMap() {
       </div>
 
       {/* ── Main content tabs ─────────────────────────────────────────────── */}
-      <div className="flex gap-2 bg-[#111] border border-[#252525] rounded-2xl p-1.5">
+      <div className="flex gap-3 bg-[#181818] border-2 border-[#2e2e2e] rounded-2xl p-2 shadow-lg">
         {[
-          { id: "visitors" as const, label: "Ziyaretçi Haritası", icon: Globe,     badge: data ? fmt(data.total) : null,                 color: "#a855f7" },
-          { id: "videos"   as const, label: "Video Dashboard",    icon: BarChart3, badge: s    ? fmt(s.totalVideos)  : null,               color: "#06b6d4" },
+          { id: "visitors" as const, label: "Ziyaretçi Haritası", icon: Globe,     badge: data ? fmt(data.total) : null,  color: "#a855f7" },
+          { id: "videos"   as const, label: "Video Dashboard",    icon: BarChart3, badge: s    ? fmt(s.totalVideos) : null, color: "#06b6d4" },
         ].map(({ id, label, icon: Icon, badge, color }) => (
           <button key={id} onClick={() => setActiveTab(id)}
-            style={{ touchAction: "manipulation" }}
             className={cn(
-              "relative flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all",
+              "relative flex-1 flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl text-sm font-bold transition-all duration-200",
               activeTab === id
-                ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]"
-                : "text-[#666] hover:text-[#aaa] hover:bg-[#161616]"
-            )}>
-            <span className={cn("p-1 rounded-lg transition-colors", activeTab === id ? "opacity-100" : "opacity-50")}
-              style={{ background: activeTab === id ? `${color}22` : "transparent" }}>
-              <Icon className="h-4 w-4" style={{ color: activeTab === id ? color : undefined }} />
+                ? "text-white shadow-md"
+                : "text-[#999] hover:text-white hover:bg-[#222]"
+            )}
+            style={activeTab === id
+              ? { touchAction: "manipulation", background: `linear-gradient(135deg, ${color}33, ${color}18)`, border: `1.5px solid ${color}55`, boxShadow: `0 0 12px ${color}22` }
+              : { touchAction: "manipulation", border: "1.5px solid transparent" }}>
+            <span className="p-1.5 rounded-lg" style={{ background: activeTab === id ? `${color}30` : "#252525" }}>
+              <Icon className="h-4 w-4" style={{ color: activeTab === id ? color : "#888" }} />
             </span>
-            {label}
+            <span>{label}</span>
             {badge !== null && badge !== undefined && (
-              <span className={cn(
-                "ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full tabular-nums transition-colors",
-                activeTab === id ? "text-white" : "text-[#555]"
-              )} style={{ background: activeTab === id ? `${color}25` : "#1a1a1a" }}>
+              <span className="ml-auto text-[11px] font-black px-2.5 py-1 rounded-full tabular-nums"
+                style={{ background: activeTab === id ? `${color}40` : "#2a2a2a", color: activeTab === id ? color : "#666", border: activeTab === id ? `1px solid ${color}60` : "1px solid #333" }}>
                 {badge}
               </span>
             )}
