@@ -67,13 +67,14 @@ const PAGE_LABELS: Record<string, string> = {
 };
 
 const PERIODS = [
-  { value: "5min", label: "Canlı",  sublabel: "Son 5 dk",   live: true,  accent: "#22c55e" },
-  { value: "1h",   label: "Saat",   sublabel: "Son 1 saat", live: false, accent: "#3b82f6" },
-  { value: "24h",  label: "Gün",    sublabel: "Son 24 sa",  live: false, accent: "#06b6d4" },
-  { value: "7d",   label: "Hafta",  sublabel: "Son 7 gün",  live: false, accent: "#a78bfa" },
-  { value: "30d",  label: "Ay",     sublabel: "Son 30 gün", live: false, accent: "#f59e0b" },
-  { value: "1y",   label: "Yıl",    sublabel: "Son 365 gün",live: false, accent: "#f97316" },
-  { value: "all",  label: "Tümü",   sublabel: "Tüm zamanlar",live:false, accent: "#ec4899" },
+  { value: "5min", label: "Canlı",   sublabel: "Son 5 dk",    live: true,  accent: "#22c55e" },
+  { value: "1h",   label: "1 Saat",  sublabel: "Son 1 saat",  live: false, accent: "#3b82f6" },
+  { value: "4h",   label: "4 Saat",  sublabel: "Son 4 saat",  live: false, accent: "#8b5cf6" },
+  { value: "24h",  label: "Günlük",  sublabel: "Son 24 saat", live: false, accent: "#06b6d4" },
+  { value: "7d",   label: "Haftalık",sublabel: "Son 7 gün",   live: false, accent: "#a78bfa" },
+  { value: "30d",  label: "Aylık",   sublabel: "Son 30 gün",  live: false, accent: "#f59e0b" },
+  { value: "1y",   label: "Yıllık",  sublabel: "Son 365 gün", live: false, accent: "#f97316" },
+  { value: "all",  label: "Tümü",    sublabel: "Tüm zamanlar",live: false, accent: "#ec4899" },
 ];
 
 const BAR_COLORS = [
@@ -664,6 +665,93 @@ export default function AdminVisitorMap() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Full visitor list table */}
+          <div className="bg-[#161616] border border-[#222] rounded-2xl p-5 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                {isLive ? "Anlık Ziyaretçi Listesi" : `Ziyaretçi Listesi — ${activePeriod.sublabel}`}
+                <span className="text-xs font-normal text-[#444]">
+                  ({data?.visitors.length ?? 0} kayıt)
+                </span>
+              </h3>
+              {data && data.visitors.length > 0 && (
+                <span className="text-[11px] text-[#555]">
+                  Toplam {data.total} ziyaret · {data.uniqueSessions} tekil oturum
+                </span>
+              )}
+            </div>
+            {loading ? (
+              <div className="space-y-2">
+                {[0,1,2,3,4].map(i => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : !data || data.visitors.length === 0 ? (
+              <div className="py-12 text-center">
+                <MapPin className="h-10 w-10 text-[#252525] mx-auto mb-2" />
+                <p className="text-xs text-[#444]">{isLive ? "Aktif ziyaretçi yok" : "Bu dönemde ziyaretçi kaydı yok"}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[#1e1e1e]">
+                      <th className="text-left py-2 px-2 text-[#444] font-medium w-8">#</th>
+                      <th className="text-left py-2 px-2 text-[#444] font-medium">Ülke</th>
+                      <th className="text-left py-2 px-2 text-[#444] font-medium">Şehir</th>
+                      <th className="text-left py-2 px-2 text-[#444] font-medium">Sayfa</th>
+                      <th className="text-right py-2 px-2 text-[#444] font-medium">
+                        {isLive ? "Durum" : "Zaman"}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.visitors.map((v, i) => (
+                      <tr key={v.id}
+                        className={cn(
+                          "border-b border-[#161616] transition-colors",
+                          newIds.has(v.id) ? "bg-amber-900/10" : "hover:bg-[#1c1c1c]"
+                        )}>
+                        <td className="py-2.5 px-2 text-[#444] tabular-nums">{i + 1}</td>
+                        <td className="py-2.5 px-2">
+                          <span className={cn("font-medium", newIds.has(v.id) ? "text-amber-300" : "text-[#ccc]")}>
+                            {COUNTRY_NAMES[v.country] ?? v.country}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-2 text-[#777]">{v.city || "—"}</td>
+                        <td className="py-2.5 px-2">
+                          <span className="px-2 py-0.5 rounded-md bg-[#1e1e1e] text-[#aaa]">
+                            {formatPage(v.page)}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-2 text-right">
+                          {newIds.has(v.id) ? (
+                            <span className="text-amber-400 font-bold text-[10px]">YENİ</span>
+                          ) : isLive ? (
+                            <span className="flex items-center justify-end gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                              <span className="text-[#555]">Aktif</span>
+                            </span>
+                          ) : v.lastSeen ? (
+                            <span className="text-[#555]">{formatRelativeTime(v.lastSeen)}</span>
+                          ) : (
+                            <span className="text-[#333]">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {data.visitors.length >= 200 && (
+                  <p className="text-center text-[11px] text-[#444] pt-3">
+                    İlk 200 kayıt gösteriliyor
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Traffic chart */}

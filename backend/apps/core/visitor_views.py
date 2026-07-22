@@ -44,6 +44,7 @@ DEMO_LOCATIONS = [
 PERIODS = {
     '5min':  timedelta(minutes=5),
     '1h':    timedelta(hours=1),
+    '4h':    timedelta(hours=4),
     '24h':   timedelta(hours=24),
     '7d':    timedelta(days=7),
     '30d':   timedelta(days=30),
@@ -232,7 +233,7 @@ def admin_visitors_chart(request):
         qs = qs.filter(country=country_filter)
 
     # Determine bucket size based on period
-    if period in ('5min', '1h'):
+    if period in ('5min', '1h', '4h'):
         bucket = 'minute'
     elif period in ('24h', '7d'):
         bucket = 'hour'
