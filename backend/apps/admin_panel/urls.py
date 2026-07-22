@@ -13,6 +13,7 @@ from . import video_analytics_views as va
 urlpatterns = [
     path('admin/watch-insights', wi.watch_insights),
     path('admin/video-analytics', va.video_analytics),
+    path('admin/analytics/video-trends', va.video_trends),
     path('analytics/platform', views.platform_analytics),
     path('analytics/creator/<int:user_id>', views.creator_analytics),
     path('admin/reports', views.list_reports),

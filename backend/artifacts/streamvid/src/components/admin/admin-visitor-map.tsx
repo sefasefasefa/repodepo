@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { Users, Globe, TrendingUp, RefreshCw, Wifi, MapPin, Clock, Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AdminVisitorChart from "./admin-visitor-chart";
+import AdminVideoStats from "./admin-video-stats";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -414,6 +415,11 @@ export default function AdminVisitorMap() {
 
       {/* Traffic chart */}
       <AdminVisitorChart period={period} countryFilter={countryFilter} />
+
+      {/* Video analytics panel */}
+      <div className="border-t border-[#1e1e1e] pt-5">
+        <AdminVideoStats period={period} />
+      </div>
     </div>
   );
 }
