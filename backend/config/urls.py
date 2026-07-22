@@ -717,7 +717,54 @@ def oauth_discovery(request):
     return response
 
 
+def _clear_cache_page(request):
+    """Tek sayfada tüm SW + cache'i temizler, /admin'e yönlendirir."""
+    html = """<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Cache Temizleniyor…</title>
+<style>
+  body{background:#0a0a0a;color:#fff;font-family:system-ui,sans-serif;
+       display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;flex-direction:column;gap:16px}
+  h2{font-size:20px;margin:0}
+  p{color:#888;font-size:14px;margin:0}
+  .dot{display:inline-block;animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+</style>
+</head>
+<body>
+<h2>Cache temizleniyor<span class="dot">…</span></h2>
+<p id="status">Service worker'lar kaldırılıyor</p>
+<script>
+(async function(){
+  const st = document.getElementById('status');
+  try {
+    // 1) Tüm SW'leri unregister et
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const r of regs) await r.unregister();
+    st.textContent = 'SW kaldırıldı — cache temizleniyor';
+    // 2) Tüm cache'leri sil
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+    st.textContent = 'Tamamdı! Yönlendiriliyor…';
+    // 3) Admin sayfasına git
+    setTimeout(() => { location.replace('/admin'); }, 800);
+  } catch(e) {
+    st.textContent = 'Hata: ' + e.message + ' — Manuel yönlendiriliyor';
+    setTimeout(() => { location.replace('/admin'); }, 1500);
+  }
+})();
+</script>
+</body>
+</html>"""
+    resp = HttpResponse(html, content_type='text/html; charset=utf-8')
+    resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
+
 urlpatterns = [
+    path('clear-cache', _clear_cache_page),
     path('django-admin/', admin.site.urls),
 
     # auth.md — Agent Authentication Metadata (workos.com/auth-md)
